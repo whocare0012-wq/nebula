@@ -379,7 +379,9 @@ export function CleanupOverview({
             {scanning ? (
               <>
                 {uiText("Measuring managed directories. No files are being removed.")}
-                {data.scan ? ` ${data.scan.checked} / ${data.scan.total} · ${data.scan.current}` : ""}
+                {data.scan
+                  ? ` ${data.scan.checked} / ${data.scan.total} · ${data.scan.current}`
+                  : ""}
               </>
             ) : null}
           </p>

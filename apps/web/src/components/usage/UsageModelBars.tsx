@@ -4,7 +4,8 @@ import { useState } from "react";
 import { modelBarGeometry } from "./usageAnalysis";
 import { useUsageDateFormat } from "./useUsageDateFormat";
 import type { MergedUsage } from "@t3tools/shared/usageMerge";
-import { formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { formatTokens } from "@t3tools/shared/usageFormat";
+import { costDisplayFactor, formatUsd, formatUsdWhole, isWholeDisplayedCost } from "./usageMoney";
 import type { UsageChartWindow } from "./UsageModelDialog";
 import { useUiText } from "~/i18n/useUiText";
 export function UsageModelBars({
@@ -29,11 +30,14 @@ export function UsageModelBars({
   );
   const values = periods.map((p) => byPeriod.get(p) ?? 0),
     peak = Math.max(0, ...values),
-    rawMax = peak || 1;
+    // Round the axis in the displayed currency, then convert back to the USD the bars use.
+    displayFactor = metric === "cost" ? costDisplayFactor() : 1,
+    rawMax = peak * displayFactor || 1;
   const magnitude = 10 ** Math.floor(Math.log10(rawMax));
-  const step =
+  const displayStep =
     [1, 2, 5, 10].map((n) => n * magnitude).find((n) => n >= rawMax / 2) ?? magnitude * 10;
-  const max = Math.ceil(rawMax / step) * step;
+  const step = displayStep / displayFactor;
+  const max = (Math.ceil(rawMax / displayStep) * displayStep) / displayFactor;
   const plotLeft = 48,
     plotWidth = 420,
     xScale = plotWidth / 456;
@@ -81,8 +85,8 @@ export function UsageModelBars({
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               {metric === "cost"
-                ? Number.isInteger(tick)
-                  ? `$${tick}`
+                ? isWholeDisplayedCost(tick)
+                  ? formatUsdWhole(tick)
                   : formatUsd(tick)
                 : formatTokens(tick)}
             </text>

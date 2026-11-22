@@ -7,9 +7,9 @@ import {
   formatCount,
   formatPercent,
   formatTokens,
-  formatUsd,
   makeWindow,
 } from "@t3tools/shared/usageFormat";
+import { costDisplayFactor, formatUsd, formatUsdWhole } from "./usageMoney";
 import {
   computeTokensPerSecond,
   isModelCostUnknown,
@@ -846,15 +846,12 @@ function v9ProviderColor(provider: UsageProviderKind): string {
 }
 
 function formatUsdCompact(value: number): string {
-  if (Math.abs(value) >= 100) {
-    return `$${Math.round(value).toLocaleString()}`;
-  }
+  if (Math.abs(value * costDisplayFactor()) >= 100) return formatUsdWhole(value);
   return formatUsd(value);
 }
 
 function formatAxisUsd(value: number, maxValue: number): string {
-  if (value <= 0) return "$0";
-  if (maxValue >= 4) return `$${Math.round(value)}`;
+  if (value <= 0 || maxValue * costDisplayFactor() >= 4) return formatUsdWhole(value);
   return formatUsd(value);
 }
 

@@ -582,11 +582,7 @@
     );
   }
   .quota-ring[data-remaining][data-apple-low] {
-    background: conic-gradient(
-      from 0deg,
-      #ff9500 var(--quota-progress),
-      var(--apple-fill-hover) 0
-    );
+    background: conic-gradient(from 0deg, #ff9500 var(--quota-progress), var(--apple-fill-hover) 0);
   }
   .quota-panel-heading {
     margin-bottom: 10px;
@@ -769,11 +765,7 @@
     color: #ff9f0a;
   }
   .quota-ring[data-remaining][data-apple-low] {
-    background: conic-gradient(
-      from 0deg,
-      #ff9f0a var(--quota-progress),
-      var(--apple-fill-hover) 0
-    );
+    background: conic-gradient(from 0deg, #ff9f0a var(--quota-progress), var(--apple-fill-hover) 0);
   }
   .quota-track i {
     background: #30d158;

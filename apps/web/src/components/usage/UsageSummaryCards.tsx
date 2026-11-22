@@ -1,6 +1,7 @@
 import { uiText as copy } from "~/i18n";
 import type { MergedUsage } from "@t3tools/shared/usageMerge";
-import { formatCount, formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { formatCount, formatTokens } from "@t3tools/shared/usageFormat";
+import { formatUsd } from "./usageMoney";
 import { UsageCount } from "./UsageMotion";
 import { useId } from "react";
 

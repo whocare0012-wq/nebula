@@ -7,7 +7,8 @@ import { useTheme } from "../../hooks/useTheme";
 import { UsageDetailsSheet } from "./UsageDetailsSheet";
 import { UsageCount } from "./UsageMotion";
 import { useUiText } from "~/i18n/useUiText";
-import { formatPercent, formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { formatPercent, formatTokens } from "@t3tools/shared/usageFormat";
+import { formatUsd } from "./usageMoney";
 import { isModelCostUnknown, type ModelTotals } from "@t3tools/shared/usageMerge";
 
 import { mergeAnsweredUsage, type EnvironmentUsageStatus } from "../../state/usage";

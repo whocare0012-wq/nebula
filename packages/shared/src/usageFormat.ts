@@ -20,17 +20,28 @@ function formatLocale(locale: string | undefined): string {
   return locale === undefined || locale === "en" ? "en-US" : locale;
 }
 
+export type UsageCurrency =
+  | { readonly code: "USD" }
+  | { readonly code: "CNY"; readonly perUsd: number };
+
+export const USD: UsageCurrency = { code: "USD" };
+
 const numberFormatters = new Map<string, Intl.NumberFormat>();
 
-function numberFormatter(locale: string, currency: boolean): Intl.NumberFormat {
-  if (locale === "en-US") return currency ? CURRENCY : INTEGER;
+function numberFormatter(
+  locale: string,
+  currency: UsageCurrency["code"] | null,
+): Intl.NumberFormat {
+  if (locale === "en-US" && currency !== "CNY") return currency ? CURRENCY : INTEGER;
   const key = `${locale}:${currency}`;
   let formatter = numberFormatters.get(key);
   if (formatter === undefined) {
     formatter = currency
       ? new Intl.NumberFormat(locale, {
           style: "currency",
-          currency: "USD",
+          currency,
+          // en-US renders CNY as "CN¥"; the bare yen sign is what Chinese readers expect.
+          currencyDisplay: currency === "CNY" ? "narrowSymbol" : "symbol",
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })
@@ -84,12 +95,14 @@ export function usageSourceMessages(
   return [...messages];
 }
 
-export function formatUsd(value: number, locale?: string): string {
-  return numberFormatter(formatLocale(locale), true).format(value);
+/** Formats a USD amount, converted when the viewer chose another currency. */
+export function formatUsd(value: number, locale?: string, currency: UsageCurrency = USD): string {
+  const amount = currency.code === "CNY" ? value * currency.perUsd : value;
+  return numberFormatter(formatLocale(locale), currency.code).format(amount);
 }
 
 export function formatCount(value: number, locale?: string): string {
-  return numberFormatter(formatLocale(locale), false).format(Math.round(value));
+  return numberFormatter(formatLocale(locale), null).format(Math.round(value));
 }
 
 const TOKEN_SUFFIXES = ["K", "M", "B", "T"] as const;

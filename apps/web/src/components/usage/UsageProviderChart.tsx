@@ -7,7 +7,8 @@ import type { UsageProviderKind, UsageSummaryInput } from "@t3tools/contracts";
 import { useRef, useState } from "react";
 
 import type { DailyTotals, HourlyTotals, MergedUsage } from "@t3tools/shared/usageMerge";
-import { enumerateDays, enumerateHourStarts, formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { enumerateDays, enumerateHourStarts, formatTokens } from "@t3tools/shared/usageFormat";
+import { costDisplayFactor, formatUsd, formatUsdWhole, isWholeDisplayedCost } from "./usageMoney";
 import { cn } from "~/lib/utils";
 import {
   USAGE_SERIES_ORDER as PROVIDER_ORDER,
@@ -188,6 +189,7 @@ function chartScale(
   loadingProviders: ReadonlySet<UsageProviderKind>,
   previousPeak = 0,
   totalOnly = false,
+  displayFactor = 1,
 ) {
   // Layered series each start at zero; summing peaks would waste plot height.
   const peak = columns.reduce(
@@ -199,7 +201,13 @@ function chartScale(
   );
   return peak === 0 && loadingProviders.size > 0
     ? { max: TICK_COUNT, ticks: PLACEHOLDER_TICKS, labeled: false }
-    : { ...niceScale(peak, TICK_COUNT), labeled: true };
+    : { ...displayedNiceScale(peak, displayFactor), labeled: true };
+}
+
+// Round the ticks in the displayed unit, so a converted currency still reads ¥50, ¥100.
+function displayedNiceScale(peak: number, displayFactor: number) {
+  const { max, ticks } = niceScale(peak * displayFactor, TICK_COUNT);
+  return { max: max / displayFactor, ticks: ticks.map((tick) => tick / displayFactor) };
 }
 
 function valueToY(value: number, max: number) {
@@ -216,7 +224,13 @@ function buildChart(
   totalOnly = false,
 ) {
   const columns = buildPeriodColumns(periods, byPeriod, metric);
-  const scale = chartScale(columns, loadingProviders, previousPeak, totalOnly);
+  const scale = chartScale(
+    columns,
+    loadingProviders,
+    previousPeak,
+    totalOnly,
+    metric === "cost" ? costDisplayFactor() : 1,
+  );
   const stepX = periods.length < 2 ? 0 : VIEW_WIDTH / (periods.length - 1);
   const paths = providers.map((provider) => {
     const slot = PROVIDER_ORDER.indexOf(provider);
@@ -510,8 +524,8 @@ export function UsageProviderChart({
                 >
                   {tick === 0
                     ? "0"
-                    : totalOnly && metric === "cost" && Number.isInteger(tick)
-                      ? "$" + String(tick)
+                    : totalOnly && metric === "cost" && isWholeDisplayedCost(tick)
+                      ? formatUsdWhole(tick)
                       : format(tick)}
                 </span>
               ))

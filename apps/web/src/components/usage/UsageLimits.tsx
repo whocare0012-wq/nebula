@@ -24,7 +24,13 @@ import {
 } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { normalizeProviderAccentColor } from "@t3tools/client-runtime/state/provider-instance-display";
-import { type LimitPace, paceOf, paceRemainingPercent, remainingPercent, type ResetCreditChoice } from "@t3tools/shared/usageLimits";
+import {
+  type LimitPace,
+  paceOf,
+  paceRemainingPercent,
+  remainingPercent,
+  type ResetCreditChoice,
+} from "@t3tools/shared/usageLimits";
 import { formatResetsIn } from "@t3tools/shared/usageLimitsCopy";
 import { GaugeIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { Fragment, useLayoutEffect, useState, type ReactNode } from "react";

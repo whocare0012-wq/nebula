@@ -9665,4 +9665,11 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Off by default. When on, once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.":
     "默认关闭。开启后每天向 xiaoxin666.cn 发送一次随机安装 ID、应用版本和系统类型，让作者知道有多少人在用 T3 星尘版。不保存聊天、账号、项目或 IP 地址。",
   "{version} available · {action}": "发现 {version}；{action}",
+  "Edit exchange rate": "编辑汇率",
+  "Yuan per US dollar": "1 美元兑人民币",
+  "Decrease exchange rate": "降低汇率",
+  "Increase exchange rate": "提高汇率",
+  "Cost currency": "费用币种",
+  "US dollars": "美元",
+  "Chinese yuan": "人民币",
 };

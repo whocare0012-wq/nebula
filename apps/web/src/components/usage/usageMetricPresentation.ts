@@ -1,4 +1,5 @@
-import { formatPercent, formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { formatPercent, formatTokens } from "@t3tools/shared/usageFormat";
+import { formatUsd } from "./usageMoney";
 import { uiText } from "~/i18n";
 import type { UsageMetric } from "./usageShortcuts";
 

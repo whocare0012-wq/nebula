@@ -189,9 +189,35 @@ function LimitSlot({
           <span className="usage-slot-number">{text("Empty slot {number}", { number })}</span>
           <span className="usage-slot-holo usage-slot-compass" aria-hidden>
             <svg viewBox="0 0 130 130" className="usage-compass-svg">
-              <circle cx="65" cy="65" r="54" fill="none" className="usage-compass-outer" strokeWidth="1" strokeDasharray="2 3" />
-              <circle cx="65" cy="65" r="39" fill="none" className="usage-compass-mid" strokeWidth="2" strokeDasharray="115 140" transform="rotate(-65 65 65)" />
-              <circle cx="65" cy="65" r="24" fill="none" className="usage-compass-inner" strokeWidth="2" strokeDasharray="68 140" transform="rotate(25 65 65)" />
+              <circle
+                cx="65"
+                cy="65"
+                r="54"
+                fill="none"
+                className="usage-compass-outer"
+                strokeWidth="1"
+                strokeDasharray="2 3"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r="39"
+                fill="none"
+                className="usage-compass-mid"
+                strokeWidth="2"
+                strokeDasharray="115 140"
+                transform="rotate(-65 65 65)"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r="24"
+                fill="none"
+                className="usage-compass-inner"
+                strokeWidth="2"
+                strokeDasharray="68 140"
+                transform="rotate(25 65 65)"
+              />
               <circle cx="65" cy="65" r="6" className="usage-compass-core" />
               <circle cx="101" cy="49" r="4" className="usage-compass-node-a" />
               <circle cx="40" cy="24" r="3.5" className="usage-compass-node-b" />

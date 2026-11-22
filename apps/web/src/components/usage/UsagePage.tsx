@@ -55,7 +55,16 @@ import { isModelPickerOpen } from "../../modelPickerVisibility";
 import { shortcutLabelForCommand } from "../../keybindings";
 import { useUsage, type EnvironmentUsageStatus } from "../../state/usage";
 import { useAtomCommand } from "../../state/use-atom-command";
-import { enumerateDays, enumerateHourStarts, formatCount, formatPercent, formatTokens, formatUsd, makeWindow, usageSourceMessages } from "@t3tools/shared/usageFormat";
+import {
+  enumerateDays,
+  enumerateHourStarts,
+  formatCount,
+  formatPercent,
+  formatTokens,
+  makeWindow,
+  usageSourceMessages,
+} from "@t3tools/shared/usageFormat";
+import { formatUsd, UsageCurrencyControl, useUsageCurrencyKey } from "./usageMoney";
 import { formatUsageContractMismatch } from "@t3tools/shared/usageFormatCopy";
 import { Button, InlineButton } from "../ui/button";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
@@ -203,6 +212,8 @@ export function UsagePage() {
   const metric = preferences.metric;
   const showingLimits = metric === "limits";
   const showingDisk = metric === "disk";
+  // Cost helpers read the currency outside React, so a change remounts the page to reformat it.
+  const currencyKey = useUsageCurrencyKey();
   const [motionTick, setMotionTick] = useState(0);
   const [diskRefreshTick, setDiskRefreshTick] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -438,6 +449,7 @@ export function UsagePage() {
             ))}
           </ToggleGroup>
         )}
+        {showingLimits || showingDisk ? null : <UsageCurrencyControl />}
         <ToggleGroup
           aria-label={uiText("Usage metric")}
           variant="segmented"
@@ -506,6 +518,7 @@ export function UsagePage() {
             </SelectPopup>
           </Select>
         )}
+        {showingLimits || showingDisk ? null : <UsageCurrencyControl />}
         <Select
           value={metric}
           onValueChange={(value) => {
@@ -574,7 +587,11 @@ export function UsagePage() {
           <AppRouteModalClose />
         </header>
         <ScrollArea className="min-h-0 flex-1" observeContent>
-          <WorkspacePageContainer width="wide" data-slot="workspace-page-container">
+          <WorkspacePageContainer
+            key={currencyKey}
+            width="wide"
+            data-slot="workspace-page-container"
+          >
             <UsageMotion
               replay={usageReplayKey(metric, 0)}
               dataKey={`${shownWindow.sinceDay}:${shownWindow.untilDay}:${shownWindow.sinceTime ?? ""}`}

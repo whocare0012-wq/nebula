@@ -132,11 +132,9 @@ describe("hourly usage formatting", () => {
     const instant = "2026-08-11T12:37:00.000Z";
     for (const zone of ["UTC", "America/New_York", "Asia/Kathmandu", "UTC"]) {
       expect(formatHourShort(instant, zone)).toBe(
-        new Intl.DateTimeFormat("en-US", {
-          timeZone: zone,
-          hour: "numeric",
-          minute: "2-digit",
-        }).format(new Date(instant)),
+        new Intl.DateTimeFormat("en-US", { timeZone: zone, hour: "numeric" }).format(
+          new Date(instant),
+        ),
       );
     }
     expect(() => formatHourShort(instant, "Etc/Unknown")).toThrow(RangeError);
@@ -144,13 +142,13 @@ describe("hourly usage formatting", () => {
   });
 
   it("disambiguates repeated hours during a fall-back transition", () => {
-    expect(formatHourShort("2026-11-01T05:37:00.000Z", "America/New_York")).toBe("1:37 AM EDT");
-    expect(formatHourShort("2026-11-01T06:37:00.000Z", "America/New_York")).toBe("1:37 AM EST");
+    expect(formatHourShort("2026-11-01T05:37:00.000Z", "America/New_York")).toBe("1 AM EDT");
+    expect(formatHourShort("2026-11-01T06:37:00.000Z", "America/New_York")).toBe("1 AM EST");
     expect(formatHourShort("2026-11-01T05:37:00.000Z", "America/New_York", false)).toBe(
-      "01:37 EDT",
+      "01:00 EDT",
     );
     expect(formatHourShort("2026-11-01T06:37:00.000Z", "America/New_York", false)).toBe(
-      "01:37 EST",
+      "01:00 EST",
     );
   });
 
