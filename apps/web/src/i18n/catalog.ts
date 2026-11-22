@@ -9662,7 +9662,7 @@ export const zhCN: Readonly<Record<string, string>> = {
     "每天发送一次随机安装 ID、应用版本和系统类型，不保存聊天、账号、项目或 IP 地址。可以随时在「设置 → 关于」里关闭。",
   "Turn off": "关闭统计",
   "Count me as an active Stardust user": "计入星尘版活跃用户",
-  "On by default. Once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.":
-    "默认开启。每天向 xiaoxin666.cn 发送一次随机安装 ID、应用版本和系统类型，让作者知道有多少人在用 T3 星尘版。不保存聊天、账号、项目或 IP 地址。",
+  "Off by default. When on, once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.":
+    "默认关闭。开启后每天向 xiaoxin666.cn 发送一次随机安装 ID、应用版本和系统类型，让作者知道有多少人在用 T3 星尘版。不保存聊天、账号、项目或 IP 地址。",
   "{version} available · {action}": "发现 {version}；{action}",
 };

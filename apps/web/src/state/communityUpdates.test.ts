@@ -81,13 +81,15 @@ describe("community release boundaries", () => {
   });
 });
 describe("community checks", () => {
-  it("defaults to standard mode, performs credential-free checks, and finds a newer release", async () => {
+  it("defaults to standard mode with background checks off, and finds a newer release when on", async () => {
     const fetch = vi
       .fn()
       .mockResolvedValue({ ok: true, json: async () => stardustRelease("1.2.2") });
     vi.stubGlobal("fetch", fetch);
     const { useCommunityUpdates: s } = await import("./communityUpdates");
     expect(s.getState().mode).toBe("standard");
+    expect(s.getState().automatic).toBe(false);
+    s.getState().setAutomatic(true);
     await s.getState().check();
     expect(s.getState().status).toBe("available");
     expect(fetch.mock.calls[0]?.[1]).toMatchObject({
@@ -144,6 +146,7 @@ describe("community checks", () => {
     const fetch = vi.fn().mockRejectedValue(new Error("offline"));
     vi.stubGlobal("fetch", fetch);
     const { useCommunityUpdates: s } = await import("./communityUpdates");
+    s.getState().setAutomatic(true);
     await s.getState().check();
     expect(s.getState()).toMatchObject({ status: "error", error: "offline" });
     await s.getState().check();

@@ -40,8 +40,8 @@ export function readStardustStatsPreferences(
 ): StardustStatsPreferences {
   const v = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
-    // Counting is on unless the user turned it off.
-    enabled: v.enabled !== false,
+    // Counting is opt-in: nothing is sent until the user turns it on.
+    enabled: v.enabled === true,
     noticeShown: v.noticeShown === true,
     install:
       typeof v.install === "string" && INSTALL_RE.test(v.install) ? v.install : makeInstallId(),

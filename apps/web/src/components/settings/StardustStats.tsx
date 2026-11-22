@@ -62,7 +62,7 @@ export function StardustStatsRow() {
     <SettingsRow
       title={uiText("Count me as an active Stardust user")}
       description={uiText(
-        "On by default. Once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.",
+        "Off by default. When on, once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.",
       )}
       control={
         <Switch

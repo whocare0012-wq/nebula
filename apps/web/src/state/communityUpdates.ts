@@ -22,7 +22,8 @@ function readPreferences(): Preferences {
   const defaults: Preferences = {
     mode: "standard",
     modeChosen: false,
-    automatic: true,
+    // This fork ships no releases of its own, so polling the upstream Stardust repo is opt-in.
+    automatic: false,
     lastAttempt: 0,
     notifiedTag: "",
   };

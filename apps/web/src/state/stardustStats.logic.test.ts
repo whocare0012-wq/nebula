@@ -14,9 +14,9 @@ const id = "ab".repeat(32);
 const day = Date.UTC(2026, 10, 22, 9);
 
 describe("stardust stats preferences", () => {
-  it("defaults to on, notice not shown, a fresh install id", () => {
+  it("defaults to off, notice not shown, a fresh install id", () => {
     expect(readStardustStatsPreferences(null, () => id)).toEqual({
-      enabled: true,
+      enabled: false,
       noticeShown: false,
       install: id,
       lastSentDay: "",

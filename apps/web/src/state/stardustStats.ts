@@ -69,7 +69,8 @@ export const useStardustStats = create<StardustStatsState>((set, get) => {
   const initial = readPreferences();
   return {
     ...initial,
-    setEnabled: (enabled) => save({ enabled }),
+    // Turning counting on is consent, so the first-run notice has nothing left to say.
+    setEnabled: (enabled) => save(enabled ? { enabled, noticeShown: true } : { enabled }),
     markNoticeShown: () => save({ noticeShown: true }),
     send: () => {
       if (pending) return pending;
