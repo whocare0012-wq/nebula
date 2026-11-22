@@ -53,7 +53,6 @@ import {
 } from "./Sidebar.logic";
 
 import type { SidebarThreadSummary } from "../types";
-import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import {
   PULL_REQUEST_STATE_PRESENTATION,
@@ -61,6 +60,7 @@ import {
   type PullRequestGlyphIcon,
 } from "./pullRequest/pullRequestIcons";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
+import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 
 export interface PrStatusIndicator {
   label: string;

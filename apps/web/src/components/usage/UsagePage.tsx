@@ -573,7 +573,7 @@ export function UsagePage() {
           ) : null}
           <AppRouteModalClose />
         </header>
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1" observeContent>
           <WorkspacePageContainer width="wide" data-slot="workspace-page-container">
             <UsageMotion
               replay={usageReplayKey(metric, 0)}
