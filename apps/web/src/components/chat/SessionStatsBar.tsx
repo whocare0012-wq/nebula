@@ -279,11 +279,14 @@ export const SessionStatsBar = memo(function SessionStatsBar({
               </PopoverPopup>
             </Popover>
           </>
-        ) : current !== null ? (
+        ) : current !== null || stats.turns > 0 ? (
           <>
             <span aria-hidden="true" data-v9-stats-sep />
-            <span className="px-2 text-xs text-muted-foreground">
-              {uiText("Reported after this turn")}
+            <span className="px-2 text-xs text-muted-foreground" data-session-usage-unreported>
+              {/* A finished turn with no usage means this agent does not report it (some ACP agents). */}
+              {stats.turns > 0
+                ? uiText("Tokens and cost not reported")
+                : uiText("Reported after this turn")}
             </span>
           </>
         ) : null}

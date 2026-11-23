@@ -154,3 +154,14 @@ it("shows the live output rate of the running turn and hides it while disconnect
   await screen.rerender(bar(live, "en", true));
   expect(summary()).not.toContain("tok/s");
 });
+
+it("says when an agent finished turns without reporting tokens", async () => {
+  const finished = projection(true);
+  const unreported = {
+    ...finished,
+    providerTurns: finished.providerTurns.map((turn) => ({ ...turn, turnTokenUsage: undefined })),
+  } as typeof finished;
+  await using screen = await render(bar(unreported, "en"));
+  const note = screen.container.querySelector("[data-session-usage-unreported]");
+  expect(note?.textContent).toBe("Tokens and cost not reported");
+});
