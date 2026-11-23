@@ -17,6 +17,7 @@ import {
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
 import { useClientSettings } from "../../hooks/useSettings";
 import { useThreadActions } from "../../hooks/useThreadActions";
+import { uiText } from "../../i18n";
 import { useUiText } from "../../i18n/useUiText";
 import { cn } from "../../lib/utils";
 import { readLocalApi } from "../../localApi";
@@ -40,7 +41,7 @@ function reportFailure(title: string, result: AtomCommandResult<unknown, unknown
     stackedThreadToast({
       type: "error",
       title,
-      description: error instanceof Error ? error.message : "An error occurred.",
+      description: error instanceof Error ? error.message : uiText("An error occurred."),
     }),
   );
 }
@@ -76,7 +77,7 @@ export function InboxQuickActions(props: {
         environmentId: threadRef.environmentId,
         input: { threadId: threadRef.threadId },
       });
-      if (result._tag === "Failure") reportFailure("Failed to stop thread", result);
+      if (result._tag === "Failure") reportFailure(text("Failed to stop thread"), result);
     })();
   };
   const archive = () => {
@@ -84,11 +85,13 @@ export function InboxQuickActions(props: {
       if (confirmArchive) {
         const api = readLocalApi();
         if (!api) return;
-        const confirmed = await api.dialogs.confirm(`Archive thread "${props.title}"?`);
+        const confirmed = await api.dialogs.confirm(
+          text("Archive thread “{title}”?", { title: props.title }),
+        );
         if (!confirmed) return;
       }
       const result = await archiveThread(threadRef);
-      if (result._tag === "Failure") reportFailure("Failed to archive thread", result);
+      if (result._tag === "Failure") reportFailure(text("Failed to archive thread"), result);
     })();
   };
   const snooze = (presetId: string) => {
@@ -96,13 +99,13 @@ export function InboxQuickActions(props: {
     if (!picked) return;
     void (async () => {
       const result = await snoozeThread(threadRef, picked.snoozedUntil);
-      if (result._tag === "Failure") reportFailure("Failed to snooze thread", result);
+      if (result._tag === "Failure") reportFailure(text("Failed to snooze thread"), result);
     })();
   };
   const remove = () => {
     void (async () => {
       const result = await confirmAndDeleteThread(threadRef);
-      if (result._tag === "Failure") reportFailure("Failed to delete thread", result);
+      if (result._tag === "Failure") reportFailure(text("Failed to delete thread"), result);
     })();
   };
 
@@ -277,7 +280,7 @@ export function InboxStatusDot(props: {
     if (!picked) return;
     void (async () => {
       const result = await snoozeThread(props.threadRef, picked.snoozedUntil);
-      if (result._tag === "Failure") reportFailure("Failed to snooze thread", result);
+      if (result._tag === "Failure") reportFailure(text("Failed to snooze thread"), result);
     })();
   };
   const current = props.status;

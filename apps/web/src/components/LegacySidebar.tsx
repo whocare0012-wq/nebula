@@ -603,7 +603,8 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
         stackedThreadToast({
           type: "error",
           title: uiText("Unable to open preview"),
-          description: error instanceof Error ? error.message : "The preview could not be opened.",
+          description:
+            error instanceof Error ? error.message : uiText("The preview could not be opened."),
         }),
       );
     })();
@@ -1877,7 +1878,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
           description: uiText("Delete all threads in this project before removing it."),
           actionVariant: "destructive",
           actionProps: {
-            children: "Delete anyway",
+            children: uiText("Delete anyway"),
             onClick: () => {
               void (async () => {
                 toastManager.close(warningToastId);
@@ -1932,13 +1933,17 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
                       type: "error",
                       title: uiText('Failed to remove "{0}"', { "0": member.title }),
                       description:
-                        error instanceof Error ? error.message : "Unknown error removing project.",
+                        error instanceof Error
+                          ? error.message
+                          : uiText("Unknown error removing project."),
                     }),
                   );
                 }
               })().catch((error) => {
                 const message =
-                  error instanceof Error ? error.message : "Unknown error removing project.";
+                  error instanceof Error
+                    ? error.message
+                    : uiText("Unknown error removing project.");
                 console.error("Failed to remove project", {
                   projectId: member.id,
                   environmentId: member.environmentId,
@@ -1972,7 +1977,8 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
     const result = await removeProject(member);
     if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
-      const message = error instanceof Error ? error.message : "Unknown error removing project.";
+      const message =
+        error instanceof Error ? error.message : uiText("Unknown error removing project.");
       console.error("Failed to remove project", {
         projectId: member.id,
         environmentId: member.environmentId,
@@ -2255,7 +2261,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
     if (clicked === "archive") {
       if (appSettingsConfirmThreadArchive) {
         const confirmed = await api.dialogs.confirm(
-          `Archive ${count} thread${count === 1 ? "" : "s"}?`,
+          count === 1 ? uiText("Archive 1 thread?") : uiText("Archive {count} threads?", { count }),
         );
         if (!confirmed) return;
       }
@@ -2604,7 +2610,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
           : []),
         { id: "rename", label: uiText("Rename thread"), disabled: !canOperateThread },
         ...(appAtomRegistry.get(canShareWithGuestAtom(thread.environmentId))
-          ? [{ id: "share-guest", label: "Share with guest" }]
+          ? [{ id: "share-guest", label: uiText("Share with guest") }]
           : []),
         { id: "set-category", label: uiText("Change category…") },
         { id: "move-project", label: uiText("Move to project…") },
@@ -4570,7 +4576,8 @@ export default function LegacySidebar(props: { routeReveal: SidebarRouteReveal }
             stackedThreadToast({
               type: "error",
               title: uiText("Could not start update download"),
-              description: error instanceof Error ? error.message : "An unexpected error occurred.",
+              description:
+                error instanceof Error ? error.message : uiText("An unexpected error occurred."),
             }),
           );
         })
@@ -4589,7 +4596,8 @@ export default function LegacySidebar(props: { routeReveal: SidebarRouteReveal }
           stackedThreadToast({
             type: "error",
             title: uiText("Could not confirm update"),
-            description: error instanceof Error ? error.message : "Update confirmation failed.",
+            description:
+              error instanceof Error ? error.message : uiText("Update confirmation failed."),
           }),
         );
         return;
@@ -4617,7 +4625,8 @@ export default function LegacySidebar(props: { routeReveal: SidebarRouteReveal }
             stackedThreadToast({
               type: "error",
               title: uiText("Could not install update"),
-              description: error instanceof Error ? error.message : "An unexpected error occurred.",
+              description:
+                error instanceof Error ? error.message : uiText("An unexpected error occurred."),
             }),
           );
         })

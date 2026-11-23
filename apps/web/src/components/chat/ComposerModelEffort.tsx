@@ -255,6 +255,7 @@ function ColumnRow(props: {
   disabled?: boolean;
   onPick: () => void;
 }) {
+  const uiText = useUiText();
   const rowProps = {
     type: "button",
     role: "radio",
@@ -273,11 +274,11 @@ function ColumnRow(props: {
       <span className="min-w-0 flex-1 truncate">{props.label}</span>
       {props.selected ? (
         <>
-          {props.isDefault ? <span className="sr-only">Default</span> : null}
+          {props.isDefault ? <span className="sr-only">{uiText("Default")}</span> : null}
           <CheckIcon aria-hidden="true" className="size-3.5" />
         </>
       ) : props.isDefault ? (
-        <span className="text-muted-foreground/70 text-xs">Default</span>
+        <span className="text-muted-foreground/70 text-xs">{uiText("Default")}</span>
       ) : null}
     </>
   );
@@ -386,7 +387,7 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
         {([true, false] as const).map((value) => (
           <ColumnRow
             key={String(value)}
-            label={value ? "On" : "Off"}
+            label={value ? uiText("On") : uiText("Off")}
             selected={(control.descriptor.currentValue === true) === value}
             tabStop={(control.descriptor.currentValue === true) === value}
             onPick={() => traits.changeBoolean(descriptor.id, value)}
@@ -434,7 +435,11 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  aria-label={option.isDefault ? `${translatedLabel} (Default)` : translatedLabel}
+                  aria-label={
+                    option.isDefault
+                      ? uiText("{label} (Default)", { label: translatedLabel })
+                      : translatedLabel
+                  }
                   disabled={locked}
                   data-effort-row
                   data-effort-level
@@ -502,6 +507,7 @@ function OptionMenuRow(props: {
   /** Holds the column's tab stop when the model has no levels. */
   tabStop: boolean;
 }) {
+  const uiText = useUiText();
   const { descriptor, traits } = props;
   const [open, setOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -583,7 +589,7 @@ function OptionMenuRow(props: {
                   ) : null}
                 </span>
                 {choice.isDefault ? (
-                  <span className="text-muted-foreground/70 text-xs">Default</span>
+                  <span className="text-muted-foreground/70 text-xs">{uiText("Default")}</span>
                 ) : null}
                 <MenuRadioItemIndicator />
               </span>
@@ -619,8 +625,11 @@ function OptionSwitchRow(props: {
 }
 
 function NoEffortRow() {
+  const uiText = useUiText();
   return (
-    <div className="flex h-8 items-center px-2 text-muted-foreground text-sm">No effort levels</div>
+    <div className="flex h-8 items-center px-2 text-muted-foreground text-sm">
+      {uiText("No effort levels")}
+    </div>
   );
 }
 
@@ -646,6 +655,7 @@ function SpeedSegment(props: {
   description?: string | undefined;
   onPick: () => void;
 }) {
+  const uiText = useUiText();
   const buttonProps = {
     type: "button",
     role: "radio",
@@ -659,7 +669,7 @@ function SpeedSegment(props: {
       {props.label === "Fast" || props.label === "Ultrafast" ? (
         <FastBolt ultra={props.label === "Ultrafast"} />
       ) : null}
-      {props.label}
+      {uiText(props.label)}
     </>
   );
   if (!props.description) return <button {...buttonProps}>{content}</button>;

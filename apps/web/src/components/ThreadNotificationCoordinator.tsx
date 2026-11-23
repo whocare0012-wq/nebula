@@ -1,3 +1,4 @@
+import { uiText } from "~/i18n";
 import { m } from "~/i18n/messages";
 import { msg } from "gt-react";
 import { startTaskBoardNotifications } from "../taskBoardNotifications";
@@ -158,8 +159,8 @@ export function startThreadNotifications(
             : status === "failed"
               ? m(msg("Thread failed"))
               : status === "request"
-                ? "Guest request"
-                : "Input needed";
+                ? m(msg("Guest request"))
+                : m(msg("Input needed"));
     if (kind === "waiting") {
       // A light hint: in-app only, never a sound, badge or desktop notification.
       if (
@@ -173,11 +174,11 @@ export function startThreadNotifications(
       const waitingToastId: ToastId = toastManager.add({
         onRemove: (): void => forgetToast(waitingKey, waitingToastId),
         type: "info",
-        title: "Waiting for background tasks",
+        title: uiText("Waiting for background tasks"),
         description: thread.title,
         data: { hideCopyButton: true },
         actionProps: {
-          children: "Open thread",
+          children: m(msg("Open thread")),
           onClick: () => {
             toastManager.close(waitingToastId);
             void router.navigate({

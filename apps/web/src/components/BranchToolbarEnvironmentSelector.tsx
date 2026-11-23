@@ -59,13 +59,15 @@ export const BranchToolbarEnvironmentSelector = memo(function BranchToolbarEnvir
 
   const environmentItems = [
     ...(onAutoEnvironment
-      ? [{ value: AUTO_VALUE, label: autoEnvironmentLabel ?? "Auto balance" }]
+      ? [{ value: AUTO_VALUE, label: autoEnvironmentLabel ?? uiText("Auto balance") }]
       : []),
     ...availableEnvironments.map((env) => ({
       value: environmentValue(env.environmentId),
       label: env.label,
     })),
-    ...(onAddToMachine ? [{ value: ADD_MACHINE_VALUE, label: "Add to another machine" }] : []),
+    ...(onAddToMachine
+      ? [{ value: ADD_MACHINE_VALUE, label: uiText("Add to another machine") }]
+      : []),
   ];
 
   // Match the xs control's height and padding: the composer strip has no min-height,
@@ -81,14 +83,14 @@ export const BranchToolbarEnvironmentSelector = memo(function BranchToolbarEnvir
           className="size-3 shrink-0"
         />
         <ComposerContextLabel>
-          {compactLabel ?? activeEnvironment?.label ?? "Run on"}
+          {compactLabel ?? activeEnvironment?.label ?? uiText("Run on")}
         </ComposerContextLabel>
       </span>
     );
     return (
       <Tooltip>
         <TooltipTrigger render={lockedRow} />
-        <TooltipPopup>{activeEnvironment?.label ?? "Run on"}</TooltipPopup>
+        <TooltipPopup>{activeEnvironment?.label ?? uiText("Run on")}</TooltipPopup>
       </Tooltip>
     );
   }
@@ -169,7 +171,7 @@ export const BranchToolbarEnvironmentSelector = memo(function BranchToolbarEnvir
             <SelectItem value={ADD_MACHINE_VALUE}>
               <span className={ADD_TO_MACHINE_LABEL_CLASS}>
                 <PlusIcon aria-hidden="true" className="size-3" />
-                Add to another machine
+                {uiText("Add to another machine")}
               </span>
             </SelectItem>
           ) : null}

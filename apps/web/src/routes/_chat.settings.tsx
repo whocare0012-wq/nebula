@@ -1,3 +1,4 @@
+import { uiText } from "../i18n";
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
@@ -88,11 +89,11 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
       >
         {targetAvailability.eligibleEnvironmentIds.length > 0
           ? gt("{title} requires a supporting environment. Choose one to continue.", {
-              title: m(searchTarget.title),
+              title: uiText(m(searchTarget.title)),
             })
           : gt(
               "{title} requires a supporting environment. Connect or update an environment to continue.",
-              { title: m(searchTarget.title) },
+              { title: uiText(m(searchTarget.title)) },
             )}
       </SettingsScopeNotice>
     );

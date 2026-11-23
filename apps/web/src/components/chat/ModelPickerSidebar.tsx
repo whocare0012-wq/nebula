@@ -15,19 +15,25 @@ import {
 
 export type ModelPickerTabId = ProviderInstanceId | "favorites" | "all";
 
-function describeUnavailableInstance(entry: ProviderInstanceEntry): string {
+function describeUnavailableInstance(
+  entry: ProviderInstanceEntry,
+  uiText: ReturnType<typeof useUiText>,
+): string {
   const label = entry.displayName;
   // An unavailable instance (a driver this build lacks or the policy leaves out) says why instead.
   if ((!entry.enabled && entry.isAvailable) || entry.status === "disabled") {
-    return `${label}: Disabled in settings.`;
+    return uiText("{label}: Disabled in settings.", { label });
   }
   if (entry.status === "ready" && entry.isAvailable) {
     return label;
   }
-  const kind =
-    entry.status === "error" ? "Unavailable" : entry.status === "warning" ? "Limited" : "Not ready";
+  const kind = uiText(
+    entry.status === "error" ? "Unavailable" : entry.status === "warning" ? "Limited" : "Not ready",
+  );
   const msg = entry.snapshot.message?.trim();
-  return msg ? `${label}: ${kind}. ${msg}` : `${label}: ${kind}.`;
+  return msg
+    ? uiText("{label}: {kind}. {message}", { label, kind, message: msg })
+    : uiText("{label}: {kind}.", { label, kind });
 }
 
 export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
@@ -96,7 +102,7 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
         const showInstanceBadge = shouldShowInstanceBadge(entry, props.instanceEntries);
 
         const tooltip = isUnavailable
-          ? describeUnavailableInstance(entry)
+          ? describeUnavailableInstance(entry, uiText)
           : isContextDisabled
             ? (props.getDisabledInstanceTooltip?.(entry) ?? entry.displayName)
             : null;

@@ -109,9 +109,10 @@ type TraitsPersistence =
     };
 
 function DefaultBadge() {
+  const uiText = useUiText();
   return (
     <Badge variant="outline" size="sm" className="min-w-0">
-      Default
+      {uiText("Default")}
     </Badge>
   );
 }

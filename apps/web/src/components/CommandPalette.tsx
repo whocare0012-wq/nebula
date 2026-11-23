@@ -1,4 +1,3 @@
-
 import { buildProjectActionItems } from "./CommandPalette.logic";
 import { useLegacySidebarEnabled } from "../hooks/useSettings";
 import { getThreadSortTimestamp } from "@t3tools/client-runtime/state/thread-sort";
@@ -1987,8 +1986,8 @@ function OpenCommandPaletteDialog(props: {
       item.title,
       SETTINGS_SECTION_LABELS[item.to],
       ...(item.searchTerms ?? []),
-    ].flatMap((term) => [messages(term), decodeMsg(term)]),
-    title: messages(item.title),
+    ].flatMap((term) => [uiText(messages(term)), decodeMsg(term)]),
+    title: uiText(messages(item.title)),
     description: gt("Settings · {section}", {
       section: messages(SETTINGS_SECTION_LABELS[item.to]),
     }),

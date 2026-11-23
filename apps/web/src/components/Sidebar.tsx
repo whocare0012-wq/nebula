@@ -1,5 +1,6 @@
 import { thrownErrorMessage } from "@t3tools/client-runtime/errors";
 import { msg, T, useGT, useMessages } from "gt-react";
+import { uiText } from "../i18n";
 import { m } from "../i18n/messages";
 import { attachSidebarTree } from "../lib/sidebarTree";
 import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
@@ -1939,7 +1940,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       const api = readLocalApi();
       if (!api) return;
       const confirmed = await settlePromise(() =>
-        api.dialogs.confirm(`Archive thread "${thread.title}"?`),
+        api.dialogs.confirm(gt('Archive thread "{title}"?', { title: thread.title })),
       );
       if (confirmed._tag === "Failure" || !confirmed.value) return;
     }
@@ -1954,8 +1955,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: didArchive ? "Thread archived, but navigation failed" : "Failed to archive thread",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: didArchive
+            ? gt("Thread archived, but navigation failed")
+            : gt("Failed to archive thread"),
+          description: error instanceof Error ? error.message : gt("An error occurred."),
         }),
       );
     }
@@ -1979,8 +1982,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to stop thread",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title: uiText("Failed to stop thread"),
+            description: error instanceof Error ? error.message : gt("An error occurred."),
           }),
         );
       }

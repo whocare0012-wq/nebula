@@ -69,16 +69,19 @@ it("renders Chinese status copy and local hour labels with the real bucket minut
 
 import { ThreadErrorBanner } from "../components/chat/ThreadErrorBanner";
 import { WorkLogRow } from "../components/chat/WorkLog";
+import { conversationLabel } from "./conversationLabel";
+import { syncCustomLocale } from "./customLocale";
 import { DEFAULT_COMPOSER_PLACEHOLDER } from "../composerPlaceholder";
 import { TaskCommandActivities } from "../components/chat/TaskCommandActivities";
 function ConversationCopy() {
   const text = useUiText();
   return (
     <>
-      <WorkLogRow label="Ran 3 commands" />
-      <WorkLogRow label="Ran 10 commands and used browser 12 times" />
-      <WorkLogRow label="Tasks 0/4 · 核对文件" />
-      <WorkLogRow label="Worked for 4m 35s" />
+      {/* Timeline rows translate their summaries before handing them to WorkLogRow. */}
+      <WorkLogRow label={conversationLabel("Ran 3 commands", text)} />
+      <WorkLogRow label={conversationLabel("Ran 10 commands and used browser 12 times", text)} />
+      <WorkLogRow label={conversationLabel("Tasks 0/4 · 核对文件", text)} />
+      <WorkLogRow label={conversationLabel("Worked for 4m 35s", text)} />
       <ThreadErrorBanner error="The libtv MCP server requires OAuth reauthentication. Run `codex mcp login libtv`." />
       <ThreadErrorBanner error="Cancelled because the server restarted before the provider work completed." />
       <span>{text("Waiting")}</span>
@@ -100,6 +103,13 @@ function ConversationCopy() {
   );
 }
 it("renders Chinese conversation, task, sidebar, composer and plugin system copy while retaining command originals", async () => {
+  // Error banners read the app-wide UI locale, which the app syncs from the language setting.
+  syncCustomLocale("zh");
+  using _locale = {
+    [Symbol.dispose]() {
+      syncCustomLocale("en");
+    },
+  };
   await using screen = await render(
     <GTProvider locale="zh" translations={{ zh, en: {} } as never}>
       <ConversationCopy />

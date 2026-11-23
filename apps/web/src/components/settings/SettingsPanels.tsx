@@ -2007,7 +2007,7 @@ export function ThreadsSettingsPanel() {
   return (
     <SettingsPageContainer>
       <SidebarCategorySettingsSection />
-      <SettingsSection id="new-projects" title="New projects">
+      <SettingsSection id="new-projects" title={gt("New projects")}>
         <SettingsRow
           serverScoped
           settingKeys={["addProjectBaseDirectory"]}
@@ -2591,7 +2591,7 @@ export function AboutSettingsPanel() {
         )}
       </SettingsSection>
 
-      <SettingsSection id="legal" title="Legal">
+      <SettingsSection id="legal" title={gt("Legal")}>
         <TelemetryConsentRow />
         <SettingsRow
           {...setting("privacy-policy")}

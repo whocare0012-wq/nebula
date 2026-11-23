@@ -260,6 +260,7 @@ function ModelPickerProviderNotices({
   onRequestClose: (() => void) | undefined;
   onOpenProviderSetup: ((instanceId: ProviderInstanceId) => void) | undefined;
 }) {
+  const uiText = useUiText();
   const navigate = useNavigate();
   return (
     <>
@@ -277,7 +278,9 @@ function ModelPickerProviderNotices({
                   onOpenProviderSetup?.(entry.instanceId);
                 }}
               >
-                {setupEntries.length > 1 ? `Set up ${entry.displayName}` : "Open provider setup"}
+                {setupEntries.length > 1
+                  ? uiText("Set up {0}", { "0": entry.displayName })
+                  : uiText("Open provider setup")}
               </InlineButton>
             </div>
           ))}
@@ -300,7 +303,7 @@ function ModelPickerProviderNotices({
                   void navigate({ to: "/settings/providers" });
                 }}
               >
-                Provider settings
+                {uiText("Provider settings")}
               </InlineButton>
             </>
           ) : null}
@@ -896,9 +899,9 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       handleSelectInstance(next);
       announce(
         next === "favorites"
-          ? "Frequent"
+          ? uiText("Frequent")
           : next === "all"
-            ? "All"
+            ? uiText("All")
             : (entryByInstanceId.get(next)?.displayName ?? next),
         "model-picker",
       );
@@ -924,7 +927,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     const name = flatModels.find(
       (item) => item.slug === selectedSlug && item.instanceId === model.instanceId,
     )?.name;
-    announce(`Model: ${name ?? selectedSlug}`, "model-picker");
+    announce(uiText("Model: {name}", { name: name ?? selectedSlug }), "model-picker");
   };
 
   const toggleShortcutHint = shortcutLabelForCommand(keybindings, "modelPicker.toggle") || "⌘/";

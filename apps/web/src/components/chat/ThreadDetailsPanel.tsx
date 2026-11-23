@@ -296,7 +296,7 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                 {show.environment || show.openIn || show.scripts ? (
                   <ThreadDetailsSection
                     headingId="thread-details-workspace-heading"
-                    title="Workspace"
+                    title={uiText("Workspace")}
                     separated={false}
                     showHeading={false}
                   >
@@ -348,7 +348,7 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                 {show.branch || show.pullRequests || show.git ? (
                   <ThreadDetailsSection
                     headingId="thread-details-version-control-heading"
-                    title="Version Control"
+                    title={uiText("Version Control")}
                     showHeading={false}
                     separated={density === "full"}
                   >
@@ -430,7 +430,7 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                       aria-hidden
                     />
                     <span className={cn("ml-0.5", THREAD_DETAILS_PANEL_LABEL_CLASS)}>
-                      Choose what to show
+                      {uiText("Choose what to show")}
                     </span>
                   </ThreadDetailsControl>
                 </div>
