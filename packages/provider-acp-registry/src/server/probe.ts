@@ -392,14 +392,22 @@ export type AcpRegistryConfigurationProbe<Requirements = never> = (
   input: AcpRegistryConfigurationProbeInput,
 ) => Effect.Effect<AcpRegistryConfigurationProbeResult, AcpRegistryOperationError, Requirements>;
 
+// The DeepSeek Harness desktop app has no `dsh` executable: its wrapper is a batch file, which
+// local commands cannot launch, so users run the app executable on this bundled CLI script.
+const DSH_DESKTOP_CLI_SCRIPT = /[\\/]@deepseek-ai[\\/]dsh-desktop-host[\\/]lib[\\/]cli\.js$/iu;
+
 const isolateDeepSeekProbeHistory = Effect.fn("AcpRegistryProbe.isolateDeepSeekProbeHistory")(
   function* (commandPath: string, spawn: AcpSessionRuntime.AcpSpawnInput) {
     const executable = (commandPath || spawn.command).split(/[\\/]/u).at(-1) ?? "";
-    if (!/^dsh(?:\.cmd|\.exe)?$/iu.test(executable)) return spawn;
-
     const argumentSeparator = spawn.args.indexOf("--");
     const launcherArgs =
       argumentSeparator === -1 ? spawn.args : spawn.args.slice(0, argumentSeparator);
+    if (
+      !/^dsh(?:\.cmd|\.exe)?$/iu.test(executable) &&
+      !launcherArgs.some((arg) => DSH_DESKTOP_CLI_SCRIPT.test(arg))
+    ) {
+      return spawn;
+    }
     const usesAcpProfile =
       launcherArgs[0] === "acp" ||
       launcherArgs.includes("--profile=acp") ||
