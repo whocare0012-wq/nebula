@@ -5,6 +5,7 @@ import type { StorageInspection } from "@t3tools/contracts";
 import { Fragment, useState } from "react";
 
 import { formatBytes } from "../../lib/formatBytes";
+import { Tabs, TabsList, TabsTab } from "../ui/tabs";
 
 const VISIBLE_ROWS = 5;
 const PHASES: Record<string, string> = {
@@ -51,29 +52,19 @@ export function CleanupRecords({ data }: { readonly data: StorageInspection }) {
     <section data-usage-card className="usage-clean-records">
       <div className="usage-records-head">
         <h3>{uiText("Archives and cleanup history")}</h3>
-        <div
-          className="usage-records-tabs"
-          role="tablist"
-          aria-label={uiText("Archives and cleanup history")}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "archives"}
-            onClick={() => select("archives")}
-          >
-            {uiText("Archives ")}
-            {archives.length}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "operations"}
-            onClick={() => select("operations")}
-          >
-            {uiText("Cleanup history ")}
-            {operations.length}
-          </button>
+        <div className="ms-auto">
+          <Tabs value={tab} onValueChange={(value) => select(value as "archives" | "operations")}>
+            <TabsList size="sm" aria-label={uiText("Archives and cleanup history")}>
+              <TabsTab value="archives">
+                {uiText("Archives ")}
+                {archives.length}
+              </TabsTab>
+              <TabsTab value="operations">
+                {uiText("Cleanup history ")}
+                {operations.length}
+              </TabsTab>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
       {tab === "archives" ? (
