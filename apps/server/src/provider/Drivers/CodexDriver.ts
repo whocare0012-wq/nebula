@@ -58,6 +58,7 @@ import {
   resolveCodexHomeLayout,
 } from "./CodexHomeLayout.ts";
 import { makeManagedCodexProvider } from "./CodexManagedProvider.ts";
+import { resolveCodexDesktopBinary } from "../codexDesktopBinary.ts";
 import { codexUsageReader } from "./codexUsage.ts";
 import * as CodexInstallation from "../CodexInstallation.ts";
 import * as CodexManagedTokenBroker from "../CodexManagedTokenBroker.ts";
@@ -191,10 +192,16 @@ export const CodexDriver: ProviderDriver<
       yield* HostProcess.Environment,
     );
     const environmentHome = processEnv.CODEX_HOME;
-    const homeConfig =
-      !config.homePath.trim() && environmentHome?.trim()
-        ? { ...config, homePath: environmentHome }
-        : config;
+    const binaryPath = yield* resolveCodexDesktopBinary({
+      binaryPath: config.binaryPath,
+      platform: yield* HostProcess.Platform,
+      env: processEnv,
+    });
+    const homeConfig = {
+      ...config,
+      binaryPath,
+      ...(!config.homePath.trim() && environmentHome?.trim() ? { homePath: environmentHome } : {}),
+    };
     const homeLayout = yield* resolveCodexHomeLayout(homeConfig);
     const continuationIdentity = codexContinuationIdentity(homeLayout);
     const stampIdentity = withInstanceIdentity({
@@ -218,7 +225,7 @@ export const CodexDriver: ProviderDriver<
     const effectiveConfig = {
       ...config,
       enabled,
-      binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
+      binaryPath: expandHomePath(binaryPath, yield* HostProcess.HomeDirectory),
       homePath: homeLayout.effectiveHomePath ?? "",
       launchArgs: codexHomeLaunchArgs(pathService, homeLayout, config.launchArgs),
     } satisfies CodexSettings;
