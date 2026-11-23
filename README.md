@@ -54,17 +54,18 @@ T3 Stardust maintainers.
 
 Compared with T3 Stardust, T3 Nebula adds or changes the following:
 
-| Area                                    | Change                                                                                                                                                                                                                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Upstream**                            | The latest official T3 Code is merged into Stardust, with the conflicts resolved by hand.                                                                                                                                |
-| **Cost currency**                       | The Usage page shows costs in US dollars or Chinese yuan. The exchange rate is editable and remembered, and chart axes round in the selected currency.                                                                   |
-| **Live output speed**                   | While a turn runs, the stats bar under the composer shows its output rate in tokens per second, alongside the round, status and elapsed time.                                                                            |
-| **npm-installed ACP agents on Windows** | Local ACP commands installed with `npm install -g` work by name. T3 Nebula reads npm's `.cmd` wrapper and launches the program it starts, still without a shell.                                                         |
-| **DeepSeek Harness**                    | The desktop app's bundled CLI is recognized, so provider status checks no longer leave empty sessions in your DeepSeek history.                                                                                          |
-| **Privacy defaults**                    | Stardust's anonymous usage counting and its community update checks are **off by default**. Turn them on in Settings if you want them. The official auto-updater is disabled, so upstream builds never replace this one. |
-| **Windows packaging**                   | Builds a working NSIS installer. The payload limit now leaves room for the server bytecode cache, and the Windows `.ico` files carry the app icon.                                                                       |
-| **Name and icon**                       | The app is renamed T3 Nebula (T3 星云 in Chinese), with a new spiral-galaxy icon. The source is [assets/nebula-icon.svg](assets/nebula-icon.svg).                                                                        |
-| **Code hygiene**                        | Removes files and exports left unused after the merge, so the pre-commit checks pass again.                                                                                                                              |
+| Area                                    | Change                                                                                                                                                                                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Upstream**                            | The latest official T3 Code is merged into Stardust, with the conflicts resolved by hand.                                                                                                                                                    |
+| **Cost currency**                       | The Usage page shows costs in US dollars or Chinese yuan. The exchange rate is editable and remembered, and chart axes round in the selected currency.                                                                                       |
+| **Live output speed**                   | While a turn runs, the stats bar under the composer shows its output rate in tokens per second, alongside the round, status and elapsed time.                                                                                                |
+| **npm-installed ACP agents on Windows** | Local ACP commands installed with `npm install -g` work by name. T3 Nebula reads npm's `.cmd` wrapper and launches the program it starts, still without a shell.                                                                             |
+| **DeepSeek Harness**                    | The desktop app's bundled CLI is recognized, so provider status checks no longer leave empty sessions in your DeepSeek history.                                                                                                              |
+| **Privacy defaults**                    | Stardust's anonymous usage counting and its community update checks are **off by default**. Turn them on in Settings if you want them. The official auto-updater is disabled, so upstream builds never replace this one.                     |
+| **Windows packaging**                   | Builds a working NSIS installer. The payload limit now leaves room for the server bytecode cache, and the Windows `.ico` files carry the app icon.                                                                                           |
+| **Name and icon**                       | The app is renamed T3 Nebula (T3 星云 in Chinese), with a new spiral-galaxy icon. The source is [assets/nebula-icon.svg](assets/nebula-icon.svg).                                                                                            |
+| **Windows polish**                      | Controls that only work against macOS servers (the disk cleanup center, the Cursor Keychain switch) are hidden on Windows, the artifact wall says File Explorer instead of Finder, and `vp run dev` prefers IPv4 for `localhost` on Windows. |
+| **Code hygiene**                        | Removes files and exports left unused after the merge, so the pre-commit checks pass again.                                                                                                                                                  |
 
 <a id="build"></a>
 
@@ -83,7 +84,6 @@ To build one yourself:
 
 ```powershell
 vp i
-$env:NODE_OPTIONS = "--dns-result-order=ipv4first"   # only if localhost does not load (broken IPv6 loopback)
 vp run dev
 ```
 
@@ -129,7 +129,7 @@ gh release create v1.0.1 release/T3-Nebula-1.0.1-x64.exe release/T3-Nebula-1.0.1
   threads carry over, but it cannot be installed side by side with official T3 Code.
 - **Updates.** Installed builds check this repository's
   [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) and offer new versions in the app.
-- **macOS-only features.** Stardust's disk cleanup center only works on macOS and declines on Windows.
+- **macOS-only features.** Stardust's disk cleanup center and the Cursor Keychain switch only work on macOS servers, so they are hidden on Windows. The Usage page still shows disk usage.
 - **Windows test runs.** Some existing upstream and Stardust tests fail on Windows (symlink
   permissions, path assumptions). They fail the same way without this fork's changes.
 
