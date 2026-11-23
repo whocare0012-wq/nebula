@@ -31,6 +31,15 @@ merges reduced to a commit count. Pass `--notes <file>` to publish hand-written 
 `--dry-run` to print the version and notes without building or publishing. The build needs Rust for
 the resource monitor and an authenticated `gh` (or set `GH` to its path).
 
+## Tests on Windows
+
+Many upstream tests assume macOS or Linux: POSIX paths, symlinks (which need Developer Mode or
+admin rights on Windows), and `/bin/sh` scripts. T3 Nebula does not edit them, so upstream merges
+stay clean. `scripts/windows-known-failures.json` lists the tests known to fail on Windows instead.
+`node scripts/windows-test-baseline.ts apps/server apps/web scripts` runs those packages and fails
+only on tests outside the list; it also names listed tests that now pass. After a merge, review the
+new failures, fix any real Windows bug, and rerun with `--update` to record the rest.
+
 ## SQLite writer compatibility mode
 
 File-backed databases use a worker for writes. If that worker fails after startup,
