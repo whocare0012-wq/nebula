@@ -69,7 +69,7 @@ T3 星云是独立的社区项目，与 T3 Tools 及 T3 星尘版的维护者均
 
 ## 在 Windows 上构建
 
-目前还没有发布预编译版本，需要从源码构建安装包。
+预编译的安装包在 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 页面。自己构建的方法如下：
 
 **环境要求**
 
@@ -96,6 +96,16 @@ node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64
 安装包会生成在 `release/T3-Nebula-<版本号>-x64.exe`。安装包没有代码签名，Windows SmartScreen 会弹出提示，
 点「更多信息」再点「仍要运行」即可。
 
+**发布新版本**
+
+带上更新源和比上一版更高的版本号构建，再上传安装包、blockmap 和 `latest.yml`：
+
+```powershell
+$env:T3CODE_DESKTOP_UPDATE_REPOSITORY = "whocare0012-wq/t3-nebula"
+node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64 --build-version 1.0.1
+gh release create v1.0.1 release/T3-Nebula-1.0.1-x64.exe release/T3-Nebula-1.0.1-x64.exe.blockmap release/latest.yml --title "T3 Nebula 1.0.1"
+```
+
 <a id="providers"></a>
 
 ## 服务商
@@ -114,7 +124,8 @@ node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64
 
 - **共用数据。** T3 星云沿用 T3 Code 的应用 ID 和数据目录（`~/.t3`），原有的项目和对话会直接带过来，
   但不能和官方 T3 Code 同时安装。
-- **更新。** 目前更新需要安装新版本。计划之后支持从本仓库的 Releases 自动更新。
+- **更新。** 安装后的应用会检查本仓库的 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases)，
+  有新版本时在应用内提示。
 - **仅限 macOS 的功能。** 星尘版的磁盘清理中心只能在 macOS 上使用，在 Windows 上会拒绝执行。
 - **Windows 上的测试。** 部分官方和星尘版原有的测试在 Windows 上会失败（符号链接权限、路径假设等），
   去掉本分支的改动后同样失败。

@@ -70,7 +70,8 @@ Compared with T3 Stardust, T3 Nebula adds or changes the following:
 
 ## Build on Windows
 
-There are no prebuilt releases yet. Build the installer from source.
+Prebuilt installers are on the [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) page.
+To build one yourself:
 
 **Requirements**
 
@@ -97,6 +98,17 @@ node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64
 The installer is written to `release/T3-Nebula-<version>-x64.exe`. It is not code-signed, so Windows
 SmartScreen asks for confirmation: choose **More info**, then **Run anyway**.
 
+**Publish a release**
+
+Build with the update feed and a version above the last release, then upload the installer, its
+blockmap and `latest.yml`:
+
+```powershell
+$env:T3CODE_DESKTOP_UPDATE_REPOSITORY = "whocare0012-wq/t3-nebula"
+node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64 --build-version 1.0.1
+gh release create v1.0.1 release/T3-Nebula-1.0.1-x64.exe release/T3-Nebula-1.0.1-x64.exe.blockmap release/latest.yml --title "T3 Nebula 1.0.1"
+```
+
 <a id="providers"></a>
 
 ## Providers
@@ -115,8 +127,8 @@ SmartScreen asks for confirmation: choose **More info**, then **Run anyway**.
 
 - **Shared data.** T3 Nebula keeps T3 Code's app ID and data directory (`~/.t3`). Your projects and
   threads carry over, but it cannot be installed side by side with official T3 Code.
-- **Updates.** Updating means installing a newer build. Automatic updates from this repository's
-  releases are planned.
+- **Updates.** Installed builds check this repository's
+  [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) and offer new versions in the app.
 - **macOS-only features.** Stardust's disk cleanup center only works on macOS and declines on Windows.
 - **Windows test runs.** Some existing upstream and Stardust tests fail on Windows (symlink
   permissions, path assumptions). They fail the same way without this fork's changes.
