@@ -1,6 +1,4 @@
-
 import { uiText } from "~/i18n";
-import type { CSSProperties } from "react";
 import { useState } from "react";
 import { msg, useGT, useMessages } from "gt-react";
 import {
@@ -25,6 +23,7 @@ import { useCustomThemes } from "../../hooks/useCustomThemes";
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
+import { Slider } from "../ui/slider";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ThemeLibrary } from "./ThemeSettings";
@@ -134,26 +133,6 @@ export function AppearanceSettingsPanel() {
     : environmentStageVariant
       ? gt("Choose how Dev and Nightly environments are identified.")
       : gt("Show Dev or Nightly artwork in the sidebar header.");
-  const glassOpacityRatio =
-    (settings.glassOpacity - MIN_GLASS_OPACITY) / (MAX_GLASS_OPACITY - MIN_GLASS_OPACITY);
-  const glassOpacitySliderStyle = {
-    "--settings-slider-progress": `${glassOpacityRatio * 100}%`,
-    "--settings-slider-fill-offset": `${0.5 - glassOpacityRatio}rem`,
-  } as CSSProperties;
-  const appearanceContrastRatio =
-    (settings.appearanceContrast - MIN_APPEARANCE_CONTRAST) /
-    (MAX_APPEARANCE_CONTRAST - MIN_APPEARANCE_CONTRAST);
-  const appearanceContrastSliderStyle = {
-    "--settings-slider-progress": `${appearanceContrastRatio * 100}%`,
-    "--settings-slider-fill-offset": `${0.5 - appearanceContrastRatio}rem`,
-  } as CSSProperties;
-  const panelAnimationDurationRatio =
-    (settings.panelAnimationDurationMs - MIN_PANEL_ANIMATION_DURATION_MS) /
-    (MAX_PANEL_ANIMATION_DURATION_MS - MIN_PANEL_ANIMATION_DURATION_MS);
-  const panelAnimationDurationSliderStyle = {
-    "--settings-slider-progress": `${panelAnimationDurationRatio * 100}%`,
-    "--settings-slider-fill-offset": `${0.5 - panelAnimationDurationRatio}rem`,
-  } as CSSProperties;
   return (
     <SettingsPageContainer>
       <SettingsSection id="appearance" title={gt("Colors & themes")} variant="plain" hideTitle>
@@ -199,14 +178,15 @@ export function AppearanceSettingsPanel() {
                 {settings.appearanceContrast}
                 {"%"}
               </output>
-              <input
-                aria-label={gt("Contrast")}
-                className="settings-slider min-w-0 flex-1"
+              <Slider
+                getAriaLabel={() => gt("Contrast")}
+                className="min-w-0 flex-1"
                 id="appearance-contrast"
                 max={MAX_APPEARANCE_CONTRAST}
                 min={MIN_APPEARANCE_CONTRAST}
-                onChange={(event) => {
-                  const appearanceContrast = Number(event.currentTarget.value);
+                onValueChange={(value) => {
+                  const appearanceContrast =
+                    typeof value === "number" ? value : (value[0] ?? Number.NaN);
                   if (
                     Number.isInteger(appearanceContrast) &&
                     appearanceContrast >= MIN_APPEARANCE_CONTRAST &&
@@ -216,8 +196,6 @@ export function AppearanceSettingsPanel() {
                   }
                 }}
                 step={5}
-                style={appearanceContrastSliderStyle}
-                type="range"
                 value={settings.appearanceContrast}
               />
             </div>
@@ -245,14 +223,14 @@ export function AppearanceSettingsPanel() {
                 {settings.glassOpacity}
                 {"%"}
               </output>
-              <input
-                aria-label={gt("Glass opacity")}
-                className="settings-slider min-w-0 flex-1"
+              <Slider
+                getAriaLabel={() => gt("Glass opacity")}
+                className="min-w-0 flex-1"
                 id="glass-opacity"
                 max={MAX_GLASS_OPACITY}
                 min={MIN_GLASS_OPACITY}
-                onChange={(event) => {
-                  const glassOpacity = Number(event.currentTarget.value);
+                onValueChange={(value) => {
+                  const glassOpacity = typeof value === "number" ? value : (value[0] ?? Number.NaN);
                   if (
                     Number.isInteger(glassOpacity) &&
                     glassOpacity >= MIN_GLASS_OPACITY &&
@@ -262,8 +240,6 @@ export function AppearanceSettingsPanel() {
                   }
                 }}
                 step={5}
-                style={glassOpacitySliderStyle}
-                type="range"
                 value={settings.glassOpacity}
               />
             </div>
@@ -391,14 +367,15 @@ export function AppearanceSettingsPanel() {
                     {settings.panelAnimationDurationMs}
                     {" ms"}
                   </output>
-                  <input
-                    aria-label={gt("Panel animation duration")}
-                    className="settings-slider min-w-0 flex-1"
+                  <Slider
+                    getAriaLabel={() => gt("Panel animation duration")}
+                    className="min-w-0 flex-1"
                     id="panel-animation-duration"
                     max={MAX_PANEL_ANIMATION_DURATION_MS}
                     min={MIN_PANEL_ANIMATION_DURATION_MS}
-                    onChange={(event) => {
-                      const panelAnimationDurationMs = Number(event.currentTarget.value);
+                    onValueChange={(value) => {
+                      const panelAnimationDurationMs =
+                        typeof value === "number" ? value : (value[0] ?? Number.NaN);
                       if (
                         Number.isInteger(panelAnimationDurationMs) &&
                         panelAnimationDurationMs >= MIN_PANEL_ANIMATION_DURATION_MS &&
@@ -408,8 +385,6 @@ export function AppearanceSettingsPanel() {
                       }
                     }}
                     step={25}
-                    style={panelAnimationDurationSliderStyle}
-                    type="range"
                     value={settings.panelAnimationDurationMs}
                   />
                 </div>

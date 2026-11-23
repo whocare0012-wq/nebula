@@ -102,6 +102,7 @@ import { VoiceInputSetup } from "../chat/VoiceInputSetup";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
 import { Input } from "../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import {
@@ -313,19 +314,10 @@ function ModelCard(props: ModelCardProps) {
           />
           {downloading ? (
             <div className="mt-2">
-              <div
-                role="progressbar"
+              <Progress
                 aria-label={gt("{name} download progress", { name: model.name })}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(progress)}
-                className="h-1 overflow-hidden rounded-full bg-muted"
-              >
-                <div
-                  className="h-full bg-primary transition-[width] duration-200"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+                value={Math.round(progress)}
+              />
               <p className="mt-1 text-2xs text-muted-foreground">
                 {model.state === "verifying"
                   ? gt("Verifying download…")

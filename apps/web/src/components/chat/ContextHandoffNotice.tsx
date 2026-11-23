@@ -9,6 +9,7 @@ import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime"
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Button } from "../ui/button";
+import { Meter, MeterIndicator, MeterTrack } from "../ui/meter";
 import { Popover, PopoverTrigger, PopoverPopup, PopoverTitle } from "../ui/popover";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { CircleAlertIcon } from "lucide-react";
@@ -475,25 +476,16 @@ export function ContextHandoffNotice({
               </span>
             </div>
             {ratio !== null ? (
-              <div
-                role="progressbar"
+              <Meter
                 aria-label={uiText("Context usage")}
-                aria-valuenow={Math.round(Math.min(1, Math.max(0, ratio)) * 100)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="h-1 overflow-hidden rounded-full bg-muted"
+                value={Math.round(Math.min(1, Math.max(0, ratio)) * 100)}
               >
-                <div
-                  className={
-                    budgetBlocked
-                      ? "h-full bg-destructive"
-                      : ratio >= 0.8
-                        ? "h-full bg-warning"
-                        : "h-full bg-primary/70"
-                  }
-                  style={{ width: `${Math.min(1, Math.max(0, ratio)) * 100}%` }}
-                />
-              </div>
+                <MeterTrack>
+                  <MeterIndicator
+                    tone={budgetBlocked ? "destructive" : ratio >= 0.8 ? "warning" : "default"}
+                  />
+                </MeterTrack>
+              </Meter>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-muted-foreground">
               {description ? <p>{description}</p> : null}

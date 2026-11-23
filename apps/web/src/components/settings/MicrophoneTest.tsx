@@ -11,6 +11,7 @@ import workletUrl from "../../speech/pcmWorklet.ts?worker&url";
 import { VoiceWaveform } from "../chat/VoiceInputPill";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
+import { Slider } from "../ui/slider";
 import { SettingsRow } from "./settingsLayout";
 import { useSearchableSetting } from "./settingsSearch";
 
@@ -286,7 +287,6 @@ function MicrophonePlayback({ src, duration }: { src: string; duration: number }
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [failed, setFailed] = useState(false);
-  const progress = duration > 0 ? Math.min(position / duration, 1) * 100 : 0;
 
   const togglePlayback = async () => {
     const player = audio.current;
@@ -329,23 +329,19 @@ function MicrophonePlayback({ src, duration }: { src: string; duration: number }
           <T>Could not play this recording. Try recording again.</T>
         </p>
       ) : (
-        <input
-          type="range"
-          aria-label={gt("Recording playback position")}
+        <Slider
+          getAriaLabel={() => gt("Recording playback position")}
+          className="min-w-0 flex-1"
           min={0}
           max={duration}
           step={0.01}
           value={Math.min(position, duration)}
-          style={{
-            background: `linear-gradient(to right, var(--primary) ${progress}%, var(--muted) ${progress}%)`,
-          }}
           disabled={duration <= 0}
-          onChange={(event) => {
-            const next = Number(event.target.value);
+          onValueChange={(value) => {
+            const next = typeof value === "number" ? value : (value[0] ?? 0);
             if (audio.current) audio.current.currentTime = next;
             setPosition(next);
           }}
-          className="h-1 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&::-webkit-slider-thumb]:size-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:size-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary"
         />
       )}
       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
