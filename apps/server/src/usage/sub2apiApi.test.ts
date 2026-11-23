@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import { HttpClient, HttpClientResponse } from "effect/http";
 
-import { makeSub2apiApi } from "./sub2apiApi.ts";
+import { keyUsageToWallet, makeSub2apiApi } from "./sub2apiApi.ts";
 
 const hub = { url: "https://relay.test:8443/", managementKey: "admin-secret" };
 
@@ -63,6 +63,45 @@ describe("Sub2API admin usage", () => {
         ["seven_day_sonnet", 12],
       ]);
       expect(accounts[1]?.usageLimits.unavailable?.reason).toBe("probeFailed");
+    }),
+  );
+
+  it.effect("reads what the Claude Code key spent, sending it only to the relay", () =>
+    Effect.gen(function* () {
+      const seen: Array<{ readonly url: string; readonly auth: string | undefined }> = [];
+      const usage = {
+        isValid: true,
+        mode: "quota_limited",
+        planName: "钱包余额",
+        unit: "USD",
+        balance: 12.5,
+        usage: {
+          today: { actual_cost: 4.25, cost: 5, requests: 70 },
+          total: { actual_cost: 280.2, requests: 4232 },
+        },
+      };
+      const http = HttpClient.make((request) =>
+        Effect.sync(() => {
+          seen.push({ url: request.url, auth: request.headers["authorization"] });
+          return HttpClientResponse.fromWeb(request, Response.json(usage));
+        }),
+      );
+      const api = yield* makeSub2apiApi.pipe(Effect.provideService(HttpClient.HttpClient, http));
+      const wallet = yield* api.readWallet("https://relay.test:8443", "sk-user");
+
+      expect(seen).toEqual([{ url: "https://relay.test:8443/v1/usage", auth: "Bearer sk-user" }]);
+      expect(wallet).toEqual({
+        plan: "钱包余额",
+        unit: "USD",
+        balance: 12.5,
+        todayCost: 4.25,
+        todayRequests: 70,
+        totalCost: 280.2,
+      });
+      expect(keyUsageToWallet({ ...usage, mode: "unrestricted", balance: 0 })?.balance).toBe(
+        undefined,
+      );
+      expect(keyUsageToWallet({ ...usage, isValid: false })).toBeUndefined();
     }),
   );
 });

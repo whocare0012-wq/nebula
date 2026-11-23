@@ -12,7 +12,9 @@ import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretReso
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
@@ -97,6 +99,8 @@ it.effect("keeps malformed source URLs encodable for config subscribers", () =>
           },
         },
       }),
+      FileSystem.layerNoop({}),
+      Path.layer,
       Layer.mock(BackgroundPolicy.BackgroundPolicy)({
         shouldRunScopeWork: () => Effect.succeed(false),
       }),
@@ -148,6 +152,8 @@ it.effect("reads a management key from its secret provider", () => {
           },
         },
       }),
+      FileSystem.layerNoop({}),
+      Path.layer,
       Layer.mock(BackgroundPolicy.BackgroundPolicy)({
         shouldRunScopeWork: () => Effect.succeed(false),
       }),
@@ -218,6 +224,8 @@ it.effect("keeps an account's last good reading when the hub's next read of it i
           },
         },
       }),
+      FileSystem.layerNoop({}),
+      Path.layer,
       Layer.mock(BackgroundPolicy.BackgroundPolicy)({
         shouldRunScopeWork: () => Effect.succeed(false),
       }),

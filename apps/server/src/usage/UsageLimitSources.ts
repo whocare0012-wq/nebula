@@ -17,7 +17,9 @@ import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Equal from "effect/Equal";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
 import * as PubSub from "effect/PubSub";
 import * as Ref from "effect/Ref";
 import * as Semaphore from "effect/Semaphore";
@@ -30,6 +32,7 @@ import { resolveSettingsSecrets } from "../secrets/settingsSecretValue.ts";
 import * as Settings from "../serverSettings.ts";
 import { windowLimitsModel } from "../provider/claudeUsageLimits.ts";
 import { makeCliproxyApi } from "./cliproxyApi.ts";
+import { readClaudeRelayKey } from "./claudeRelayKey.ts";
 import { makeSub2apiApi } from "./sub2apiApi.ts";
 
 export class UsageLimitSources extends Context.Service<
@@ -105,6 +108,8 @@ export const make = Effect.gen(function* () {
   const settingsService = yield* Settings.ServerSettingsService;
   const secrets = yield* SecretResolver.SecretResolver;
   const backgroundPolicy = yield* BackgroundPolicy.BackgroundPolicy;
+  const fileSystem = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
   const readManagementKey = Effect.fn("UsageLimitSources.readManagementKey")(function* (
     config: UsageLimitSourceConfig,
   ) {
@@ -116,6 +121,15 @@ export const make = Effect.gen(function* () {
     PubSub.unbounded<ReadonlyArray<UsageLimitSourceSnapshot>>(),
     PubSub.shutdown,
   );
+
+  // The relay also tells what the key Claude Code sends through it has spent.
+  const readWallet = Effect.fn("UsageLimitSources.readWallet")(function* (origin: string) {
+    const apiKey = yield* readClaudeRelayKey(origin).pipe(
+      Effect.provideService(FileSystem.FileSystem, fileSystem),
+      Effect.provideService(Path.Path, path),
+    );
+    return apiKey ? yield* sub2api.readWallet(origin, apiKey) : undefined;
+  });
 
   const readSource = Effect.fn("UsageLimitSources.readSource")(function* (
     id: UsageLimitSourceId,
@@ -136,18 +150,29 @@ export const make = Effect.gen(function* () {
       checkedAt,
     } as const;
     const managementKey = yield* readManagementKey(config);
-    if (managementKey.length === 0) {
-      return { ...base, accounts: [], error: missingManagementKey(config) };
-    }
     const hub = { url: config.url, managementKey };
-    const accounts = yield* (
-      config.kind === "sub2api" ? sub2api.readAccounts(hub) : api.readAccounts(hub)
-    ).pipe(Effect.result);
+    const readAccounts =
+      managementKey.length === 0
+        ? Effect.fail(new UsageLimitSourceError({ detail: missingManagementKey(config) }))
+        : config.kind === "sub2api"
+          ? sub2api.readAccounts(hub)
+          : api.readAccounts(hub);
+    const [accounts, wallet] = yield* Effect.all(
+      [
+        Effect.result(readAccounts),
+        // Needs no admin key: Claude Code's own key reads its spend at the relay.
+        config.kind === "sub2api" && base.origin ? readWallet(base.origin) : Effect.void,
+      ],
+      { concurrency: 2 },
+    );
+    const withWallet = wallet ? { ...base, wallet } : base;
     if (accounts._tag === "Failure") {
-      yield* Effect.logDebug("usage limit source read failed", { id, cause: accounts.failure });
-      return { ...base, accounts: [], error: accounts.failure.detail };
+      if (managementKey.length > 0) {
+        yield* Effect.logDebug("usage limit source read failed", { id, cause: accounts.failure });
+      }
+      return { ...withWallet, accounts: [], error: accounts.failure.detail };
     }
-    return { ...base, accounts: accounts.success };
+    return { ...withWallet, accounts: accounts.success };
   });
 
   const publish = Effect.fn("UsageLimitSources.publish")(function* (

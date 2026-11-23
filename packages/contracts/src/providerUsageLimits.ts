@@ -84,6 +84,19 @@ export const UsageLimitSourceAccount = Schema.Struct({
 });
 export type UsageLimitSourceAccount = typeof UsageLimitSourceAccount.Type;
 
+/** What the API key Claude Code sends through a Sub2API relay has spent there. */
+export const UsageLimitSourceWallet = Schema.Struct({
+  plan: Schema.optional(TrimmedNonEmptyString),
+  /** Currency of the amounts, such as USD. */
+  unit: Schema.optional(TrimmedNonEmptyString),
+  /** Absent when the relay does not meter the key against a balance. */
+  balance: Schema.optional(Schema.Number),
+  todayCost: Schema.Number,
+  todayRequests: Schema.Number,
+  totalCost: Schema.Number,
+});
+export type UsageLimitSourceWallet = typeof UsageLimitSourceWallet.Type;
+
 export const UsageLimitSourceSnapshot = Schema.Struct({
   id: UsageLimitSourceId,
   kind: Schema.Literals(["cliproxy", "sub2api"]),
@@ -94,6 +107,7 @@ export const UsageLimitSourceSnapshot = Schema.Struct({
   endpoint: Schema.optional(TrimmedNonEmptyString),
   checkedAt: IsoDateTime,
   accounts: ForwardCompatibleArray(UsageLimitSourceAccount),
+  wallet: Schema.optional(UsageLimitSourceWallet),
   error: Schema.optional(TrimmedNonEmptyString),
 });
 export type UsageLimitSourceSnapshot = typeof UsageLimitSourceSnapshot.Type;

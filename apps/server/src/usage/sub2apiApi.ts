@@ -2,6 +2,7 @@ import {
   ProviderDriverKind,
   UsageLimitSourceError,
   type UsageLimitSourceAccount,
+  type UsageLimitSourceWallet,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -44,6 +45,48 @@ const Usage = Envelope(
     error: Schema.optional(Schema.NullOr(Schema.String)),
   }),
 );
+
+const UsageTotals = Schema.Struct({
+  actual_cost: Schema.optional(Schema.Number),
+  cost: Schema.optional(Schema.Number),
+  requests: Schema.optional(Schema.Number),
+});
+
+const KeyUsage = Schema.Struct({
+  isValid: Schema.optional(Schema.Boolean),
+  mode: Schema.optional(Schema.String),
+  planName: Schema.optional(Schema.String),
+  unit: Schema.optional(Schema.String),
+  balance: Schema.optional(Schema.NullOr(Schema.Number)),
+  usage: Schema.optional(
+    Schema.Struct({
+      today: Schema.optional(UsageTotals),
+      total: Schema.optional(UsageTotals),
+    }),
+  ),
+});
+const decodeKeyUsage = Schema.decodeUnknownEffect(KeyUsage);
+
+const spent = (totals: typeof UsageTotals.Type | undefined) =>
+  totals?.actual_cost ?? totals?.cost ?? 0;
+
+/** Sub2API's own `/v1/usage` answer for an API key, as T3 shows it. */
+export function keyUsageToWallet(usage: typeof KeyUsage.Type): UsageLimitSourceWallet | undefined {
+  if (usage.isValid === false) return undefined;
+  const plan = usage.planName?.trim();
+  const unit = usage.unit?.trim();
+  return {
+    ...(plan ? { plan } : {}),
+    ...(unit ? { unit } : {}),
+    // An unrestricted key is not charged against the balance, so a zero there means nothing.
+    ...(usage.mode !== "unrestricted" && typeof usage.balance === "number"
+      ? { balance: usage.balance }
+      : {}),
+    todayCost: spent(usage.usage?.today),
+    todayRequests: usage.usage?.today?.requests ?? 0,
+    totalCost: spent(usage.usage?.total),
+  };
+}
 
 const decodeAccountPage = Schema.decodeUnknownEffect(AccountPage);
 const decodeUsage = Schema.decodeUnknownEffect(Usage);
@@ -174,5 +217,23 @@ export const makeSub2apiApi = Effect.gen(function* () {
     });
   });
 
-  return { readAccounts };
+  /** What `apiKey` has spent at the relay; undefined when the relay cannot tell. */
+  const readWallet = Effect.fn("Sub2apiApi.readWallet")(function* (origin: string, apiKey: string) {
+    return yield* client
+      .execute(
+        HttpClientRequest.get(new URL("/v1/usage", origin).toString()).pipe(
+          HttpClientRequest.setHeader("Authorization", `Bearer ${apiKey}`),
+        ),
+      )
+      .pipe(
+        Effect.flatMap(HttpClientResponse.filterStatusOk),
+        Effect.flatMap((response) => response.json),
+        Effect.flatMap(decodeKeyUsage),
+        Effect.timeout("15 seconds"),
+        Effect.map(keyUsageToWallet),
+        Effect.orElseSucceed(() => undefined),
+      );
+  });
+
+  return { readAccounts, readWallet };
 });

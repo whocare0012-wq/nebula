@@ -27,6 +27,7 @@ import {
   resetExpiry,
 } from "./usageResetCreditPresentation";
 import { t3LimitWindows } from "./usageQuotaPresentation";
+import { RelayWallets } from "./RelayWallets";
 import { uiText as copy } from "~/i18n";
 import { UsageResetTimeline } from "./UsageResetTimeline";
 import { StardustOrbitMeter, gapText, healthSentence } from "./UsageLimitsHealth";
@@ -1817,6 +1818,8 @@ export function UsageLimitsPooled({
             : uiText("Official quota data · Bars show used quota; markers show elapsed time.")}
         </p>
       )}
+      <RelayWallets presentations={presentations} />
+
       {pools.length === 0 && externalLinks.length === 0 ? (
         <div
           data-usage-limits-empty
