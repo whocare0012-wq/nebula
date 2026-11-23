@@ -123,3 +123,34 @@ it("explains unreported fields and exposes finished token details using English 
     /\p{Script=Han}/u,
   );
 });
+
+it("shows the live output rate of the running turn and hides it while disconnected", async () => {
+  const id = RunId.make("run-1");
+  const base = projection(false);
+  const live = {
+    ...base,
+    runs: base.runs.map((run) => ({ ...run, activeAttemptId: "attempt-1" })),
+    providerTurns: [
+      {
+        id: "turn-1",
+        runAttemptId: "attempt-1",
+        ordinal: 1,
+        status: "running",
+        startedAt: start,
+        completedAt: null,
+        turnTokenUsage: { usageStatus: "partial", outputTokens: 120 },
+      },
+    ],
+    turnItems: [{ type: "assistant_message", status: "running", runId: id }],
+  } as unknown as ReturnType<typeof projection>;
+  using _visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  await using screen = await render(bar(live, "en", true));
+  using _timers = fakeTimers();
+  vi.setSystemTime(1_000 + 4_000);
+  await screen.rerender(bar(live, "en"));
+  const summary = () =>
+    screen.container.querySelector("[data-session-stats] [data-v9-stats-wide]")?.textContent;
+  expect(summary()).toContain("30 tok/s");
+  await screen.rerender(bar(live, "en", true));
+  expect(summary()).not.toContain("tok/s");
+});

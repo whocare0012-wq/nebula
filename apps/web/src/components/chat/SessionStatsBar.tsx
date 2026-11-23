@@ -7,6 +7,7 @@ import { Popover, PopoverPopup, PopoverTitle, PopoverTrigger } from "../ui/popov
 import "./composerV9.css";
 import { formatStatDuration, formatTokenCount, selectSessionStats } from "./sessionStats";
 import { useVisibleTurnClock } from "./TurnThroughputStatus";
+import { selectTurnThroughput, throughputReading } from "./turnThroughput";
 
 const runLabels: Partial<Record<OrchestrationV2RunStatus, string>> = {
   preparing: "Preparing",
@@ -54,9 +55,7 @@ export const SessionStatsBar = memo(function SessionStatsBar({
       positionStatsDockPill(dockPillRef.current, null);
       return;
     }
-    const target = clusterRef.current?.querySelector<HTMLElement>(
-      `[data-v9-stats-trig="${open}"]`,
-    );
+    const target = clusterRef.current?.querySelector<HTMLElement>(`[data-v9-stats-trig="${open}"]`);
     positionStatsDockPill(dockPillRef.current, target ?? null);
   }, [open]);
 
@@ -66,6 +65,15 @@ export const SessionStatsBar = memo(function SessionStatsBar({
   const notReported = uiText("Not reported");
   const rateNumber = stats.outputRate === null ? null : Math.round(stats.outputRate);
   const rate = rateNumber === null ? null : uiText("{rate} tok/s", { rate: rateNumber });
+  // Live turn rate: reported output so far over the turn's elapsed time; moves with each usage report.
+  const liveSnapshot = current === null || disconnected ? null : selectTurnThroughput(projection);
+  const liveRateValue =
+    liveSnapshot === null || !liveSnapshot.running
+      ? null
+      : throughputReading(liveSnapshot, now).rate;
+  const liveRateNumber = liveRateValue === null ? null : Math.round(liveRateValue);
+  const liveRate =
+    liveRateNumber === null ? null : uiText("{rate} tok/s", { rate: liveRateNumber });
   const rounds = uiText(stats.turns === 1 ? "{count} round" : "{count} rounds", {
     count: stats.turns,
   });
@@ -105,11 +113,16 @@ export const SessionStatsBar = memo(function SessionStatsBar({
           uiText("Elapsed {duration}", {
             duration: formatStatDuration(now - current.startMs, uiText, true),
           }),
-        ].join(" · ");
+          liveRate,
+        ]
+          .filter(Boolean)
+          .join(" · ");
   const narrowLeftSummary =
     current === null
       ? [rounds, rateNumber === null ? null : `${rateNumber}/s`].filter(Boolean).join(" · ")
-      : [currentRound, activeStatusLabel].filter(Boolean).join(" · ");
+      : [currentRound, activeStatusLabel, liveRateNumber === null ? null : `${liveRateNumber}/s`]
+          .filter(Boolean)
+          .join(" · ");
 
   const wideRightSummary = [
     stats.inputTokens === null && stats.outputTokens === null
@@ -119,10 +132,7 @@ export const SessionStatsBar = memo(function SessionStatsBar({
   ]
     .filter(Boolean)
     .join(" · ");
-  const narrowRightSummary = [
-    totalText,
-    cacheHitPercent === null ? null : `${cacheHitPercent}%`,
-  ]
+  const narrowRightSummary = [totalText, cacheHitPercent === null ? null : `${cacheHitPercent}%`]
     .filter(Boolean)
     .join(" · ");
 
@@ -137,7 +147,10 @@ export const SessionStatsBar = memo(function SessionStatsBar({
       >
         <div ref={dockPillRef} aria-hidden="true" data-v9-stats-dock-pill />
 
-        <Popover open={open === "session"} onOpenChange={(next) => setOpen(next ? "session" : null)}>
+        <Popover
+          open={open === "session"}
+          onOpenChange={(next) => setOpen(next ? "session" : null)}
+        >
           <PopoverTrigger
             render={
               <button
