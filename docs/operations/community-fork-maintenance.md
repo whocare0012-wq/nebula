@@ -18,6 +18,19 @@ Fork pull requests use standard GitHub-hosted Ubuntu and macOS runners; the offi
 
 Install only after the storage guard passes and the candidate is verified. Wait for the existing task/input idle gates, take the protected cold backup, and verify the program, data, authentication and configuration after replacement. A program rollback never restores an old database over new conversations.
 
+## Releasing T3 Nebula
+
+From a clean, merged checkout, `vp run release:nebula` releases the Windows build to
+`whocare0012-wq/t3-nebula`. It takes the next patch version after the newest `vX.Y.Z` tag on the
+`nebula` remote (or `--bump minor|major`, `--version X.Y.Z`), builds the x64 NSIS installer with the
+update feed pointed at that repository, pushes `HEAD` to `nebula/main`, and publishes the installer,
+blockmap and `latest.yml` as a GitHub release. The in-app updater reads that release.
+
+Release notes are drafted from the first-parent history since the last release, with upstream
+merges reduced to a commit count. Pass `--notes <file>` to publish hand-written bilingual notes, and
+`--dry-run` to print the version and notes without building or publishing. The build needs Rust for
+the resource monitor and an authenticated `gh` (or set `GH` to its path).
+
 ## SQLite writer compatibility mode
 
 File-backed databases use a worker for writes. If that worker fails after startup,
