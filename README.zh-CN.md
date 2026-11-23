@@ -1,171 +1,124 @@
 <p align="center">
-  <img src="assets/community/v1.2.0/stardust-icon.png" width="92" height="92" alt="T3 星尘版图标：午夜星尘" />
+  <img src="assets/nebula-icon.svg" width="112" height="112" alt="T3 星云图标：环绕明亮核心的旋涡星系" />
 </p>
 
-<h1 align="center">T3 星尘版 · Stardust</h1>
+<h1 align="center">T3 星云 · Nebula</h1>
 
 <p align="center">
-  <strong>基于 T3 Code 深度打磨的中文 AI 桌面工作台</strong><br />
-  V18 星舰发射栈流体推理滑块 · 多账号用量与限额洞察 · 新版本应用内提醒 · 苹果风极简质感
-</p>
-
-<p align="center">
-  <a href="https://www.xiaoxin666.cn/stardust"><strong>产品官网与积木工坊</strong></a> ·
-  <a href="#download">下载 v1.2.1</a> ·
-  <a href="#highlights">核心亮点</a> ·
-  <a href="#workshop">星尘积木工坊</a> ·
-  <a href="#compare">与官方对比</a> ·
-  <a href="#updates-privacy">更新与隐私</a> ·
-  <a href="README.en.md"><strong>English</strong></a>
+  <strong>以 Windows 为主的 T3 Code 社区版，开源的编程智能体图形界面。</strong><br />
+  官方 T3 Code + T3 星尘版的全部功能 + 一些自己的改进。
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/zds-xiaoxin/xiaoxin-t3code?label=Stars&color=ff5a1f&style=flat" alt="GitHub Stars" />
-  <img src="https://img.shields.io/github/v/release/zds-xiaoxin/xiaoxin-t3code?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=1d1d1f" alt="Latest Release" />
-  <img src="https://img.shields.io/github/downloads/zds-xiaoxin/xiaoxin-t3code/total?label=%E7%B4%AF%E8%AE%A1%E4%B8%8B%E8%BD%BD&color=0a84ff" alt="Total Downloads" />
-  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-1d1d1f" alt="macOS Apple Silicon" />
-  <img src="https://img.shields.io/badge/License-MIT-30d158" alt="MIT License" />
+  <a href="README.md"><strong>English</strong></a> ·
+  <a href="#credits">引用的项目</a> ·
+  <a href="#whats-new">新增功能</a> ·
+  <a href="#build">在 Windows 上构建</a> ·
+  <a href="#providers">服务商</a> ·
+  <a href="#notes">注意事项</a>
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/community/v1.2.0/hero-dark.jpg" />
-  <img src="assets/community/v1.2.0/hero-light.jpg" alt="T3 星尘版 v1.2苹果主题主界面：任务步骤卡、星舰推理滑块与底部令牌缓存弹窗" width="100%" />
-</picture>
-
-<p align="center"><sub>T3 星尘版 v1.2 苹果主题浅 / 深色自适应宣传图 · 演示数据全部本地生成，不涉及任何真实隐私信息。</sub></p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-x64-0078d4" alt="Windows x64" />
+  <img src="https://img.shields.io/badge/UI-English%20%7C%20%E4%B8%AD%E6%96%87-7b5cff" alt="中英文界面" />
+  <img src="https://img.shields.io/badge/License-MIT-30d158" alt="MIT 许可证" />
+</p>
 
 ---
 
-<a id="highlights"></a>
+T3 星云是一个个人分支：在一个桌面应用里使用你已有的各家智能体订阅，包括 Codex、Claude、Antigravity、
+Cursor、OpenCode、DeepSeek Harness 以及其他 ACP 智能体。它以 **T3 星尘版**为基础（一个深度定制、
+带完整中文界面和用量分析的 T3 Code），合并了最新的**官方 T3 Code**，并补上了在 Windows 上构建和日常
+使用所需的改动。
 
-## 核心亮点与动效实录
+界面语言跟随系统，英文和简体中文都完整支持。
 
-**v1.2** 基于官方 T3 Code 截至 2026-11-21 的最新代码（`0.1.11`，提交 `f9b19a7f85`）深度定制，正式更名为 **`T3 Stardust.app`**，重点打磨推理交互、用量可视化、界面流畅度与新版本提醒。
+<a id="credits"></a>
 
-### 1. V18「星舰发射栈」流体推理强度滑块（离屏贴图 + 静止 2 秒停止重绘）
+## 引用的项目
 
-每次切换模型推理强度，不再是枯燥的下拉菜单——一艘不锈钢星舰随档位连续演进 5 个高对比视觉阶段：**发射台冷态待命 → 猛禽点火 → Max-Q 音爆破云 → 地球弧线钟形真空羽流 → 深空曲速巡航**，升档自带 180ms 过载打击反馈（2 帧定格、曝光闪、胶囊微震、旋钮反冲、色散与音爆环）与 Liquid Glass 折射放大镜。
+T3 星云建立在以下三个项目之上，相关功能的功劳归原作者所有。
 
-- **流畅度优化**：将羽流、激波菱形、星轨、云层与粒子全部预烘焙为离屏精灵贴图（每帧新建的渐变对象从约 120–180 个降到 6 个以内），切档结束静置 **2 秒后自动停止重绘**，鼠标移入、聚焦或拖拽时立即恢复。
+| 项目                                                                                         | T3 星云从中继承的内容                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                                  | 整体基础：应用、服务端、各服务商接入、编排与检查点。已合并到 2026 年 11 月下旬的版本。官方 README 保留在 [README.upstream.md](README.upstream.md)。                                          |
+| [**zds-xiaoxin/xiaoxin-t3code**](https://github.com/zds-xiaoxin/xiaoxin-t3code)（T3 星尘版） | 本分支的直接基础：所有定制功能的中文界面、Composer V9 模型胶囊、星舰推理强度滑块、会话与令牌浮层、顶栏额度胶囊、多账号额度环与燃尽预测、四标签用量工作台、任务步骤卡、预览图钉标注和产物墙。 |
+| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)                  | 费用币种切换的思路来源。它的其他额度功能（顶栏额度胶囊、模型选择器额度徽章、燃尽预测）星尘版已经有了，所以只移植了人民币 / 美元切换。                                                        |
 
-<p align="center">
-  <img src="assets/community/v1.2.0/demo-starship-slider.gif" alt="V18 星舰发射栈推理强度滑块 5 档连续演进实录" width="92%" />
-</p>
+T3 星云是独立的社区项目，与 T3 Tools 及 T3 星尘版的维护者均无关联。
 
-### 2. Composer V9 统一输入台与底部「会话概览 / 令牌缓存」弹簧浮层
+<a id="whats-new"></a>
 
-- **统一模型触发胶囊（输入台右侧）**：显示当前提供方图标、模型名称与推理档位色点；点击向上展开弹窗，依次集成 Spotlight 模型搜索、横向提供方药丸标签、模型列表（含剩余额度）、V18 星舰推理滑块与底部三段式弹性权限滑块（默认「完全访问」不占底栏，切换为「自动 / 需审批」时在模型胶囊左侧显示独立权限芯片）。
-- **居中会话统计浮层**：底部悬停磁吸 Dock 药丸顺滑跟手，点击纯合成层弹簧弹出「会话概览」（轮次/步数/速率/思考与工具耗时占比）与「令牌与缓存」（总计/缓存命中读取与命中率）。
+## T3 星云的新增功能
 
-<p align="center">
-  <img src="assets/community/v1.2.0/demo-composer-stats.gif" alt="底部会话概览与令牌缓存 3 层毛玻璃弹簧弹窗演示" width="92%" />
-</p>
+相比 T3 星尘版，T3 星云新增或改动了以下内容：
 
-### 3. 用量、费用、多账号限额与 macOS 清理中心
+| 方面                        | 改动                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **合并上游**                | 把最新的官方 T3 Code 合并进星尘版，冲突逐一手动解决。                                                                                         |
+| **费用币种**                | 用量页面的费用可以按美元或人民币显示。汇率可以修改并会被记住，图表坐标轴也按所选币种取整。                                                    |
+| **实时输出速度**            | 回合进行中，输入框下方的统计条除了轮次、状态和已用时间，还会显示当前的每秒 token 输出速度。                                                   |
+| **Windows 上的 npm 智能体** | 用 `npm install -g` 安装的本地 ACP 命令可以直接填名字使用。T3 星云会读取 npm 生成的 `.cmd` 包装文件，直接启动它背后的程序，依然不经过 shell。 |
+| **DeepSeek Harness**        | 能识别桌面版自带的 CLI，状态检测不会再往你的 DeepSeek 历史里留下空会话。                                                                      |
+| **隐私默认值**              | 星尘版的匿名使用统计和社区更新检查**默认关闭**，需要时可在设置里打开。官方自动更新已禁用，官方版本不会覆盖本版本。                            |
+| **Windows 打包**            | 能打出可用的 NSIS 安装包。安装包文件数上限为服务端字节码缓存留出了空间，Windows 的 `.ico` 图标也换成了本应用的图标。                          |
+| **名称与图标**              | 应用改名为 T3 星云（英文 T3 Nebula），新图标是一个旋涡星系，源文件在 [assets/nebula-icon.svg](assets/nebula-icon.svg)。                       |
+| **代码清理**                | 删除合并后不再使用的文件和导出，提交前检查重新可以全部通过。                                                                                  |
 
-- **四分页数据工作台**（费用 / 令牌 / 限额 / 清理与整理）：采用一次性数据动效（数字滚动、曲线绘制、双限额圆环、燃尽预测与前一时段对比），首次打开极速渲染。
-- **顶栏常驻额度胶囊**：不用切页面就能随时看清 Claude / Codex 剩余额度与重置倒计时。
-- **先预览再执行的磁盘清理（macOS）**：按卷查看占用与受保护项，每一条清理建议都先预览路径和去向，确认后才执行。
+<a id="build"></a>
 
-<p align="center">
-  <img src="assets/community/v1.2.0/demo-usage-dashboard.gif" alt="用量、费用与多账号限额圆环动态可视化" width="92%" />
-</p>
+## 在 Windows 上构建
 
-### 4. 任务步骤卡、内置预览图钉批注与产物墙
+目前还没有发布预编译版本，需要从源码构建安装包。
 
-- **任务步骤卡与命令人话描述**：把晦涩终端命令自动折叠成可读步骤卡（如 `跑测试`、`类型检查`），展示耗时与产出数，展开保留原始命令。
-- **预览图钉批注**：在内置浏览器预览里直接点元素钉图钉、按「待改 / 已改」筛选、双向定位，发送给助手时自动附带局部截图。
-- **产物面板**：集中管理当前会话与项目产出的文档、图片和代码文件。
+**环境要求**
 
----
+- Node.js 26（仓库指定 26.13.1）
+- [Vite+](https://viteplus.dev)（`vp` 命令）
+- Rust（`rustup`）和带 C++ 工作负载的 Visual Studio 2022 生成工具，用于编译原生资源监视器
 
-<a id="workshop"></a>
+**开发模式运行**
 
-## 星尘积木工坊 · 把喜欢的动画装进你自己的 T3
+```powershell
+vp i
+$env:NODE_OPTIONS = "--dns-result-order=ipv4first"   # 仅在 localhost 打不开时需要（IPv6 回环不通）
+vp run dev
+```
 
-在打磨 V18 流体星舰的过程中，我们还做出了多套风格迥异的高完成度推理滑块方案（**V16 星尘观测站**、**V19-A 16-Bit 街机像素星舰**、**V19-B 赛博机甲 HUD**、**V17 聚变核心 / 日食弹弓 / 星钢淬火**）。
+打开终端里输出的 `pairingUrl` 链接即可。
 
-不想拘泥于默认样式？可以在 **[开源小新 · 星尘积木工坊](https://www.xiaoxin666.cn/stardust#workshop)** 在线拖动全部方案试玩，或者打开本仓库的 **[`stardust-kit/`](stardust-kit/README.md)** 目录：每套方案都带一个可直接在浏览器打开的 `demo.html`，以及独立源码和 AI 改造 Prompt，可以装进你自己的 T3 工作台。
+**打包安装程序**
 
-<p align="center">
-  <img src="assets/community/v1.2.0/demo-slider-gallery.gif" alt="星尘积木工坊：V18 流体星舰 / V16 星尘观测站 / V19 像素星舰 / V19 赛博机甲 HUD" width="94%" />
-</p>
+```powershell
+node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64
+```
 
-| 积木方案 | 视觉风格 | 仓库目录 | 在线体验 |
-| --- | --- | --- | --- |
-| **V18 流体写实星舰** | 正式版默认搭载 · 连续飞行 + 离屏贴图 + 2s 自动休眠 | [`stardust-kit/v18-starship-fluid`](stardust-kit/v18-starship-fluid/) | [demo.html](stardust-kit/v18-starship-fluid/demo.html) |
-| **V16 星尘观测站** | 治愈像素叙事 · 小机器人夜间逐件点亮观测站与流星 | [`stardust-kit/v16-stardust-observatory`](stardust-kit/v16-stardust-observatory/) | [demo.html](stardust-kit/v16-stardust-observatory/demo.html) |
-| **V19-A 16-Bit 像素星舰** | 复古街机高精像素火箭与圆润火焰烟球 | [`stardust-kit/v19-pixel-starship`](stardust-kit/v19-pixel-starship/) | [demo.html](stardust-kit/v19-pixel-starship/demo.html) |
-| **V19-B 赛博机甲 HUD** | 高达 / EVA 遥测网格、流体光带尾迹与曲速护盾 | [`stardust-kit/v19-cyber-hud`](stardust-kit/v19-cyber-hud/) | [demo.html](stardust-kit/v19-cyber-hud/demo.html) |
-| **V17 高对比实验 4 套** | 星舰 / 聚变核心超频 / 日食引力弹弓 / 星钢淬火 | [`stardust-kit/v17-thrill-experiments`](stardust-kit/v17-thrill-experiments/) | [demo.html](stardust-kit/v17-thrill-experiments/demo.html) |
+安装包会生成在 `release/T3-Nebula-<版本号>-x64.exe`。安装包没有代码签名，Windows SmartScreen 会弹出提示，
+点「更多信息」再点「仍要运行」即可。
 
----
+<a id="providers"></a>
 
-<a id="compare"></a>
+## 服务商
 
-## 和官方 T3 Code 的完整对比
+| 服务商               | 配置方法                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Codex**            | 不用手动安装。在 **设置 → 服务商** 里用 ChatGPT 连接，T3 星云会自动安装 Codex。已经用 `codex login` 登录过的也能直接用。                                                                                                                                                                                                                                                                             |
+| **Antigravity**      | 不用手动安装。在 **设置 → 服务商** 里启用，在那里安装运行时，再用 Google 账号登录。需要约 1.25 GB 可用空间。                                                                                                                                                                                                                                                                                         |
+| **Claude**           | 需要自己安装 Claude Code，并运行 `claude auth login` 登录。                                                                                                                                                                                                                                                                                                                                          |
+| **DeepSeek Harness** | 添加一个 **本地 ACP 命令**。用 npm 装的 CLI：可执行文件填 `dsh`，参数填 `--profile` 和 `acp`。用桌面版：可执行文件填 `DeepSeek Harness.exe`，参数依次填 `--expose-internals`、桌面版目录下的 `resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js`、`--profile`、`acp`，并添加环境变量 `ELECTRON_RUN_AS_NODE=1`。官方 ACP 接口不上报 token 数，所以费用和速度对它显示为空。 |
+| **其他 ACP 智能体**  | 在 **设置 → 服务商 → 添加服务商 → 显示更多** 里可以搜索 ACP 注册表，或添加任意本地 ACP 命令。                                                                                                                                                                                                                                                                                                        |
 
-仅列出可在源码中核实的差异，不包含官方原生已有且未改动的通用能力：
+<a id="notes"></a>
 
-| 维度 / 功能 | 官方 T3 Code | T3 星尘版 v1.2 |
-| --- | --- | --- |
-| **推理强度交互** | 下拉 / 基础选项列表 | **✓ V18 星舰流体滑块**（5 档连续演进、180ms 升档反馈、离屏贴图、2s 休眠）+ 开源积木工坊多套方案 |
-| **Composer 输入台** | 基础选择栏 | **✓ Composer V9**（一体化触发胶囊、Spotlight 搜索、三段式弹性权限滑块） |
-| **底部会话与令牌浮层** | — | **✓ 居中磁吸 Dock 栏 + 3 层纯合成弹簧弹窗**（轮次/速率/思考占比/缓存命中率） |
-| **顶栏常驻额度胶囊** | — | **✓ 常驻顶栏毛玻璃圆环胶囊**，实时预览多账号剩余额度 |
-| **用量、费用与限额页** | 基础用量与明细 | **✓ 费用 / 令牌 / 限额 / 清理四分页**，含圆环、燃尽预测、前一时段对比与首次打开加速 |
-| **任务步骤卡** | 原始工具日志 | **✓ 人话步骤卡**（耗时、产出数、展开看原始命令） |
-| **内置预览批注** | 画笔涂鸦 | **✓ 图钉批注**（待改/已改筛选、双向定位、附带局部截图） |
-| **产物面板 & 磁盘清理** | — | **✓ 右侧产物墙 + macOS 先预览再执行磁盘清理** |
-| **中文界面 & 主题** | 官方已支持中文 | **✓ 星尘版新增功能全部中文化 + Apple 极简浅/深双色主题 + `T3 Stardust.app` 正式正名** |
-| **社区版更新提醒** | 上游通道 | **✓ 自动检查本仓库 GitHub 发行版**（启动时及每 6 小时），有新版时提醒并直达下载页；下载、安装与重启由你手动完成 |
+## 注意事项
 
----
+- **共用数据。** T3 星云沿用 T3 Code 的应用 ID 和数据目录（`~/.t3`），原有的项目和对话会直接带过来，
+  但不能和官方 T3 Code 同时安装。
+- **更新。** 目前更新需要安装新版本。计划之后支持从本仓库的 Releases 自动更新。
+- **仅限 macOS 的功能。** 星尘版的磁盘清理中心只能在 macOS 上使用，在 Windows 上会拒绝执行。
+- **Windows 上的测试。** 部分官方和星尘版原有的测试在 Windows 上会失败（符号链接权限、路径假设等），
+  去掉本分支的改动后同样失败。
 
-<a id="updates-privacy"></a>
+## 许可证
 
-## 更新提醒与隐私说明
-
-### 应用内新版本提醒
-- 启动时及之后每 6 小时，应用会请求 GitHub 公开接口，查看本仓库最新的正式发行版（只认带完整 macOS Apple Silicon 安装包和 SHA256 摘要的版本）。
-- 发现新版本时弹出提醒，点击直达发行页下载。**应用不会自动下载、替换或重启**，升级请按下方「下载与安装」步骤手动完成。
-- 在 **设置 → 关于** 中可以：
-  - 切换 **社区更新模式**：「标准版 · 手动确认更新」（默认，跳转发行下载页）或「自行改造 · 仅提醒」（跳转源码差异页，适合自己魔改过代码的用户）；
-  - 关闭 **自动检查社区更新**。
-- 检查更新不发送聊天、账号或项目数据。
-
-### 使用统计与隐私
-- **星尘版活跃人数（v1.2.1 起，默认开启）**：为了知道有多少人在用，应用每天最多发送一次：随机安装 ID、星尘版版本号、系统和芯片类型，发到 `xiaoxin666.cn/api/stardust`。不发送聊天、账号、项目或文件路径；网站接口不读取也不转发你的 IP，服务器只保存安装 ID 的再哈希值，按天去重，90 天后删除。
-- 第一次启动新版本会弹出说明，可以直接点「关闭统计」；之后在 **设置 → 关于 →「计入星尘版活跃用户」** 随时开关。关闭后不再发送。
-- 网站 [xiaoxin666.cn/stardust](https://www.xiaoxin666.cn/stardust) 只公开「近 7 天活跃设备数」一个数字。
-- 上游 T3 Code 自带的匿名使用统计在星尘版里**默认关闭**，未开启时不记录、不缓存、不发送任何数据。
-- 如愿意帮助上游改进，可在 **设置 → 关于 →「共享匿名使用数据」** 手动开启：只发送功能使用、应用版本和操作系统信息（不含提示词、文件或路径）到上游项目的 `ingest.t3.codes`；关闭后立即停止发送并丢弃未发送的事件。
-
----
-
-<a id="download"></a>
-
-## 下载与安装（macOS Apple Silicon）
-
-> **系统要求**：macOS 13 及以上 · Apple Silicon（M1 / M2 / M3 / M4）
-
-- **安装包下载**：[T3-Stardust-v1.2.1-macOS-arm64.zip](https://github.com/zds-xiaoxin/xiaoxin-t3code/releases/download/v1.2.1/T3-Stardust-v1.2.1-macOS-arm64.zip) · [Releases 发行页 & SHA256SUMS.txt](https://github.com/zds-xiaoxin/xiaoxin-t3code/releases/tag/v1.2.0) · [详细发行说明](docs/community/v1.2.0/RELEASE.zh.md)
-
-### 快速校验与安装
-1. 下载 ZIP 与 `SHA256SUMS.txt` 到同一目录，终端校验完整性：
-   ```bash
-   shasum -a 256 -c SHA256SUMS.txt
-   ```
-2. 解压后将 `T3 Stardust.app` 拖入 `/Applications`（升级旧版前建议先等待运行中的任务结束）。
-   > **注意**：星尘版与官方 T3 Code 共用同一份本机数据（对话、设置、钥匙串），从官方版切换过来历史不会丢；但两者**不能同时运行**，打开其中一个前请先完全退出另一个。
-3. 公开版为社区 **ad-hoc 签名**（未经 Apple 付费公证），首次打开若出现系统提示，在 **系统设置 → 隐私与安全性** 点击「仍要打开」，或运行：
-   ```bash
-   xattr -dr com.apple.quarantine "/Applications/T3 Stardust.app"
-   ```
-4. 使用你本机已登录的智能体 CLI（Claude Code、Codex、Cursor、OpenCode 或任意 ACP 智能体）。
-
----
-
-## 开源协议与致谢
-
-本项目基于开源项目 [pingdotgg/t3code](https://github.com/pingdotgg/t3code) 定制开发，完整保留上游 [MIT 许可证](LICENSE)。T3 星尘版为独立社区定制版本，与上游官方无隶属关系。公开构建均经过隐私扫描并去除维护者私有签名与个人路径，随发行页附带构建校验与隐私扫描回执。
+[MIT](LICENSE)，与官方 T3 Code 相同。原作品的版权归原作者所有。
