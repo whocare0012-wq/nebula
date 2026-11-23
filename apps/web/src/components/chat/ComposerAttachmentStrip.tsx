@@ -8,7 +8,7 @@ import type {
 import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
 import { T, useGT, useMessages } from "gt-react";
 import { CircleAlertIcon, ImageIcon, PlayIcon, XIcon } from "lucide-react";
-import { type ComponentProps, useLayoutEffect, useRef } from "react";
+import { type ComponentProps, type Ref, useLayoutEffect, useRef } from "react";
 
 import {
   type ComposerFileAttachment,
@@ -728,5 +728,36 @@ export function ComposerQueuedAttachmentRow({
         </div>
       ))}
     </div>
+  );
+}
+
+// Kept outside the composer footer: on mobile the picker blurs the editor and the
+// footer unmounts, and a detached input never delivers its change event.
+export function ComposerAttachInput({
+  ref,
+  addComposerAttachments,
+  focusComposer,
+}: {
+  readonly ref: Ref<HTMLInputElement>;
+  readonly addComposerAttachments: (files: File[]) => Promise<boolean>;
+  readonly focusComposer: () => void;
+}) {
+  return (
+    <input
+      ref={ref}
+      type="file"
+      multiple
+      className="hidden"
+      onChange={(event) => {
+        const files = Array.from(event.currentTarget.files ?? []);
+        event.currentTarget.value = "";
+        // Inserting a chip refocuses the editor after the draft renders;
+        // focusing synchronously here would report the editor's stale text
+        // over the prompt that was just written.
+        void addComposerAttachments(files).then((inserted) => {
+          if (!inserted) focusComposer();
+        });
+      }}
+    />
   );
 }
