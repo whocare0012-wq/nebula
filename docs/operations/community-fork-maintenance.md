@@ -8,7 +8,7 @@ Use short-lived `feat/*` or `fix/*` branches for independent changes. Keep custo
 
 Before integration, reconcile the installed application's build manifest and any local patches with a committed source baseline. Preserve uncommitted work in the original checkout. Validate the merge in an isolated worktree and state directory, retaining the Chinese interface, task progress, artifacts and feedback, Claude runtime selection, scheduled task time zones, and account isolation. Run `vp run check:changed` and an integrated client check before promoting the branch.
 
-Use immutable release tags and matching package manifests for each distribution. Do not move the default branch to a version-named branch for each release. Preserve historical branches and tags for retrieval; label obsolete releases clearly rather than deleting their history. Keep the bilingual visible feature gallery required by `community-release-showcase.md`.
+Use immutable release tags and matching package manifests for each distribution. Do not move the default branch to a version-named branch for each release. Preserve historical branches and tags for retrieval; label obsolete releases clearly rather than deleting their history.
 
 Source validation, a published package, a queued installer, an installed application, and user acceptance are separate states. Record the source commit, upstream tag, custom patch identity and package digest. A source update must not imply that the application has been installed or accepted.
 
