@@ -30,6 +30,7 @@ import {
   listLoginShellCandidates,
   mergePathEntries,
   mergePathValues,
+  npmNodeShimScript,
   npmShimExecutable,
   preferGitForWindowsBinary,
   readEnvironmentFromLoginShell,
@@ -978,6 +979,60 @@ describe("npmShimExecutable", () => {
         shimPath.replace(".cmd", ".bat"),
         () => NPM_OPENCODE_SHIM,
         () => true,
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("npmNodeShimScript", () => {
+  const shimPath = "C:\\npm\\dsh.cmd";
+  const shim = NPM_OPENCODE_SHIM.replace(
+    '"%dp0%\\node_modules\\opencode-ai\\bin\\opencode.exe"   %*',
+    [
+      "",
+      'IF EXIST "%dp0%\\node.exe" (',
+      '  SET "_prog=%dp0%\\node.exe"',
+      ") ELSE (",
+      '  SET "_prog=node"',
+      "  SET PATHEXT=%PATHEXT:;.JS;=;%",
+      ")",
+      "",
+      'endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "%_prog%"  "%dp0%\\node_modules\\dsh\\bin\\dsh.js" %*',
+    ].join("\r\n"),
+  );
+
+  it("finds the script a standard shim runs", () => {
+    expect(
+      npmNodeShimScript(
+        shimPath,
+        () => shim,
+        () => true,
+      ),
+    ).toEqual({
+      script: NodePath.join(NodePath.dirname(shimPath), "node_modules", "dsh", "bin", "dsh.js"),
+      node: NodePath.join(NodePath.dirname(shimPath), "node.exe"),
+    });
+  });
+
+  it("keeps shims that pass interpreter flags, set variables, or run another interpreter", () => {
+    for (const altered of [
+      shim.replace('"%_prog%"  "%dp0%', '"%_prog%" --flag "%dp0%'),
+      shim.replace("SETLOCAL", "SETLOCAL\r\nSET DSH_HOME=C:\\x"),
+      shim.replaceAll("node.exe", "python.exe"),
+    ]) {
+      expect(
+        npmNodeShimScript(
+          shimPath,
+          () => altered,
+          () => true,
+        ),
+      ).toBeUndefined();
+    }
+    expect(
+      npmNodeShimScript(
+        shimPath,
+        () => shim,
+        () => false,
       ),
     ).toBeUndefined();
   });

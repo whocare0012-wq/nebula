@@ -39,6 +39,10 @@ credentials and skills remain managed by the installed agent or its wrapper. Mod
 options come from ACP, including model IDs that contain JSON. T3 Code launches the executable directly
 without expanding shell expressions.
 
+On Windows, commands installed with `npm install -g` work by name: T3 Code runs the program their
+`.cmd` wrapper starts. Other `.cmd` or `.bat` files are not run. Enter the program they start
+instead, such as `node.exe`, with the script path as the first argument.
+
 ## Where agents run
 
 Registry agents always run on the machine that hosts your T3 Code server. That stays true when you

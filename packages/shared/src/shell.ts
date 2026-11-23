@@ -962,6 +962,43 @@ export function npmShimExecutable(
   return isFile(executable) ? executable : undefined;
 }
 
+// npm cmd-shim format for `#!/usr/bin/env node` scripts, after the shared prefix.
+const NPM_NODE_SHIM_BODY = [
+  'IF EXIST "%dp0%\\node.exe" (',
+  '  SET "_prog=%dp0%\\node.exe"',
+  ") ELSE (",
+  '  SET "_prog=node"',
+  "  SET PATHEXT=%PATHEXT:;.JS;=;%",
+  ")",
+];
+const NPM_NODE_SHIM_RUN =
+  /^endLocal & goto #_undefined_# 2>NUL \|\| title %COMSPEC% & "%_prog%" {2}"%dp0%\\([^"%]+)" %\*$/;
+
+/**
+ * The Node script an npm shim runs, and the `node.exe` beside the shim it prefers.
+ * `node` is undefined when the shim would take `node` from PATH.
+ */
+export function npmNodeShimScript(
+  shimPath: string,
+  readFile: (filePath: string) => string | undefined = readFileSyncOrUndefined,
+  isFile: (filePath: string) => boolean = isFileSync,
+): { readonly script: string; readonly node: string | undefined } | undefined {
+  if (NodePath.extname(shimPath).toLowerCase() !== ".cmd") return undefined;
+  const lines = readFile(shimPath)
+    ?.split(/\r?\n/)
+    .filter((line) => line.length > 0);
+  const expected = [...NPM_EXECUTABLE_SHIM_PREFIX, ...NPM_NODE_SHIM_BODY];
+  if (lines?.length !== expected.length + 1) return undefined;
+  if (expected.some((line, index) => lines[index] !== line)) return undefined;
+  const target = NPM_NODE_SHIM_RUN.exec(lines.at(-1)!)?.[1];
+  if (target === undefined) return undefined;
+  const directory = NodePath.dirname(shimPath);
+  const script = NodePath.join(directory, ...target.split("\\"));
+  if (!isFile(script)) return undefined;
+  const bundledNode = NodePath.join(directory, "node.exe");
+  return { script, node: isFile(bundledNode) ? bundledNode : undefined };
+}
+
 export type XcodeGitLocator = (env: NodeJS.ProcessEnv) => string | undefined;
 
 // xcrun honors DEVELOPER_DIR and the `xcode-select` choice, as the shim does.

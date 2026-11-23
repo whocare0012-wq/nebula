@@ -17,6 +17,8 @@ import { cliArchiveTarCommand } from "@t3tools/shared/cliRelease";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import {
   mergePathEntries,
+  npmNodeShimScript,
+  npmShimExecutable,
   resolveSpawnCommand,
   SpawnExecutableResolution,
 } from "@t3tools/shared/shell";
@@ -1822,24 +1824,40 @@ export const makeAcpRegistryCatalog = Effect.fn("AcpRegistryCatalog.make")(funct
     },
   );
 
-  const validateLocalExecutable = (command: string) =>
-    platform === "win32" && /\.(?:cmd|bat)$/iu.test(command)
-      ? Effect.fail(
-          new AcpRegistryError({
-            reason: "runner_unavailable",
-            detail:
-              "Local ACP commands launch without a shell. For a Windows batch wrapper, configure the underlying executable (for example node.exe) and pass the script path as an argument.",
-          }),
-        )
-      : Effect.void;
+  // Local commands launch without a shell, so run what a standard npm batch shim would run.
+  const localLaunch = Effect.fn("AcpRegistryCatalog.localLaunch")(function* (
+    executable: string,
+    args: ReadonlyArray<string>,
+    environment: NodeJS.ProcessEnv,
+  ) {
+    if (platform !== "win32" || !/\.(?:cmd|bat)$/iu.test(executable)) {
+      return { command: executable, args };
+    }
+    const nativeExecutable = npmShimExecutable(executable);
+    if (nativeExecutable !== undefined) return { command: nativeExecutable, args };
+    const shim = npmNodeShimScript(executable);
+    const node =
+      shim === undefined
+        ? undefined
+        : (shim.node ?? (yield* resolveExecutable("node", environment)));
+    if (shim !== undefined && node !== undefined) {
+      return { command: node, args: [shim.script, ...args] };
+    }
+    return yield* new AcpRegistryError({
+      reason: "runner_unavailable",
+      detail:
+        "Local ACP commands launch without a shell, and this batch file is not a standard npm shim. Configure the underlying executable (for example node.exe) and pass the script path as an argument.",
+    });
+  });
 
   const inspect: AcpRegistryCatalog["Service"]["inspect"] = Effect.fn("AcpRegistryCatalog.inspect")(
     function* (settings, environment) {
       if (settings.source === "local") {
         const command = settings.commandPath.trim();
         if (!command) return { status: "unconfigured" } as const;
-        const executable = yield* resolveExecutable(command, environment ?? hostEnvironment);
-        if (executable !== undefined) yield* validateLocalExecutable(executable);
+        const env = environment ?? hostEnvironment;
+        const executable = yield* resolveExecutable(command, env);
+        if (executable !== undefined) yield* localLaunch(executable, settings.commandArgs, env);
         return executable === undefined
           ? ({
               status: "missing_runner",
@@ -2046,10 +2064,10 @@ export const makeAcpRegistryCatalog = Effect.fn("AcpRegistryCatalog.make")(funct
             detail: "Local ACP executable is not available on this environment's PATH.",
           });
         }
-        yield* validateLocalExecutable(command);
+        const launch = yield* localLaunch(command, settings.commandArgs, env);
         return {
           distribution: "local",
-          spawn: { command, args: settings.commandArgs, cwd, env, shell: false },
+          spawn: { command: launch.command, args: [...launch.args], cwd, env, shell: false },
         } satisfies ResolvedAcpRegistryAgent;
       }
       const registry = yield* loadRegistry();

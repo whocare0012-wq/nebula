@@ -331,6 +331,62 @@ describe("AcpRegistrySupport", () => {
           });
         }
       }
+
+      // npm's own cmd-shim output for a `#!/usr/bin/env node` bin and for a native bin.
+      const shimHead =
+        "@ECHO off\r\nGOTO start\r\n:find_dp0\r\nSET dp0=%~dp0\r\nEXIT /b\r\n:start\r\nSETLOCAL\r\nCALL :find_dp0\r\n";
+      const nodeShim = `${shimHead}\r\nIF EXIST "%dp0%\\node.exe" (\r\n  SET "_prog=%dp0%\\node.exe"\r\n) ELSE (\r\n  SET "_prog=node"\r\n  SET PATHEXT=%PATHEXT:;.JS;=;%\r\n)\r\n\r\nendLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "%_prog%"  "%dp0%\\node_modules\\@deepseek-ai\\dsh\\bin\\dsh.js" %*\r\n`;
+      const path = yield* Path.Path;
+      const shimDir = `${cacheDir}/npm`;
+      const script = path.join(shimDir, "node_modules", "@deepseek-ai", "dsh", "bin", "dsh.js");
+      const nativeBin = path.join(shimDir, "node_modules", "agy", "bin", "agy.exe");
+      yield* fileSystem.makeDirectory(path.dirname(script), { recursive: true });
+      yield* fileSystem.makeDirectory(path.dirname(nativeBin), { recursive: true });
+      yield* fileSystem.writeFileString(script, "");
+      yield* fileSystem.writeFileString(nativeBin, "");
+      yield* fileSystem.writeFileString(`${shimDir}/dsh.cmd`, nodeShim);
+      yield* fileSystem.writeFileString(
+        `${shimDir}/agy.cmd`,
+        `${shimHead}"%dp0%\\node_modules\\agy\\bin\\agy.exe"   %*\r\n`,
+      );
+      const shimResolver = yield* AcpRegistrySupport.makeAcpRegistryCatalog({
+        cacheDir,
+        toolsDir: `${cacheDir}/tools`,
+        registryUrl,
+      }).pipe(
+        Effect.provideService(HostProcess.Platform, "win32"),
+        Effect.provideService(SpawnExecutableResolution, async (command) =>
+          command === "node" ? "C:\\nodejs\\node.exe" : `${shimDir}/${command}.cmd`,
+        ),
+      );
+      const shimLaunch = (commandPath: string) =>
+        shimResolver
+          .resolve(
+            decodeAcpRegistrySettings({ source: "local", commandPath, commandArgs: ["acp"] }),
+            "/workspace",
+          )
+          .pipe(Effect.map((resolved) => resolved.spawn));
+      expect(yield* shimLaunch("dsh")).toMatchObject({
+        command: "C:\\nodejs\\node.exe",
+        args: [script, "acp"],
+        shell: false,
+      });
+      expect(yield* shimLaunch("agy")).toMatchObject({
+        command: nativeBin,
+        args: ["acp"],
+        shell: false,
+      });
+      // A node.exe installed beside the shim wins over PATH, as in the shim itself.
+      yield* fileSystem.writeFileString(`${shimDir}/node.exe`, "");
+      expect(yield* shimLaunch("dsh")).toMatchObject({
+        command: path.join(shimDir, "node.exe"),
+        args: [script, "acp"],
+      });
+      expect(
+        yield* shimResolver.inspect(
+          decodeAcpRegistrySettings({ source: "local", commandPath: "dsh" }),
+        ),
+      ).toMatchObject({ status: "ready" });
     }).pipe(
       Effect.scoped,
       Effect.provide(layerResolver(() => Effect.die("unexpected registry request"))),
