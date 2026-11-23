@@ -69,7 +69,7 @@ export const boardStateLabel = {
     return uiText("Completed");
   },
 };
-export function isBoardTaskPath(folder: string, cwd: string | null | undefined) {
+function isBoardTaskPath(folder: string, cwd: string | null | undefined) {
   const normalize = (value: string) => value.replace(/\/+/g, "/").replace(/\/$/, "");
   const root = (value: string) =>
     !value || /^(?:\/(?:Users|home)(?:\/[^/]+(?:\/Documents)?)?|~(?:\/Documents)?)$/.test(value);

@@ -989,7 +989,7 @@ export function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
 }
 
 // Local state belongs to one checkout; a new key drops it when the target changes.
-export const GitActionsControl = memo(function GitActionsControl(props: GitActionsControlProps) {
+const GitActionsControl = memo(function GitActionsControl(props: GitActionsControlProps) {
   const checkoutKey = JSON.stringify([
     props.threadRef?.environmentId ?? null,
     props.target?.key ?? null,

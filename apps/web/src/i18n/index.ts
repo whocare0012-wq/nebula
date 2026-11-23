@@ -4,11 +4,6 @@ export type UiLocale = "zh-CN" | "en";
 export function readUiLocale(): UiLocale {
   return readCustomLocale();
 }
-export function writeUiLocale(locale: UiLocale): void {
-  void import("../hooks/useSettings").then(({ updateClientSettings }) =>
-    updateClientSettings({ language: locale === "zh-CN" ? "zh" : "en" }),
-  );
-}
 // Legacy custom copy follows the official language setting; user content is never translated.
 export function uiText(
   source: string,

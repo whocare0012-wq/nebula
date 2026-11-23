@@ -35,7 +35,7 @@ const IMAGE = /\.(png|jpe?g|webp|gif|avif)$/i;
 const VIDEO = /\.(mp4|mov|webm|m4v)$/i;
 
 /** One plain sentence: what is being asked of the user, never the project's internal state. */
-export function inboxRequestText(task: BoardTask): string {
+function inboxRequestText(task: BoardTask): string {
   const step = boardCurrentStep(task);
   const ask = task.judge?.trim();
   if (ask) return ask;
@@ -49,7 +49,7 @@ export function inboxRequestText(task: BoardTask): string {
   if (kind === "decide") return uiText("Decide on “{name}”", { name: step.name });
   return uiText("Take action on “{name}”", { name: step.name });
 }
-export function inboxNeedsUser(task: BoardTask) {
+function inboxNeedsUser(task: BoardTask) {
   return task.state === "user" || task.state === "blocked";
 }
 

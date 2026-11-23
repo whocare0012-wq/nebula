@@ -26,7 +26,7 @@ import { useUiText } from "~/i18n/useUiText";
 import { scopeUsageEnvironments, mergeUsageEnvironments } from "./usageAnalysis";
 import { useUsage, type EnvironmentUsageStatus } from "../../state/usage";
 import { cacheHitRate, modelShare, sortModelsByTokens } from "./usageBreakdown";
-import { cacheInputRate } from "./usagePresentation";
+
 import { PROVIDER_PRESENTATION, usageSeries, usageSeriesLabel } from "./usageProviders";
 import { Toggle } from "../ui/toggle-group";
 import { UsageSegments as ToggleGroup } from "./UsageSegments";
@@ -34,24 +34,9 @@ import "./costTokensV9.css";
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
-export const ACCENT_TIERS = [100, 72, 46, 24] as const;
-export const accentTier = (index: number) =>
+const ACCENT_TIERS = [100, 72, 46, 24] as const;
+const accentTier = (index: number) =>
   `color-mix(in srgb, var(--primary) ${ACCENT_TIERS[Math.min(index, 3)]}%, var(--card))`;
-
-export function UsageSectionTitle({
-  title,
-  hint,
-}: {
-  readonly title: string;
-  readonly hint?: string;
-}) {
-  return (
-    <h2 className="usage-section-title">
-      {title}
-      {hint ? <span>{hint}</span> : null}
-    </h2>
-  );
-}
 
 type ProviderTotals = {
   readonly provider: UsageProviderKind;
@@ -190,110 +175,6 @@ export function UsageProviderRows({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-/** 费用页右侧：缓存省钱环形摘要 + beUI 平滑折叠洞察条。 */
-export function UsageCostSavingsSummary({ merged }: { readonly merged: MergedUsage }) {
-  const text = useUiText();
-  const [insightOpen, setInsightOpen] = useState(false);
-  const saved = merged.costQuality.cacheSavingsUsd;
-  const actual = merged.costUsd;
-  const baseline = actual + saved;
-  const saveRate = baseline > 0 ? Math.max(0, Math.min(1, saved / baseline)) : 0;
-  if (saved <= 0 && actual <= 0) return null;
-  const radius = 34;
-  const circumference = 2 * Math.PI * radius;
-  return (
-    <div className="usage-cost-savings">
-      <div className="usage-cost-savings-top">
-        <svg viewBox="0 0 84 84" className="usage-cost-ring" aria-hidden="true">
-          <circle cx="42" cy="42" r={radius} fill="none" stroke="var(--muted)" strokeWidth="7" />
-          <circle
-            cx="42"
-            cy="42"
-            r={radius}
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray={`${circumference * saveRate} ${circumference}`}
-            transform="rotate(-90 42 42)"
-          />
-          <text x="42" y="46" textAnchor="middle" className="usage-cost-ring-pct">
-            {Math.round(saveRate * 100)}%
-          </text>
-        </svg>
-        <div className="usage-cost-savings-meta">
-          <span>{text("Saved by cache")}</span>
-          <strong>{formatUsd(saved)}</strong>
-          <small>
-            {copy("{count} cache reads", { count: formatTokens(merged.cachedInputTokens) })}
-          </small>
-        </div>
-      </div>
-      <div className="usage-beui-insight" data-open={insightOpen || undefined}>
-        <button
-          type="button"
-          className="usage-beui-insight-head"
-          aria-expanded={insightOpen}
-          onClick={() => setInsightOpen((prev) => !prev)}
-        >
-          <span>{text("Cost efficiency insight")}</span>
-          <small>{insightOpen ? text("Collapse") : text("Details")}</small>
-        </button>
-        <div className="usage-beui-insight-body">
-          <p className="usage-beui-insight-inner">
-            {copy(
-              "Cache reduced estimated spend by {percent} (saved {savings} vs uncached input).",
-              {
-                percent: formatPercent(saveRate),
-                savings: formatUsd(saved),
-              },
-            )}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 令牌页右侧：缓存命中半圆 + 提供方列表。 */
-export function UsageCacheGauge({ merged }: { readonly merged: MergedUsage }) {
-  const rate = Math.max(0, Math.min(1, cacheInputRate(merged) ?? 0));
-  const radius = 60;
-  const half = Math.PI * radius;
-  return (
-    <div className="usage-cache-gauge">
-      <svg viewBox="0 0 160 92" aria-hidden>
-        <path
-          d="M 20 80 A 60 60 0 0 1 140 80"
-          fill="none"
-          stroke="var(--muted)"
-          strokeWidth="12"
-          strokeLinecap="round"
-        />
-        <path
-          className="usage-gauge-arc"
-          d="M 20 80 A 60 60 0 0 1 140 80"
-          fill="none"
-          stroke="var(--primary)"
-          strokeWidth="12"
-          strokeLinecap="round"
-          strokeDasharray={`${half * rate} ${half}`}
-        />
-      </svg>
-      <div className="usage-gauge-value">
-        <strong>{(rate * 100).toFixed(1)}</strong>
-        <small>%</small>
-      </div>
-      <p>
-        {copy("{count} cache reads · Saved {savings}", {
-          count: formatTokens(merged.cachedInputTokens),
-          savings: formatUsd(merged.costQuality.cacheSavingsUsd),
-        })}
-      </p>
     </div>
   );
 }
@@ -827,9 +708,6 @@ export function UsageBreakdownCard({
   );
 }
 
-export const PROVIDER_LABEL = (provider: UsageProviderKind) =>
-  PROVIDER_PRESENTATION[provider].label;
-
 const V9_PROVIDER_COLOR: Record<UsageProviderKind, string> = {
   codex: "var(--ctv9-prov-codex)",
   claude: "var(--ctv9-prov-claude)",
@@ -918,7 +796,7 @@ function providerTimeSeries(
 }
 
 /** V9 Segmented control with spring sliding pill (340ms cubic-bezier(0.3, 0.7, 0.2, 1)). */
-export function V9SegControl<T extends string>({
+function V9SegControl<T extends string>({
   ariaLabel,
   value,
   options,

@@ -5,7 +5,7 @@
  * Uses volumetric radial Gaussian plumes and a reused particle pool (zero hard polygon edges).
  */
 
-export const STARSHIP_STORY_BEATS = [
+const STARSHIP_STORY_BEATS = [
   "Pad standby · cryo mist",
   "Raptors ignite · clamps open",
   "Max-Q · breaking clouds",
@@ -49,11 +49,7 @@ function smoothstep(a: number, b: number, x: number): number {
 
 function hexRgb(hex: string): readonly [number, number, number] {
   const h = hex.startsWith("#") ? hex.slice(1) : hex;
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
 function mixRgb(
@@ -110,7 +106,7 @@ export function sampleStarshipFlash(ratio: number): string {
 }
 
 /** Active flight story beat index (0..4) for `ratio`. */
-export function starshipBeatIndexAtRatio(ratio: number): number {
+function starshipBeatIndexAtRatio(ratio: number): number {
   return Math.min(STARSHIP_STORY_BEATS.length - 1, Math.round(clamp(ratio, 0, 1) * 4));
 }
 
@@ -504,12 +500,14 @@ function drawVolumetricPlume(
   const auraRad = lerp(13, 25, power) * (1 + vacMix * 0.42 - warpMix * 0.14);
   const auraRx = auraLen * 0.64;
   const auraRy = auraRad * (0.64 / 0.52);
-  const auraSprite = warpMix > 0.5 ? atlas.auraWarp : vacMix > 0.35 ? atlas.auraVac : atlas.auraWarm;
+  const auraSprite =
+    warpMix > 0.5 ? atlas.auraWarp : vacMix > 0.35 ? atlas.auraVac : atlas.auraWarm;
   ctx.globalAlpha = power;
   ctx.drawImage(auraSprite, -auraLen * 0.35 - auraRx, -auraRy, auraRx * 2, auraRy * 2);
 
   // 2. 22 overlapping radial Gaussian plasma puffs (pre-baked sprites, zero save/restore in loop).
-  const puffSprite = warpMix > 0.5 ? atlas.puffWarp : vacMix > 0.35 ? atlas.puffVac : atlas.puffWarm;
+  const puffSprite =
+    warpMix > 0.5 ? atlas.puffWarp : vacMix > 0.35 ? atlas.puffVac : atlas.puffWarm;
   const puffBoost = warpMix > 0.5 ? 1.15 : vacMix > 0.35 ? 0.95 : 1.2;
   const blobs = 22;
   for (let i = 0; i < blobs; i++) {

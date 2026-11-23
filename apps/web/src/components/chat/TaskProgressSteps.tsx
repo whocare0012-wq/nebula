@@ -3,7 +3,7 @@ import { chineseDuration } from "~/i18n/conversationLabel";
 import { useUiText } from "~/i18n/useUiText";
 import { useId, useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon, CheckIcon } from "lucide-react";
-import type { OrchestrationV2PlanStep } from "@t3tools/contracts";
+
 import type { TaskProgressSnapshot } from "../../taskProgress";
 
 import { cn } from "~/lib/utils";
@@ -40,14 +40,6 @@ export function progressTone(progress: TaskProgressSnapshot) {
   }
 }
 
-/** States in which the current step's clock is still truthfully running. */
-const LIVE_STATES: ReadonlySet<TaskProgressSnapshot["state"]> = new Set([
-  "running",
-  "approval",
-  "input",
-  "waiting",
-]);
-
 function shortStepDuration(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000));
   if (seconds < 60) return `${seconds}s`;
@@ -59,23 +51,6 @@ function shortStepDuration(ms: number): string {
 export function formatStepDuration(ms: number): string {
   const value = shortStepDuration(ms);
   return readUiLocale() === "zh-CN" ? chineseDuration(value) : value;
-}
-
-/**
- * Only what the server reported: a finished step's measured duration, or the running step's
- * clock from its anchor while the run is live. Anything else shows no time at all.
- */
-export function stepDurationSource(
-  step: OrchestrationV2PlanStep,
-  progress: Pick<TaskProgressSnapshot, "state" | "stale">,
-): { kind: "fixed"; ms: number } | { kind: "live"; anchorMs: number } | null {
-  if (step.status === "completed") {
-    return step.durationMs === undefined ? null : { kind: "fixed", ms: step.durationMs };
-  }
-  if (step.status !== "running" || progress.stale || !LIVE_STATES.has(progress.state)) return null;
-  const anchorMs =
-    step.durationAnchorAt === undefined ? Number.NaN : Date.parse(step.durationAnchorAt);
-  return Number.isFinite(anchorMs) ? { kind: "live", anchorMs } : null;
 }
 
 export function TaskProgressSteps({

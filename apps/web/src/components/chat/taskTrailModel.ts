@@ -187,7 +187,9 @@ export function trailActivity(item: ThreadStructure["turnItems"][number]): Trail
       if (/(^|[_.])(invoke_subagent|delegate_task|spawn_agent)$/.test(name)) {
         const role =
           field(item.input, ["Role", "role", "title", "TypeName"]) ?? item.title ?? uiText("Agent");
-        return [{ ...base, kind: "delegate", label: uiText("Delegate {driver}", { driver: role }) }];
+        return [
+          { ...base, kind: "delegate", label: uiText("Delegate {driver}", { driver: role }) },
+        ];
       }
       if (/(^|[_.])(search_web|web_search|grep_search|find_by_name)$/.test(name)) {
         const query =
@@ -196,7 +198,8 @@ export function trailActivity(item: ThreadStructure["turnItems"][number]): Trail
           uiText("Search");
         return [{ ...base, kind: "search", label: uiText("Search for {query}", { query }) }];
       }
-      const summary = field(item.input, ["toolSummary", "description", "Description"]) ?? item.title;
+      const summary =
+        field(item.input, ["toolSummary", "description", "Description"]) ?? item.title;
       if (summary) {
         return [{ ...base, kind: "command", label: summary }];
       }
@@ -295,13 +298,6 @@ export function taskTrailDetails(
     }
   }
   return result;
-}
-
-export function primaryTrailTool(activities: readonly TrailActivity[]): TrailTool | undefined {
-  const counts = new Map<TrailTool, number>();
-  for (const activity of activities)
-    counts.set(activity.kind, (counts.get(activity.kind) ?? 0) + 1);
-  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
 }
 
 function activityStepTitle(activity: TrailActivity): string {
@@ -441,7 +437,10 @@ export function liveActivityTrailSnapshot(
 
   const files = new Set(
     collected
-      .filter((entry) => entry.status === "completed" && (entry.kind === "write" || entry.kind === "image"))
+      .filter(
+        (entry) =>
+          entry.status === "completed" && (entry.kind === "write" || entry.kind === "image"),
+      )
       .flatMap((entry) => (entry.path ? [entry.path] : [])),
   );
   let durationMs: number | undefined;

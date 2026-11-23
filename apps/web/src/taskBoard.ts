@@ -3,7 +3,7 @@ import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { create } from "zustand";
 import type { BoardData } from "./taskBoard.logic";
-export const TASK_BOARD_ORIGIN = "http://127.0.0.1:8765";
+const TASK_BOARD_ORIGIN = "http://127.0.0.1:8765";
 export const TASK_BOARD_START_COMMAND =
   "launchctl kickstart -k gui/$(id -u)/com.xiaoxin.task-board";
 interface BoardState {
@@ -171,16 +171,4 @@ export function requestTaskBoardCard(folder: string | null = null) {
   useTaskBoard.setState((state) => ({
     reveal: { folder, revision: (state.reveal?.revision ?? 0) + 1 },
   }));
-}
-
-const autoLinked = new Set<string>();
-export async function autoLinkBoardTask(folder: string, session: string, title: string) {
-  const key = `${session}:${folder}`;
-  if (autoLinked.has(key)) return;
-  autoLinked.add(key);
-  try {
-    await mutateTaskBoard("link", { folder, session, title, source: "auto" });
-  } catch {
-    /* Failed links are retried only after the next app session. */
-  }
 }

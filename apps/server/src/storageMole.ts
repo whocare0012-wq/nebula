@@ -29,7 +29,7 @@ export const cleanupRoots = (): CleanupRoots => ({
   activeSource: NodePath.resolve(import.meta.dirname, "../../.."),
   systemCaches: "/Library/Caches",
 });
-export const cleanupId = (p: string) =>
+const cleanupId = (p: string) =>
   "cleanup-" + NodeCrypto.createHash("sha256").update(p).digest("hex");
 const DAY = 86400_000;
 const GIB = 1024 ** 3;

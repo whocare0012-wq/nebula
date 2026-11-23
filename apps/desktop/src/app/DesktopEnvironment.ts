@@ -98,7 +98,7 @@ function resolveDesktopAppStageLabel(input: {
   return isNightlyDesktopVersion(input.appVersion) ? "Nightly" : "Beta";
 }
 
-export const STARDUST_DISPLAY_NAME = "T3 Stardust";
+const STARDUST_DISPLAY_NAME = "T3 Stardust";
 
 export function resolveDesktopAppBranding(input: {
   readonly isDevelopment: boolean;

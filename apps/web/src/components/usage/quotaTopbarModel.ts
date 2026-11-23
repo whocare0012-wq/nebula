@@ -49,7 +49,7 @@ export function quotaPins(
     .map((a) => a.id);
 }
 /** The login the open thread's provider instance signs in with, when it has a quota to show. */
-export function followedQuotaAccount(
+function followedQuotaAccount(
   accounts: readonly QuotaAccount[],
   current: { readonly environmentId: string; readonly instanceId: string } | null,
 ): QuotaAccount | null {

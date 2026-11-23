@@ -19,7 +19,7 @@ export function filterPreviewPins(
       filter === "all" || (filter === "fixed" ? pin.status === "fixed" : pin.status !== "fixed"),
   );
 }
-export function previewPinsMessage(pins: readonly PreviewPin[]): string {
+function previewPinsMessage(pins: readonly PreviewPin[]): string {
   return pins
     .map(
       (p) =>

@@ -2,7 +2,7 @@ import type { OrchestrationV2PlanStep } from "@t3tools/contracts";
 import type { TrailActivity } from "./taskTrailModel";
 import { trailFailureKind } from "./taskTrailFailures";
 
-export const MAX_MILESTONES = 6;
+const MAX_MILESTONES = 6;
 
 export type MilestoneStatus = "todo" | "run" | "need" | "problem" | "done";
 

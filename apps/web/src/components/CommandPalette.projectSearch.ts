@@ -31,7 +31,7 @@ export function loadProjectPinyinConverter(): Promise<ProjectPinyinConverter> {
   });
 }
 
-export function createProjectPinyinConverter(
+function createProjectPinyinConverter(
   pinyin: (text: string, options: { toneType: "none"; type: "array"; v: true }) => string[],
 ): ProjectPinyinConverter {
   // Projects are few and titles rarely change, so convert each distinct text once.
@@ -54,7 +54,7 @@ export function createProjectPinyinConverter(
   };
 }
 
-export function lastPathSegment(path: string): string {
+function lastPathSegment(path: string): string {
   const trimmed = path.replace(/[\\/]+$/, "");
   return trimmed.slice(Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\")) + 1);
 }

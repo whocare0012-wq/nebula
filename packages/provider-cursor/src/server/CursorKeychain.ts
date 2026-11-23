@@ -8,7 +8,7 @@ import * as Context from "effect/Context";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
+
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
@@ -111,5 +111,3 @@ export const make = Effect.gen(function* () {
 
   return CursorKeychain.of({ accessToken });
 });
-
-export const layer = Layer.effect(CursorKeychain, make);

@@ -31,29 +31,6 @@ export function animateWorkbenchOnce(
   return stop;
 }
 
-export function useTrailPillWidth(label: string) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const previous = useRef<{ label: string; width: number } | null>(null);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Measure the committed pill and animate only its changed intrinsic width.
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const width = element.getBoundingClientRect().width;
-    const before = previous.current;
-    previous.current = { label, width };
-    if (before === null || before.label === label || before.width === width) return;
-    return animateWorkbenchOnce(
-      element,
-      [{ width: `${before.width}px` }, { width: `${width}px` }],
-      {
-        duration: 350,
-        easing: "cubic-bezier(.3,1.35,.45,1)",
-      },
-    );
-  }, [label]);
-  return ref;
-}
-
 export function useInboxCountBounce(count: number) {
   const ref = useRef<HTMLSpanElement>(null);
   const previous = useRef(count);

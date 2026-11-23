@@ -42,9 +42,6 @@ When compacting this conversation, preserve verbatim:
 3. Every delegated or background task (taskId, childThreadId link, purpose, expected output) and open PR/thread links.
 4. Key absolute file paths and tool conventions (html_preview -> html_render for visuals, clickable file links, never poll delegates).`;
 
-export const T3_CODE_POST_COMPACT_CONTEXT =
-  "Conversation was just compacted. Maintain the user's preferred reply language and formatting; if unsure about active delegated or background tasks, call `t3_thread_read` (`view:\"activity\"`) or `t3_thread_list` (`includeSubagents:true`) to recover them.";
-
 export const T3_CODE_BROWSER_TOOL_INSTRUCTIONS = `
 
 ## T3 Code browser

@@ -553,7 +553,7 @@ export function UsageLimitRings({
   );
 }
 
-export function UsageBurndown({
+function UsageBurndown({
   window,
   now,
   stale = false,

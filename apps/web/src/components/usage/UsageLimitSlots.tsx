@@ -87,9 +87,6 @@ export function LimitSlotsToggle() {
     </button>
   );
 }
-export function useLimitSlotsHidden() {
-  return useLocalStorage(LIMIT_SLOTS_KEY, false, Schema.Boolean)[0];
-}
 // Lives outside the component: React Compiler cannot compile dynamic `import()` expressions.
 async function openSetupDraftThread(
   router: ReturnType<typeof useRouter>,

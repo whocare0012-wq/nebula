@@ -68,7 +68,7 @@ function pointOnCircle(radius: number, deg: number): { readonly cx: number; read
  * For 3 pools this reproduces V9's exact three-orbit layout (outer dashed r=54,
  * middle arc r=39, inner arc r=24) while scaling cleanly to any number of pools.
  */
-export function buildCompassGeometry(pools: readonly PoolHealth[]): CompassGeometry {
+function buildCompassGeometry(pools: readonly PoolHealth[]): CompassGeometry {
   const ranked = pools.toSorted((a, b) => (b.lowest ?? -1) - (a.lowest ?? -1));
   const arcs: CompassOrbitArc[] = [];
   const nodes: CompassOrbitNode[] = [];
@@ -131,7 +131,7 @@ export function buildCompassGeometry(pools: readonly PoolHealth[]): CompassGeome
 }
 
 /** Returns the 1–2 most ample real pools with live readings for the compass back face. */
-export function compassBackupCandidates(pools: readonly PoolHealth[]): readonly PoolHealth[] {
+function compassBackupCandidates(pools: readonly PoolHealth[]): readonly PoolHealth[] {
   return pools
     .filter((entry) => entry.lowest !== null)
     .toSorted((a, b) => (b.lowest ?? 0) - (a.lowest ?? 0))
@@ -190,7 +190,7 @@ function resolveProviderSelectionForEnvironment(
  * Sets the composer draft's model selection on the current or most recent thread
  * without modifying sticky/default model preferences.
  */
-export function applyBackupForNextMessage(
+function applyBackupForNextMessage(
   pool: LimitPool,
   presentations: LimitPresentations,
 ): CompassNextMessageResult {

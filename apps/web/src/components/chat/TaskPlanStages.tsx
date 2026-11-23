@@ -26,7 +26,7 @@ const TOOL_KIND_LABELS: Record<TrailTool, string> = {
 };
 
 /** Merge operations of the same tool kind in first-seen order for V9 compact tool chips (e.g. 搜索 ×4). */
-export function groupStageOperations(
+function groupStageOperations(
   operations: readonly TrailActivity[],
 ): readonly GroupedOperationBucket[] {
   const buckets: Array<{ kind: TrailTool; items: TrailActivity[] }> = [];
@@ -54,7 +54,7 @@ export function completedTitle(count: number, durationMs: number | undefined, ui
   ].join(" · ");
 }
 
-export function operationSummary(milestone: Milestone, uiText: UiText): string {
+function operationSummary(milestone: Milestone, uiText: UiText): string {
   const count = milestone.operations.length;
   if (count === 0) return "";
   return [
@@ -110,8 +110,7 @@ function GroupedToolChips({
     <div className="plan-step-sub">
       {groups.map((group) => {
         const kindLabel = uiText(TOOL_KIND_LABELS[group.kind]);
-        const tag =
-          group.items.length > 1 ? `${kindLabel} ×${group.items.length}` : kindLabel;
+        const tag = group.items.length > 1 ? `${kindLabel} ×${group.items.length}` : kindLabel;
         const separator = group.kind === "search" ? " / " : " · ";
         return (
           <div className="plan-tool-chip" key={group.kind} data-tool-kind={group.kind}>

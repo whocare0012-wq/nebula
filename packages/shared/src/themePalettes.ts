@@ -915,7 +915,7 @@ export const IRIS_THEME: ThemeDefinition = {
   sidebarArtwork: true,
 };
 
-export const HARBOR_THEME: ThemeDefinition = {
+const HARBOR_THEME: ThemeDefinition = {
   id: "harbor",
   label: "星港 Harbor",
   appearance: "dark",
@@ -1050,7 +1050,7 @@ export const HARBOR_THEME: ThemeDefinition = {
   sidebarArtwork: true,
 };
 
-export const MIST_THEME: ThemeDefinition = {
+const MIST_THEME: ThemeDefinition = {
   id: "mist",
   label: "晨雾 Mist",
   appearance: "light",
@@ -1186,7 +1186,7 @@ export const MIST_THEME: ThemeDefinition = {
 };
 
 /** 石墨纸 Graphite paper: warm-grey desk, paper panels, ink text; colour only marks state. */
-export const GRAPHITE_THEME: ThemeDefinition = {
+const GRAPHITE_THEME: ThemeDefinition = {
   id: "graphite",
   label: "石墨纸 Graphite",
   appearance: "light",
@@ -1321,7 +1321,7 @@ export const GRAPHITE_THEME: ThemeDefinition = {
 };
 
 /** 暗房 Darkroom: near-black desk, lighter floating panels, a red notch on the selected row. Dark only. */
-export const DARKROOM_THEME: ThemeDefinition = {
+const DARKROOM_THEME: ThemeDefinition = {
   id: "darkroom",
   label: "暗房 Darkroom",
   appearance: "dark",
@@ -1391,7 +1391,7 @@ export const DARKROOM_THEME: ThemeDefinition = {
 };
 
 /** 瓷白 Porcelain: pure white, no material, hairlines only; running is ink, not blue. Light only. */
-export const PORCELAIN_THEME: ThemeDefinition = {
+const PORCELAIN_THEME: ThemeDefinition = {
   id: "porcelain",
   label: "瓷白 Porcelain",
   appearance: "light",
@@ -1460,7 +1460,7 @@ export const PORCELAIN_THEME: ThemeDefinition = {
   },
 };
 
-export const APPLE_THEME: ThemeDefinition = {
+const APPLE_THEME: ThemeDefinition = {
   id: "apple",
   label: "苹果",
   appearance: "light",

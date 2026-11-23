@@ -11,11 +11,9 @@ import {
 } from "@t3tools/contracts";
 
 export {
-  MIN_THROUGHPUT_MODEL_MS,
   TURN_TOOL_ITEM_TYPES,
   computeTurnModelDuration,
   evaluateThroughputTurn,
-  unionIntervalLength,
   type ThroughputTurnCandidate,
   type TurnModelDuration,
 } from "./turnModelDuration.ts";
@@ -518,7 +516,13 @@ export function mergeUsage(
   >();
   const modelThroughputAccumulator = new Map<
     string,
-    { provider: UsageProviderKind; model: string; outputTokens: number; modelMs: number; turns: number }
+    {
+      provider: UsageProviderKind;
+      model: string;
+      outputTokens: number;
+      modelMs: number;
+      turns: number;
+    }
   >();
   const modelUnitPrices: Record<string, number> = {};
   const orderedByReadAt = [...current].sort(

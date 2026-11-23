@@ -46,7 +46,7 @@ function stripFetches(parent: RuleParent): void {
   }
 }
 
-export function createThemeCssApplier() {
+function createThemeCssApplier() {
   let themeSheet: CSSStyleSheet | null = null;
   let appliedCss = "";
   return function applyThemeCss(css: string | undefined): void {

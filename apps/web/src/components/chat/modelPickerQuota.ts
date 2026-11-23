@@ -1,17 +1,13 @@
 import { uiText } from "../../i18n";
-import type {
-  ProviderDriverKind,
-  ServerProvider,
-  UsageProviderKind,
-} from "@t3tools/contracts";
+import type { ProviderDriverKind, ServerProvider, UsageProviderKind } from "@t3tools/contracts";
 import type { ModelThroughputTotals } from "@t3tools/shared/usageMerge";
 import { DEFAULT_QUOTA_PREFERENCES, quotaState, quotaWindow } from "../usage/quotaTopbarModel";
 
 /** Minimum completed turns required before a model can earn the "Ultrafast" tag. */
-export const MIN_FASTEST_MODEL_TURNS = 5;
+const MIN_FASTEST_MODEL_TURNS = 5;
 
 /** Remaining quota percentage at or below which quota always takes priority over speed/price tags. */
-export const LOW_QUOTA_PRIORITY_THRESHOLD = 20;
+const LOW_QUOTA_PRIORITY_THRESHOLD = 20;
 
 export interface ModelPickerQuotaInfo {
   readonly label: string;
@@ -44,9 +40,7 @@ const DRIVER_TO_USAGE_PROVIDER: Readonly<Record<string, UsageProviderKind>> = {
   muse: "muse",
 };
 
-export function driverKindToUsageProvider(
-  driverKind: ProviderDriverKind,
-): UsageProviderKind | null {
+function driverKindToUsageProvider(driverKind: ProviderDriverKind): UsageProviderKind | null {
   return DRIVER_TO_USAGE_PROVIDER[String(driverKind)] ?? null;
 }
 
@@ -61,7 +55,7 @@ function bareModelLookupKey(key: string): string {
   return slash === -1 ? key : key.slice(slash + 1);
 }
 
-export function lookupModelUnitPrice(
+function lookupModelUnitPrice(
   modelUnitPrices: Readonly<Record<string, number>> | undefined,
   slug: string,
 ): number | null {

@@ -1,7 +1,7 @@
 import type { StorageInspection } from "@t3tools/contracts";
 import { storageTabFor, type StorageEntry } from "./storageInventoryModel";
 
-export const DISPLAY_RESERVE_GIB = 40;
+const DISPLAY_RESERVE_GIB = 40;
 export const GIB = 1024 ** 3;
 
 export function cleanupRisk(entry: StorageEntry): "safe" | "review" | "locked" {

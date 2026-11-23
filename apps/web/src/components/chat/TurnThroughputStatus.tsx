@@ -1,6 +1,3 @@
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import * as Option from "effect/Option";
-import { useEnvironmentThread } from "../../state/threads";
 import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
 import { memo, useEffect, useState } from "react";
 import { useUiText } from "../../i18n/useUiText";
@@ -99,21 +96,3 @@ export const TurnThroughput = memo(function TurnThroughput({
     </section>
   );
 });
-
-/** The live subscription exists only while the usage details are expanded. */
-export function LiveTurnThroughput(props: {
-  environmentId: EnvironmentId;
-  threadId: ThreadId;
-  projection: ThreadStructure;
-  disconnected: boolean;
-  now?: number | undefined;
-}) {
-  const live = useEnvironmentThread(props.environmentId, props.threadId);
-  return (
-    <TurnThroughput
-      projection={Option.getOrNull(live.data) ?? props.projection}
-      disconnected={props.disconnected}
-      now={props.now}
-    />
-  );
-}
