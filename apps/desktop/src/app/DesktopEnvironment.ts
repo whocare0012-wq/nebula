@@ -98,7 +98,7 @@ function resolveDesktopAppStageLabel(input: {
   return isNightlyDesktopVersion(input.appVersion) ? "Nightly" : "Beta";
 }
 
-const STARDUST_DISPLAY_NAME = "T3 Stardust";
+const NEBULA_DISPLAY_NAME = "T3 Nebula";
 
 export function resolveDesktopAppBranding(input: {
   readonly isDevelopment: boolean;
@@ -108,9 +108,9 @@ export function resolveDesktopAppBranding(input: {
   return {
     baseName: APP_BASE_NAME,
     stageLabel,
-    // Stardust custom build: shown in the menu bar, About panel and Hide/Quit items.
+    // Nebula custom build: shown in the menu bar, About panel and Hide/Quit items.
     // Only the visible name changes; app.setName (keychain, User-Agent) and userData keep the base name.
-    displayName: stageLabel === "Dev" ? `${APP_BASE_NAME} (${stageLabel})` : STARDUST_DISPLAY_NAME,
+    displayName: stageLabel === "Dev" ? `${APP_BASE_NAME} (${stageLabel})` : NEBULA_DISPLAY_NAME,
   };
 }
 

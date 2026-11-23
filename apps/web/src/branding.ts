@@ -23,7 +23,7 @@ export const HOSTED_APP_CHANNEL =
 export const HOSTED_APP_CHANNEL_LABEL = resolveHostedAppChannelLabel(HOSTED_APP_CHANNEL);
 export function appBaseName(): string {
   const name = injectedDesktopAppBranding?.baseName;
-  return !name || name === uiText("T3 Stardust", undefined, "zh-CN") ? uiText("T3 Stardust") : name;
+  return !name || name === uiText("T3 Nebula", undefined, "zh-CN") ? uiText("T3 Nebula") : name;
 }
 // Set by the stable release build (VITE_RELEASE_CHANNEL=stable). Such a build hides the Nightly
 // stage even though it carries the upstream nightly version stamp.

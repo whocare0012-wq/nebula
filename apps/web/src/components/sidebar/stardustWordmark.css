@@ -1,5 +1,5 @@
 /*
- * V11 logo A: "T3 Stardust" in the app icon's holographic blue → violet → rose → amber.
+ * The "T3 Nebula" wordmark in the app icon's blue → cyan → violet → pink.
  * The gradient is one seamless period (first stop == last stop) tiled twice the text width and
  * scrolled by exactly one period with linear timing, so the sheen flows left → right without a
  * pause, a restart jump, or a second color pass.
@@ -7,14 +7,14 @@
 [data-stardust-wordmark] {
   --stardust-holo: linear-gradient(
     90deg,
-    #4285f4 0%,
-    #7b7fe0 14%,
-    #9b72cb 28%,
-    #d96570 46%,
-    #ff8a5b 58%,
-    #d96570 70%,
-    #9b72cb 84%,
-    #4285f4 100%
+    #4f7bff 0%,
+    #2ee6ff 18%,
+    #7b5cff 36%,
+    #c04dff 50%,
+    #ff6fb5 62%,
+    #c04dff 76%,
+    #7b5cff 88%,
+    #4f7bff 100%
   );
   background-image: var(--stardust-holo);
   background-size: 200% 100%;
@@ -30,14 +30,14 @@
 [data-stardust-wordmark][data-on-backdrop] {
   --stardust-holo: linear-gradient(
     90deg,
-    #8ab4ff 0%,
-    #a9a6ff 14%,
-    #c3a6f0 28%,
-    #f29aa3 46%,
-    #ffb48f 58%,
-    #f29aa3 70%,
-    #c3a6f0 84%,
-    #8ab4ff 100%
+    #9db4ff 0%,
+    #8ff1ff 18%,
+    #b3a3ff 36%,
+    #df9eff 50%,
+    #ffb3d6 62%,
+    #df9eff 76%,
+    #b3a3ff 88%,
+    #9db4ff 100%
   );
 }
 @keyframes stardust-wordmark-flow {

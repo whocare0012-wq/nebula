@@ -191,7 +191,7 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
   );
 }
 /** The English product wordmark; it is a name, not copy, so it is never translated. */
-const STARDUST_WORDMARK = "T3 Stardust";
+const WORDMARK = "T3 Nebula";
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
     <span
@@ -199,7 +199,7 @@ function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
       data-on-backdrop={onBackdrop || undefined}
       className="truncate text-sm font-bold tracking-tight [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1"
     >
-      {STARDUST_WORDMARK}
+      {WORDMARK}
     </span>
   );
 }
