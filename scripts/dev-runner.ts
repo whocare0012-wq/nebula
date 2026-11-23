@@ -348,6 +348,12 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
   // install of the developer's real accounts. Set it explicitly to opt in.
   output.T3CODE_TELEMETRY_ENABLED = baseEnv.T3CODE_TELEMETRY_ENABLED ?? "false";
 
+  // Some Windows machines cannot reach ::1, so `localhost` proxies and probes would hang there.
+  const nodeOptions = output.NODE_OPTIONS ?? "";
+  if ((yield* HostProcess.Platform) === "win32" && !nodeOptions.includes("--dns-result-order")) {
+    output.NODE_OPTIONS = `${nodeOptions} --dns-result-order=ipv4first`.trim();
+  }
+
   if (!isDesktopMode) {
     output.T3CODE_PORT = String(serverPort);
     // An inherited HOST pins Vite's HMR socket via explicitHost in apps/web/vite.config.ts.
