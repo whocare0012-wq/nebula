@@ -90,6 +90,7 @@ import {
 } from "../WorkspaceBreadcrumb";
 import { WorkspacePageContainer } from "../WorkspacePageContainer";
 import { AppRouteModal, AppRouteModalClose } from "../AppRouteModal";
+import { useServerConfigs } from "../../state/entities";
 import { DiskSpaceSection } from "./DiskSpaceSection";
 import { UsageLimitsSection } from "./UsageLimits";
 import { UsagePriceOverrides } from "./UsagePriceOverrides";
@@ -193,13 +194,23 @@ export function UsagePage() {
   const [preferences, setPreferences] = useState(readUsagePagePreferences);
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const hour12 = usePrimarySettings((settings) => resolveHour12(settings.timestampFormat));
+  // Storage cleanup only exists on macOS servers; elsewhere this tab is just disk usage.
+  const cleanupAvailable = [...useServerConfigs().values()].some(
+    (config) => config?.environment.platform.os === "darwin",
+  );
+  const optionLabel = (
+    option: (typeof METRIC_OPTIONS)[number] | (typeof WINDOW_OPTIONS)[number],
+  ): string =>
+    "value" in option && option.value === "disk" && !cleanupAvailable
+      ? uiText("Disk")
+      : option.label;
   const shortcutTitle = (
     option: (typeof METRIC_OPTIONS)[number] | (typeof WINDOW_OPTIONS)[number],
   ) => {
     const shortcut = shortcutLabelForCommand(keybindings, option.command, {
       context: { usagePageOpen: true },
     });
-    return shortcut ? `${option.label} (${shortcut})` : option.label;
+    return shortcut ? `${optionLabel(option)} (${shortcut})` : optionLabel(option);
   };
   const [windowSelection, setWindowSelection] = useState(() => ({
     days: preferences.windowDays,
@@ -465,7 +476,7 @@ export function UsagePage() {
               value={option.value}
               aria-description={shortcutTitle(option)}
             >
-              {option.label}
+              {optionLabel(option)}
             </Toggle>
           ))}
         </ToggleGroup>
@@ -532,7 +543,7 @@ export function UsagePage() {
             className="w-auto min-w-0"
           >
             <SelectValue>
-              {METRIC_OPTIONS.find((option) => option.value === metric)?.label}
+              {optionLabel(METRIC_OPTIONS.find((option) => option.value === metric)!)}
             </SelectValue>
           </SelectTrigger>
           <SelectPopup data-usage-portal align="end" alignItemWithTrigger={false}>
@@ -542,7 +553,7 @@ export function UsagePage() {
                 value={option.value}
                 aria-description={shortcutTitle(option)}
               >
-                {option.label}
+                {optionLabel(option)}
               </SelectItem>
             ))}
           </SelectPopup>
