@@ -150,7 +150,7 @@ const nodeErrorCode = (cause: unknown) => {
 };
 
 // Hub responses can contain credentials; expose only failure kind, HTTP status or Node code.
-const describeManagementFailure = (error: unknown) => {
+export const describeManagementFailure = (error: unknown) => {
   if (Cause.isTimeoutError(error)) return "The hub did not answer within 15 seconds.";
   if (HttpClientError.isHttpClientError(error)) {
     const reason = error.reason;

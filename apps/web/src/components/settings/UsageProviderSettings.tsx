@@ -82,15 +82,14 @@ export function UsageProviderSettings({
         ) : (
           entries.map(([id, source]) => {
             const label = source.label?.trim() || source.url;
+            const kindName = source.kind === "sub2api" ? "Sub2API" : CLI_PROXY_NAME;
             return (
               <SettingsRow
                 key={id}
                 title={label}
                 description={
                   <span className="break-all">
-                    {source.enabled
-                      ? CLI_PROXY_NAME
-                      : gt("{name} · Disabled", { name: CLI_PROXY_NAME })}
+                    {source.enabled ? kindName : gt("{name} · Disabled", { name: kindName })}
                     {label !== source.url ? ` · ${source.url}` : ""}
                   </span>
                 }

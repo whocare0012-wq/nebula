@@ -30,6 +30,7 @@ import { resolveSettingsSecrets } from "../secrets/settingsSecretValue.ts";
 import * as Settings from "../serverSettings.ts";
 import { windowLimitsModel } from "../provider/claudeUsageLimits.ts";
 import { makeCliproxyApi } from "./cliproxyApi.ts";
+import { makeSub2apiApi } from "./sub2apiApi.ts";
 
 export class UsageLimitSources extends Context.Service<
   UsageLimitSources,
@@ -91,14 +92,16 @@ function keepLastGoodReadings(
 }
 
 function missingManagementKey(config: UsageLimitSourceConfig): string {
+  const key = config.kind === "sub2api" ? "admin API key" : "management key";
   return typeof config.managementKey === "string"
-    ? "No management key configured."
-    : "Could not read the management key from its secret provider.";
+    ? `No ${key} configured.`
+    : `Could not read the ${key} from its secret provider.`;
 }
 
 /** @public */
 export const make = Effect.gen(function* () {
   const api = yield* makeCliproxyApi;
+  const sub2api = yield* makeSub2apiApi;
   const settingsService = yield* Settings.ServerSettingsService;
   const secrets = yield* SecretResolver.SecretResolver;
   const backgroundPolicy = yield* BackgroundPolicy.BackgroundPolicy;
@@ -136,9 +139,10 @@ export const make = Effect.gen(function* () {
     if (managementKey.length === 0) {
       return { ...base, accounts: [], error: missingManagementKey(config) };
     }
-    const accounts = yield* api
-      .readAccounts({ url: config.url, managementKey })
-      .pipe(Effect.result);
+    const hub = { url: config.url, managementKey };
+    const accounts = yield* (
+      config.kind === "sub2api" ? sub2api.readAccounts(hub) : api.readAccounts(hub)
+    ).pipe(Effect.result);
     if (accounts._tag === "Failure") {
       yield* Effect.logDebug("usage limit source read failed", { id, cause: accounts.failure });
       return { ...base, accounts: [], error: accounts.failure.detail };
@@ -180,7 +184,7 @@ export const make = Effect.gen(function* () {
       Effect.mapError(() => new UsageLimitSourceError({ detail: "Could not read hub settings." })),
     );
     const config = settings.usageLimitSources[input.sourceId];
-    if (!config?.enabled) {
+    if (!config?.enabled || config.kind !== "cliproxy") {
       return yield* new UsageLimitSourceError({
         detail: "The usage limit source is missing or disabled.",
       });

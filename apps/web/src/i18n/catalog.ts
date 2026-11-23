@@ -8144,6 +8144,11 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Attach to composer": "附加到输入框",
   "Show {name} in Finder": "在 Finder 中显示 {name}",
   "Show in Finder": "在 Finder 中显示",
+  "Add a Sub2API relay": "添加 Sub2API 中转站",
+  "Hub type": "Hub 类型",
+  "Admin API key": "管理员 API Key",
+  "In the Sub2API admin panel, open Settings and copy the admin API key. It reads the 5-hour and weekly usage of the Claude accounts the relay uses.":
+    "在 Sub2API 管理后台的「设置」里复制管理员 API Key。它会读取中转站所用 Claude 账号的 5 小时和每周用量。",
   "Show in File Explorer": "在文件资源管理器中显示",
   "Show {name} in File Explorer": "在文件资源管理器中显示 {name}",
   "Couldn’t show the file in File Explorer": "无法在文件资源管理器中显示此文件",

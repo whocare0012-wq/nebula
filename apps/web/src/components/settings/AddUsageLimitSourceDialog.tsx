@@ -1,4 +1,9 @@
-import type { EnvironmentId, SecretReference, UnifiedSettings } from "@t3tools/contracts";
+import type {
+  EnvironmentId,
+  SecretReference,
+  UnifiedSettings,
+  UsageLimitSourceKind,
+} from "@t3tools/contracts";
 import { T, useGT, Var } from "gt-react";
 import { useId, useState } from "react";
 
@@ -17,6 +22,8 @@ import { Input } from "../ui/input";
 import { sourceIdFromUrl } from "./AddUsageLimitSourceDialog.logic";
 import { SecretSourceInput, useSecretSources } from "./SecretSourceInput";
 import { Label } from "../ui/label";
+import { Toggle, ToggleGroup } from "../ui/toggle-group";
+import { useUiText } from "~/i18n/useUiText";
 
 /** Send the management key once to server secret storage; settings retain only a redaction marker. */
 export function AddUsageLimitSourceDialog({
@@ -33,7 +40,10 @@ export function AddUsageLimitSourceDialog({
   readonly sources: UnifiedSettings["usageLimitSources"];
 }) {
   const gt = useGT();
+  const uiText = useUiText();
   const formId = useId();
+  const [kind, setKind] = useState<UsageLimitSourceKind>("cliproxy");
+  const sub2api = kind === "sub2api";
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
@@ -45,6 +55,7 @@ export function AddUsageLimitSourceDialog({
   const canSave = keyValid && trimmedUrl.length > 0 && managementKey !== "";
 
   const reset = () => {
+    setKind("cliproxy");
     setLabel("");
     setUrl("");
     setKeyDraft("");
@@ -53,11 +64,11 @@ export function AddUsageLimitSourceDialog({
 
   const save = () => {
     if (!canSave) return;
-    const id = sourceIdFromUrl(trimmedUrl, sources);
+    const id = sourceIdFromUrl(trimmedUrl, sources, kind);
     updateSettings({
       usageLimitSources: {
         [id]: {
-          kind: "cliproxy",
+          kind,
           ...(label.trim() ? { label: label.trim() } : {}),
           url: trimmedUrl,
           managementKey,
@@ -80,7 +91,7 @@ export function AddUsageLimitSourceDialog({
       <DialogPopup className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <T>Add a CLIProxyAPI hub</T>
+            {sub2api ? uiText("Add a Sub2API relay") : <T>Add a CLIProxyAPI hub</T>}
           </DialogTitle>
           <DialogDescription>
             <T>
@@ -98,13 +109,27 @@ export function AddUsageLimitSourceDialog({
               save();
             }}
           >
+            <ToggleGroup
+              aria-label={uiText("Hub type")}
+              variant="segmented"
+              value={[kind]}
+              onValueChange={(next) => {
+                const value = next[0];
+                if (value === "cliproxy" || value === "sub2api") setKind(value);
+              }}
+            >
+              <Toggle value="cliproxy">CLIProxyAPI</Toggle>
+              <Toggle value="sub2api">Sub2API</Toggle>
+            </ToggleGroup>
             <div className="grid gap-1.5">
               <Label htmlFor="usage-source-url">
                 <T>Hub URL</T>
               </Label>
               <Input
                 id="usage-source-url"
-                placeholder="https://hub.example.ts.net:8318"
+                placeholder={
+                  sub2api ? "https://relay.example.com" : "https://hub.example.ts.net:8318"
+                }
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 autoFocus
@@ -112,11 +137,11 @@ export function AddUsageLimitSourceDialog({
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="usage-source-key">
-                <T>Management key</T>
+                {sub2api ? uiText("Admin API key") : <T>Management key</T>}
               </Label>
               <SecretSourceInput
                 id="usage-source-key"
-                aria-label={gt("Management key")}
+                aria-label={sub2api ? uiText("Admin API key") : gt("Management key")}
                 value={keyDraft}
                 sources={secretSources}
                 environmentId={environmentId}
@@ -124,6 +149,13 @@ export function AddUsageLimitSourceDialog({
                 onSecretChange={(secret) => setKeyDraft(secret ?? "")}
                 onValidityChange={setKeyValid}
               />
+              {sub2api ? (
+                <p className="text-xs text-muted-foreground">
+                  {uiText(
+                    "In the Sub2API admin panel, open Settings and copy the admin API key. It reads the 5-hour and weekly usage of the Claude accounts the relay uses.",
+                  )}
+                </p>
+              ) : null}
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="usage-source-label">

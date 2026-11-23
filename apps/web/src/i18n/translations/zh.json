@@ -20692,5 +20692,9 @@
   "c467cdd92aef6bb7": "提高汇率",
   "1253616405c4a24f": "费用币种",
   "a5905b3d1afcfc36": "美元",
-  "ae8dcaec025d2e7a": "人民币"
+  "ae8dcaec025d2e7a": "人民币",
+  "fed2d2e3165a333a": "添加 Sub2API 中转站",
+  "59afdd5a7fd615a8": "Hub 类型",
+  "68d7d52f1cea7798": "管理员 API Key",
+  "143cccbc2cf58a6c": "在 Sub2API 管理后台的「设置」里复制管理员 API Key。它会读取中转站所用 Claude 账号的 5 小时和每周用量。"
 }
