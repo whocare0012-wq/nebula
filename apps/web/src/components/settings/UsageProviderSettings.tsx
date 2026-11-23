@@ -1,13 +1,13 @@
 import { uiText } from "~/i18n";
 import { Switch } from "../ui/switch";
 
-
 import type { EnvironmentId, UnifiedSettings } from "@t3tools/contracts";
 import { T, useGT, Var } from "gt-react";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
+import { useServerConfigs } from "../../state/entities";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -41,6 +41,9 @@ export function UsageProviderSettings({
   const searchableSetting = useSearchableSetting();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const [adding, setAdding] = useState(false);
+  // Only macOS servers read this setting; elsewhere Cursor usage comes from its auth file.
+  const keychainSetting =
+    useServerConfigs().get(environmentId)?.environment.platform.os === "darwin";
   const entries = Object.entries(sources);
 
   return (
@@ -56,20 +59,24 @@ export function UsageProviderSettings({
           ) : null
         }
       >
-        <SettingsRow
-          title={uiText("Read Cursor account usage")}
-          description={uiText(
-            "Uses your existing Cursor CLI sign-in from the macOS Keychain to show usage and monthly limits. macOS may ask for permission.",
-          )}
-          control={
-            <Switch
-              checked={cursorKeychainUsageEnabled}
-              disabled={readOnly}
-              onCheckedChange={(enabled) => updateSettings({ cursorKeychainUsageEnabled: enabled })}
-              aria-label={uiText("Read Cursor account usage")}
-            />
-          }
-        />
+        {keychainSetting ? (
+          <SettingsRow
+            title={uiText("Read Cursor account usage")}
+            description={uiText(
+              "Uses your existing Cursor CLI sign-in from the macOS Keychain to show usage and monthly limits. macOS may ask for permission.",
+            )}
+            control={
+              <Switch
+                checked={cursorKeychainUsageEnabled}
+                disabled={readOnly}
+                onCheckedChange={(enabled) =>
+                  updateSettings({ cursorKeychainUsageEnabled: enabled })
+                }
+                aria-label={uiText("Read Cursor account usage")}
+              />
+            }
+          />
+        ) : null}
         {entries.length === 0 ? (
           <SettingsRow title={gt("No hubs configured.")} />
         ) : (

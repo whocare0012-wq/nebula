@@ -6,6 +6,7 @@ import * as Option from "effect/Option";
 import { useEffect, useRef } from "react";
 
 import { formatBytes } from "../../lib/formatBytes";
+import { useServerConfigs } from "../../state/entities";
 import { serverEnvironment } from "../../state/server";
 import { DISK_SPACE_KINDS, categoryFor, summarizeGrowth } from "./diskSpaceModel";
 import { StorageManagementPanel } from "./StorageManagementPanel";
@@ -48,6 +49,9 @@ function DiskSpaceEnvironment({
   readonly onSettled: (id: EnvironmentId) => void;
 }) {
   const uiText = useUiText();
+  // The cleanup center scans and cleans macOS locations only; its worker refuses elsewhere.
+  const cleanupAvailable =
+    useServerConfigs().get(environmentId)?.environment.platform.os === "darwin";
   const atom = serverEnvironment.diskSpace({
     environmentId,
     input: { awaitMeasurement: true, ...(refreshTick > 0 ? { refresh: true } : {}) },
@@ -79,13 +83,15 @@ function DiskSpaceEnvironment({
   return (
     <section className="flex min-w-0 flex-col gap-6">
       {label ? <h2 className="text-sm font-medium">{label}</h2> : null}
-      <StorageManagementPanel
-        refreshTick={refreshTick}
-        environmentId={environmentId}
-        diskReport={report}
-        onOperationFinished={refresh}
-      />
-      <details>
+      {cleanupAvailable ? (
+        <StorageManagementPanel
+          refreshTick={refreshTick}
+          environmentId={environmentId}
+          diskReport={report}
+          onOperationFinished={refresh}
+        />
+      ) : null}
+      <details open={!cleanupAvailable}>
         <summary className="cursor-pointer text-xs text-muted-foreground">
           {uiText("Usage, history & measurement scope")}
         </summary>

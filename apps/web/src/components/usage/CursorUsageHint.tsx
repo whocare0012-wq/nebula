@@ -1,12 +1,17 @@
 import { InfoIcon } from "lucide-react";
 import { useUiText } from "~/i18n/useUiText";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { useServerConfigs } from "../../state/entities";
 import { Button, InlineButton } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 
 export function CursorUsageHint() {
   const uiText = useUiText();
   const { copyToClipboard, isCopied } = useCopyToClipboard();
+  // The Keychain setting is read on macOS servers only; elsewhere Cursor's auth file is used.
+  const keychainSetting = [...useServerConfigs().values()].some(
+    (config) => config?.environment.platform.os === "darwin",
+  );
   return (
     <div
       data-usage-card
@@ -15,7 +20,9 @@ export function CursorUsageHint() {
       <InfoIcon className="size-4 text-primary" aria-hidden />
       <span className="flex-1">
         {uiText("Cursor quota is unavailable · Sign in to Cursor CLI on its environment")}
-        <span> · {uiText("Enable Read Cursor account usage in Settings → Providers.")}</span>
+        {keychainSetting ? (
+          <span> · {uiText("Enable Read Cursor account usage in Settings → Providers.")}</span>
+        ) : null}
       </span>
       <Popover>
         <PopoverTrigger render={<InlineButton />}>{uiText("Sign in")}</PopoverTrigger>

@@ -8144,6 +8144,12 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Attach to composer": "附加到输入框",
   "Show {name} in Finder": "在 Finder 中显示 {name}",
   "Show in Finder": "在 Finder 中显示",
+  "Show in File Explorer": "在文件资源管理器中显示",
+  "Show {name} in File Explorer": "在文件资源管理器中显示 {name}",
+  "Couldn’t show the file in File Explorer": "无法在文件资源管理器中显示此文件",
+  "Show in file manager": "在文件管理器中显示",
+  "Show {name} in file manager": "在文件管理器中显示 {name}",
+  "Couldn’t show the file in the file manager": "无法在文件管理器中显示此文件",
   "A file can exist before checks pass": "文件存在不代表检查通过",
   "{label}. This records a check command. User approval and deployment are separate.":
     "{label}。此项为检查命令记录，不代表用户验收或已部署。",

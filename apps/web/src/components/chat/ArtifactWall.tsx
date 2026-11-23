@@ -30,7 +30,7 @@ import {
 import { artifactFileUrl, fileFromArtifact } from "../../lib/artifactWallClient";
 import { useWallArtifacts } from "../../useWallArtifacts";
 import { artifactsSince } from "../../artifactShelf";
-import { useQuietThreadShell } from "../../state/entities";
+import { useQuietThreadShell, useServerConfigs } from "../../state/entities";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { shellEnvironment } from "../../state/shell";
@@ -40,6 +40,24 @@ import { Dialog, DialogPopup, DialogTitle } from "../ui/dialog";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
+
+const REVEAL_COPY = {
+  darwin: {
+    show: "Show in Finder",
+    showNamed: "Show {name} in Finder",
+    failed: "Couldn’t show the file in Finder",
+  },
+  windows: {
+    show: "Show in File Explorer",
+    showNamed: "Show {name} in File Explorer",
+    failed: "Couldn’t show the file in File Explorer",
+  },
+  other: {
+    show: "Show in file manager",
+    showNamed: "Show {name} in file manager",
+    failed: "Couldn’t show the file in the file manager",
+  },
+} as const;
 
 export const ArtifactWall = memo(function ArtifactWall({
   environmentId,
@@ -60,6 +78,8 @@ export const ArtifactWall = memo(function ArtifactWall({
   onCount?: (count: number) => void;
 }) {
   const appearance = useTheme();
+  const hostOs = useServerConfigs().get(environmentId)?.environment.platform.os;
+  const revealCopy = REVEAL_COPY[hostOs === "darwin" || hostOs === "windows" ? hostOs : "other"];
   const apple =
     (appearance.themeHalves?.[appearance.resolvedTheme] ?? appearance.theme) === "apple";
   const [scope, setScope] = useState<"thread" | "project">("thread");
@@ -280,7 +300,7 @@ export const ArtifactWall = memo(function ArtifactWall({
       environmentId,
       input: { cwd: a.path, editor: "file-manager", reveal: true },
     });
-    if (result._tag === "Failure") setActionError(uiText("Couldn’t show the file in Finder"));
+    if (result._tag === "Failure") setActionError(uiText(revealCopy.failed));
   };
   const attach = async (a: WallArtifact) => {
     setBusy(true);
@@ -552,12 +572,12 @@ export const ArtifactWall = memo(function ArtifactWall({
               </button>
               <button
                 type="button"
-                aria-label={uiText("Show {name} in Finder", { name: featured.name })}
+                aria-label={uiText(revealCopy.showNamed, { name: featured.name })}
                 onClick={() => void reveal(featured)}
                 className="inline-flex h-8 min-w-0 items-center justify-center gap-1.5 rounded-lg bg-muted px-2 text-xs font-medium text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <FolderOpenIcon aria-hidden className="hidden size-3.5 shrink-0 @2xs:block" />
-                <span className="truncate">{uiText("Show in Finder")}</span>
+                <span className="truncate">{uiText(revealCopy.show)}</span>
               </button>
             </div>
             <Tooltip>
@@ -765,7 +785,7 @@ export const ArtifactWall = memo(function ArtifactWall({
                             {uiText("Attach to composer")}
                           </MenuItem>
                           <MenuItem onClick={() => void reveal(a)}>
-                            {uiText("Show in Finder")}
+                            {uiText(revealCopy.show)}
                           </MenuItem>
                           <MenuItem onClick={() => void copyPath(a)}>
                             {uiText("Copy path")}
@@ -1092,7 +1112,7 @@ export const ArtifactWall = memo(function ArtifactWall({
                 ) : null}
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
                   <Button size="sm" variant="outline" onClick={() => void reveal(selected)}>
-                    {uiText("Show in Finder")}
+                    {uiText(revealCopy.show)}
                   </Button>
                   <Button size="sm" disabled={busy} onClick={() => void attach(selected)}>
                     {busy ? uiText("Attaching…") : uiText("Attach to composer")}
