@@ -7977,6 +7977,7 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Restore original project grouping": "恢复原项目归类",
   "Work in progress": "有运行中",
   "New conversation (⌥ to choose a folder)": "新建会话（⌥ 选择目录）",
+  "New conversation (Alt to choose a folder)": "新建会话（Alt 选择目录）",
   "{provider} projects": "{provider} 项目",
   "No projects or conversation history": "暂无项目或历史会话",
   "More projects": "更多项目",
