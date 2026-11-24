@@ -106,7 +106,7 @@ export class DesktopWslEnvironment extends Context.Service<
     readonly getUserHome: (distro: string | null) => Effect.Effect<Option.Option<string>>;
     // Use the distro IP to avoid unreliable wslhost localhost forwarding.
     readonly getDistroIp: (distro: string | null) => Effect.Effect<Option.Option<string>>;
-    // A null t3Home means the distro's login shell has no absolute T3CODE_HOME, so ~/.t3 applies.
+    // A null t3Home means the probe could not report a home, so the server's default ~/.t3 applies.
     readonly prepareRuntime: (
       distro: string | null,
       archive: WslRuntimeArchive,
@@ -453,7 +453,20 @@ const formatNodePtyProbeFailureReason = (exitCode: number): string | null =>
 // Capture login-shell PATH because the server launches provider CLIs by name.
 const RESOLVED_PATH_LINE = `printf 'resolvedPath:%s\\n' "$PATH"`;
 // wsl.exe --exec skips the profile, so the server only sees a profile-exported T3CODE_HOME if passed on.
-const T3_HOME_LINE = `printf 't3Home:%s\\n' "\${T3CODE_HOME:-}"`;
+// Nebula shared T3 Code's ~/.t3 before it had its own: move it once, unless a process still has a
+// file or working directory in it (Linux would let the rename through). Until then keep using it.
+const T3_HOME_LINE = [
+  'if [ -n "${T3CODE_HOME:-}" ]; then t3_home="$T3CODE_HOME"; else',
+  '  t3_home="$HOME/.nebula"',
+  '  if [ ! -e "$t3_home" ] && [ -d "$HOME/.t3/userdata" ]; then',
+  '    t3_busy=$(ls -l /proc/[0-9]*/cwd /proc/[0-9]*/fd 2>/dev/null | while IFS= read -r line; do case "$line" in *" -> $HOME/.t3"|*" -> $HOME/.t3/"*) echo busy; break;; esac; done)',
+  '    if [ -n "$t3_busy" ] || ! mv -T "$HOME/.t3" "$t3_home" 2>/dev/null; then',
+  '      t3_home="$HOME/.t3"',
+  "    fi",
+  "  fi",
+  "fi",
+  `printf 't3Home:%s\\n' "$t3_home"`,
+].join("\n");
 
 const NODE_PTY_PROBE_SCRIPT = (
   linuxServerDir: string,
@@ -489,7 +502,7 @@ NODE`;
 // Resolve version-managed Node for providers without making runtime readiness depend on it.
 // The install script already ran the staged t3, so running it again here only adds a second startup.
 export const buildWslRuntimeProbeScript = () =>
-  `bash -lc ${shellQuote(`${buildWslNodeEnvPreamble()}${RESOLVED_PATH_LINE}\n${T3_HOME_LINE}`)} 2>/dev/null || ${RESOLVED_PATH_LINE}`;
+  `bash -lc ${shellQuote(`${buildWslNodeEnvPreamble()}${RESOLVED_PATH_LINE}\n${T3_HOME_LINE}`)} 2>/dev/null || {\n${RESOLVED_PATH_LINE}\n${T3_HOME_LINE}\n}`;
 
 const TOOLCHAIN_CHECK_SCRIPT = [
   "for tool in node make g++ python3; do",

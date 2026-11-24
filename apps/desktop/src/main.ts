@@ -9,7 +9,7 @@ import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-// @effect-diagnostics-next-line nodeBuiltinImport:off - Version output must flush before Electron exits, without acquiring the runtime.
+// @effect-diagnostics-next-line nodeBuiltinImport:off - Version output must flush before Electron exits, and the data directory moves before any layer opens it.
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -104,6 +104,7 @@ const layerDesktopEnvironment = Layer.unwrap(
       platform,
       processArch,
       ...metadata,
+      legacyBaseDirFileSystem: { exists: NodeFS.existsSync, rename: NodeFS.renameSync },
     });
   }),
 );

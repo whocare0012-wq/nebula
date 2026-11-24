@@ -416,9 +416,30 @@ export const make = Effect.gen(function* () {
     return yield* state;
   }).pipe(addToPathPermit.withPermits(1), Effect.withSpan("desktop.cliCommand.addToPath"));
 
+  // The marker moved with the data directory and still names the old bin folder on PATH.
+  const relocateOwnedPathEntry = Effect.gen(function* () {
+    if (!windows) return;
+    const recorded = yield* fs.readFileString(ownedPathMarker).pipe(Effect.option);
+    if (Option.isNone(recorded)) return;
+    const previous = recorded.value.trim();
+    if (previous === "" || sameWindowsPath(previous, binDirectory)) return;
+    yield* ensureLauncher;
+    const entries = pathEntries(yield* readUserPath, ";");
+    const kept = entries.filter(
+      (entry) => !sameWindowsPath(entry, previous) && !sameWindowsPath(entry, binDirectory),
+    );
+    yield* writeUserPath([...kept, binDirectory].join(";"));
+    yield* fs
+      .writeFileString(ownedPathMarker, `${binDirectory}\n`)
+      .pipe(Effect.mapError(() => fail("Moved t3 on your PATH but could not record it.")));
+    yield* logInfo("moved the t3 command's PATH entry", { from: previous, to: binDirectory });
+  });
+
   const installOnFirstLaunch: DesktopCliCommand["Service"]["installOnFirstLaunch"] = Effect.gen(
     function* () {
-      if (!environment.isPackaged || (yield* exists(firstLaunchMarker))) return;
+      if (!environment.isPackaged) return;
+      yield* relocateOwnedPathEntry;
+      if (yield* exists(firstLaunchMarker)) return;
       // Mark first so a failed or removed install is never retried behind the user's back.
       yield* fs.writeFileString(firstLaunchMarker, "");
       if (!freshInstall) {

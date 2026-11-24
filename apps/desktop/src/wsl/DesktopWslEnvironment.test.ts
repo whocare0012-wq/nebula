@@ -218,6 +218,38 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
     expect(parseT3Home(probe.stdout)).toBe(t3Home);
   });
 
+  it("moves the T3 home Nebula shared, but not while a process has it open", () => {
+    const fixture = createFixture();
+    const probeIn = (home: string, prelude = "") =>
+      parseT3Home(
+        runShell(
+          [
+            "set -eu",
+            `export HOME=${sh(home)}`,
+            "unset T3CODE_HOME",
+            prelude,
+            buildWslRuntimeProbeScript(),
+          ].join("\n"),
+        ).stdout,
+      );
+    const busy = `${fixture.work}/busy`;
+    const free = `${fixture.work}/free`;
+    expect(
+      runShell(`set -eu\nmkdir -p ${sh(`${busy}/.t3/userdata`)} ${sh(`${free}/.t3/userdata`)}`)
+        .status,
+    ).toBe(0);
+
+    expect(probeIn(busy, `exec 8>${sh(`${busy}/.t3/userdata/statev2.sqlite`)}`)).toBe(
+      `${busy}/.t3`,
+    );
+    expect(runShell(`test -d ${sh(`${busy}/.t3/userdata`)}`).status).toBe(0);
+
+    expect(probeIn(free)).toBe(`${free}/.nebula`);
+    expect(runShell(`test -d ${sh(`${free}/.nebula/userdata`)}`).status).toBe(0);
+    expect(runShell(`test ! -e ${sh(`${free}/.t3`)}`).status).toBe(0);
+    expect(probeIn(free)).toBe(`${free}/.nebula`);
+  });
+
   it("keeps the inherited PATH when bash is unavailable", () => {
     const fixture = createFixture();
     expect(fixture.install().status).toBe(0);

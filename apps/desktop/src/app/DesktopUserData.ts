@@ -66,9 +66,11 @@ export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPa
     }
     const names = input.isDevelopment
       ? { current: "t3code-dev", legacy: "T3 Code (Dev)" }
-      : { current: "t3code-v2", legacy: "T3 Code (Alpha)" };
+      : { current: "nebula", legacy: "T3 Code (Alpha)" };
     const destinationPath = path.join(input.appDataDirectory, names.current);
     const legacyPath = path.join(input.appDataDirectory, names.legacy);
+    // Nebula shared T3 Code's profile before it had its own.
+    const sharedPath = path.join(input.appDataDirectory, "t3code-v2");
     const inspect = (resourcePath: string) =>
       fs
         .exists(resourcePath)
@@ -84,17 +86,31 @@ export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPa
     if (input.platform !== "win32") return destinationPath;
     const destinationState = path.join(destinationPath, "Local State");
     if (yield* inspect(destinationState)) return destinationPath;
-    const legacyState = path.join(legacyPath, "Local State");
-    const sourceState = (yield* inspect(legacyState))
-      ? legacyState
-      : path.join(input.appDataDirectory, "t3code", "Local State");
-    if (!(yield* inspect(sourceState))) return destinationPath;
+    // Windows refuses while T3 Code has the profile open; then copy its keys like the older ones.
+    if (!(yield* inspect(destinationPath)) && (yield* inspect(sharedPath))) {
+      const moved = yield* fs.rename(sharedPath, destinationPath).pipe(
+        Effect.as(true),
+        Effect.catch((cause) =>
+          Effect.logWarning("Could not move the shared desktop profile", cause).pipe(
+            Effect.as(false),
+          ),
+        ),
+      );
+      if (moved) return destinationPath;
+    }
+    const sourceState = yield* Effect.findFirst(
+      [sharedPath, legacyPath, path.join(input.appDataDirectory, "t3code")].map((directory) =>
+        path.join(directory, "Local State"),
+      ),
+      inspect,
+    );
+    if (Option.isNone(sourceState)) return destinationPath;
     // Windows safeStorage keys live here. Copy only these preferences, never locked databases.
     const state = yield* fs
-      .readFileString(sourceState)
+      .readFileString(sourceState.value)
       .pipe(
         Effect.mapError((cause) =>
-          DesktopUserDataInitializationError.fromFileSystem(cause, "read", sourceState),
+          DesktopUserDataInitializationError.fromFileSystem(cause, "read", sourceState.value),
         ),
       );
     yield* fs

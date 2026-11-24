@@ -104,10 +104,10 @@ Prebuilt Windows x64 installers are published on the [GitHub Releases](https://g
 3. Launch **Nebula** and enable at least one provider under **Settings → Providers**.
 
 > [!NOTE]
-> **Shared data directory (`~/.t3`):** Nebula shares upstream T3 Code's application ID and local data directory (`~/.t3`), so existing projects and thread histories carry over automatically. Because of this shared ID, Nebula and upstream T3 Code cannot be installed side by side on the same machine.
+> **Own app ID and data directory (since v1.0.9):** Nebula now uses its own application ID (`com.nebula.desktop`), data directory (`~/.nebula`), and install folder (`%LOCALAPPDATA%\Programs\nebula`), so it can be installed side by side with upstream T3 Code. When you upgrade from v1.0.8 or earlier, the installer removes the old Nebula registration (keeping your data), and on first launch Nebula moves `~/.t3` to `~/.nebula` and `%APPDATA%\t3code-v2` to `%APPDATA%\nebula`. The WSL backend does the same inside WSL. If T3 Code or a background `t3` service still has the old folder open, Nebula keeps using it for that launch and retries next time, so close T3 Code before the first launch. Upstream T3 Code will start with empty data afterwards. Setting `T3CODE_HOME` skips the move. Re-pin Nebula to the taskbar once after upgrading.
 
 > [!WARNING]
-> **Do not downgrade after upgrading to v1.0.8 or later:** Starting in v1.0.8, Nebula encrypts its stored secrets with Windows DPAPI (migrating existing plaintext secrets automatically on first read). Earlier versions cannot read encrypted secrets, so downgrading will require re-entering provider credentials and relay API keys.
+> **Do not downgrade after upgrading to v1.0.8 or later:** Starting in v1.0.8, Nebula encrypts its stored secrets with Windows DPAPI (migrating existing plaintext secrets automatically on first read). Earlier versions cannot read encrypted secrets, so downgrading will require re-entering provider credentials and relay API keys. Versions before v1.0.9 also read `~/.t3`, not `~/.nebula`, so they would not see your data.
 
 <a id="providers"></a>
 
@@ -137,10 +137,10 @@ Nebula is designed to stay strictly local except for the model services and tool
 
 ### How Credentials Are Stored on Windows
 
-| Store                                                                                                  | Protection Model                                                                                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Nebula secret store**<br />(`~/.t3/userdata/secrets/` — provider credentials, relay keys, sign keys) | Encrypted with **Windows DPAPI** (64-bit Windows), bound to your current Windows account on this machine. Legacy plaintext secrets are automatically sealed on first read; copied or backed-up files cannot be decrypted on another account or PC. |
-| **External CLI login files**<br />(e.g., Codex `auth.json`, Antigravity OAuth tokens)                  | Kept in the format required by each official agent CLI so the CLI itself can read and refresh them, isolated inside per-account directories and protected by standard Windows account permissions (current user, Administrators, and SYSTEM).      |
+| Store                                                                                                      | Protection Model                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Nebula secret store**<br />(`~/.nebula/userdata/secrets/` — provider credentials, relay keys, sign keys) | Encrypted with **Windows DPAPI** (64-bit Windows), bound to your current Windows account on this machine. Legacy plaintext secrets are automatically sealed on first read; copied or backed-up files cannot be decrypted on another account or PC. |
+| **External CLI login files**<br />(e.g., Codex `auth.json`, Antigravity OAuth tokens)                      | Kept in the format required by each official agent CLI so the CLI itself can read and refresh them, isolated inside per-account directories and protected by standard Windows account permissions (current user, Administrators, and SYSTEM).      |
 
 <a id="build"></a>
 

@@ -14,7 +14,11 @@ import * as Path from "effect/Path";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopConfig from "./DesktopConfig.ts";
 import { resolveLinuxDesktopEntryName } from "./DesktopEarlyElectronStartup.ts";
-import { resolveDesktopBaseDir, resolveDesktopStateDir } from "./DesktopStatePaths.ts";
+import {
+  migrateLegacyDesktopBaseDir,
+  resolveDesktopBaseDir,
+  resolveDesktopStateDir,
+} from "./DesktopStatePaths.ts";
 import { isNightlyDesktopVersion } from "../updates/updateChannels.ts";
 import type { OtlpProtocol } from "@t3tools/shared/observability";
 
@@ -28,6 +32,11 @@ export interface MakeDesktopEnvironmentInput {
   readonly isPackaged: boolean;
   readonly resourcesPath: string;
   readonly runningUnderArm64Translation: boolean;
+  /** Synchronous so the move finishes before anything opens a file under the base dir. */
+  readonly legacyBaseDirFileSystem?: {
+    readonly exists: (path: string) => boolean;
+    readonly rename: (from: string, to: string) => void;
+  };
 }
 
 export class DesktopEnvironment extends Context.Service<
@@ -109,7 +118,7 @@ export function resolveDesktopAppBranding(input: {
     baseName: APP_BASE_NAME,
     stageLabel,
     // Nebula custom build: shown in the menu bar, About panel and Hide/Quit items.
-    // Only the visible name changes; app.setName (keychain, User-Agent) and userData keep the base name.
+    // Only the visible name changes; app.setName (keychain, User-Agent) keeps the base name.
     displayName: stageLabel === "Dev" ? `${APP_BASE_NAME} (${stageLabel})` : NEBULA_DISPLAY_NAME,
   };
 }
@@ -160,11 +169,34 @@ const make = Effect.fn("desktop.environment.make")(function* (
       : input.platform === "darwin"
         ? path.join(homeDirectory, "Library", "Application Support")
         : Option.getOrElse(config.xdgConfigHome, () => path.join(homeDirectory, ".config"));
-  const baseDir = resolveDesktopBaseDir({
-    homeDirectory,
-    joinPath: path.join,
-    t3Home: config.t3Home,
-  });
+  const legacyMigration =
+    input.legacyBaseDirFileSystem !== undefined &&
+    input.isPackaged &&
+    input.platform === "win32" &&
+    !isDevelopment &&
+    Option.isNone(config.t3Home)
+      ? migrateLegacyDesktopBaseDir({
+          homeDirectory,
+          joinPath: path.join,
+          ...input.legacyBaseDirFileSystem,
+        })
+      : ({ kind: "none" } as const);
+  if (legacyMigration.kind === "moved") {
+    yield* Effect.logInfo("moved the desktop data directory", legacyMigration);
+  } else if (legacyMigration.kind === "kept-legacy") {
+    yield* Effect.logWarning("could not move the desktop data directory; using it in place", {
+      legacyBaseDir: legacyMigration.legacyBaseDir,
+      cause: String(legacyMigration.cause),
+    });
+  }
+  const baseDir =
+    legacyMigration.kind === "kept-legacy"
+      ? legacyMigration.legacyBaseDir
+      : resolveDesktopBaseDir({
+          homeDirectory,
+          joinPath: path.join,
+          t3Home: config.t3Home,
+        });
   const rootDir = path.resolve(input.dirname, "../../..");
   const appRoot = input.isPackaged ? input.appPath : rootDir;
   const serverRoot =
@@ -232,7 +264,7 @@ const make = Effect.fn("desktop.environment.make")(function* (
     branding,
     displayName,
     appUserModelId: Option.getOrElse(config.appUserModelIdOverride, () =>
-      isDevelopment ? "com.t3tools.t3code.dev" : "com.t3tools.t3code",
+      isDevelopment ? "com.nebula.desktop.dev" : "com.nebula.desktop",
     ),
     linuxDesktopEntryName: resolveLinuxDesktopEntryName(isDevelopment),
     linuxApplicationsDir,

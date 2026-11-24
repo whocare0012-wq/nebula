@@ -40,3 +40,28 @@
     ${EndIf}
   !endif
 !macroend
+
+; Nebula 1.0.8 and earlier installed under T3 Code's app id. Remove that registration (keeping
+; app data, which the app moves on first launch) so the two never share an uninstall entry or
+; folder. A real T3 Code install under that id is left alone.
+!define NEBULA_LEGACY_GUID "e9197887-efb3-55e0-985e-d6d3b5dd594a"
+!macro customInit
+  Push $0
+  Push $1
+  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${NEBULA_LEGACY_GUID}" "DisplayName"
+  StrCpy $0 $0 7
+  ReadRegStr $1 HKCU "Software\${NEBULA_LEGACY_GUID}" "InstallLocation"
+  ${If} $0 == "Nebula "
+  ${AndIf} $1 != ""
+  ${AndIf} ${FileExists} "$1\Uninstall Nebula.exe"
+    InitPluginsDir
+    CopyFiles /SILENT /FILESONLY "$1\Uninstall Nebula.exe" "$PLUGINSDIR\nebula-legacy-uninstaller.exe"
+    ExecWait '"$PLUGINSDIR\nebula-legacy-uninstaller.exe" /S /KEEP_APP_DATA /currentuser --updated _?=$1'
+    Delete "$PLUGINSDIR\nebula-legacy-uninstaller.exe"
+    ; Run with _?=, the uninstaller cannot delete itself or its folder.
+    Delete "$1\Uninstall Nebula.exe"
+    RMDir "$1"
+  ${EndIf}
+  Pop $1
+  Pop $0
+!macroend
