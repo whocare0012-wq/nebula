@@ -8324,33 +8324,7 @@ export const zhCN: Readonly<Record<string, string>> = {
   Sent: "已发送",
   "Send to assistant ({count})": "发给助手（{count}）",
   "Stardust Community C{number} is available": "小新社区版 C{number} 已发布",
-  "Source mode lets you review and merge changes in your fork.":
-    "自行改造模式：请先查看差异，按需合并；不会替换应用。",
-  "Review the update and download it when you’re ready.":
-    "可查看更新内容，确认后自行下载；不会自动安装。",
-  "View update": "查看更新",
-  "Community update mode": "社区更新模式",
-  "Standard mode links to release downloads. Source mode links to source changes. Updating and restarting are manual in both modes.":
-    "标准模式提供发行下载入口；自行改造模式提供源码差异。两种模式都不会自动下载、安装或重启。",
-  "Source mode · Notify only": "自行改造 · 仅提醒",
-  "Standard · Confirm updates manually": "标准版 · 手动确认更新",
-  "Check for community updates automatically": "自动检查社区更新",
-  "Checks public GitHub releases at startup and every 6 hours. Conversation, account, and project data stay on your device.":
-    "启动后及每 6 小时检查一次 GitHub 公开发行；不发送聊天、账号或项目数据。",
-  "Stardust Community · Mac Apple Silicon": "小新社区版 · Mac Apple Silicon",
   "C{number} available · {total}": "发现 C{number}；{total}",
-  "Review and merge source changes as needed": "先查看差异，按需合并源码",
-  "Review the notes, then download manually": "查看说明后手动下载",
-  "You have the latest community release.": "未发现比当前社区基线更新的正式版",
-  "Checks the Stardust Community release feed only.":
-    "仅检查小新社区发行，不使用上游官方自动更新源。",
-  "Community baseline:": "社区基线：",
-  ". Your local source may contain additional changes.": "。此编号不代表本地源码未改动。",
-  "View release notes": "查看发行说明",
-  "Open download page": "前往下载页",
-  "View source changes": "查看源码差异",
-  "Review and merge the changes in your fork before building. Replacing the app can overwrite your customizations.":
-    "请在自己的 fork 中审阅并合并所需修改，再构建；整包覆盖可能替换你的代码改造。",
   "Memory content": "记忆内容",
   Scope: "范围",
   "Memory scope": "记忆范围",
@@ -8921,18 +8895,6 @@ export const zhCN: Readonly<Record<string, string>> = {
   "{count}h.": "{count}时",
   "{count}d": "{count}天",
   "Subtask · {count}": "子任务 · {count}",
-  "Invalid release information": "发行信息格式不正确",
-  "The latest release is unavailable for Mac": "最新发行不是可用的 Mac 社区正式版",
-  "No complete, verifiable Mac Apple Silicon build is available for this release":
-    "该发行尚无完整且可校验的 Mac Apple Silicon 安装包",
-  "Couldn’t save update preferences. Defaults may return after restart.":
-    "更新偏好暂时无法保存，重启后可能恢复默认值",
-  "GitHub is rate-limiting update checks. Try again later.":
-    "检查过于频繁或 GitHub 暂时限制访问，请稍后再试",
-  "Update check failed (HTTP {status})": "检查失败（HTTP {status}）",
-  "Local community baseline unknown. Check the releases page.":
-    "本地社区基线未知，请手动查看发行页",
-  "Couldn’t reach GitHub. Try again later.": "暂时无法连接 GitHub，请稍后重试",
   "Blocked.": "阻塞",
   "Your action: {name}": "{name}，你来做",
   "Task board service unavailable": "看板服务暂时不可用",
@@ -9669,15 +9631,6 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Only counts conversations run in T3": "仅统计在 T3 中运行的对话",
   "Fast & Low-cost": "极速低价",
   "Low-cost": "低价",
-  "T3 Stardust {tag} is available": "T3 星尘版 {tag} 已发布",
-  "T3 Stardust counts active users anonymously": "T3 星尘版会匿名统计活跃人数",
-  "Once a day it sends a random install ID, the app version and your system type. No chats, accounts, projects or IP addresses are stored. You can turn it off any time in Settings → About.":
-    "每天发送一次随机安装 ID、应用版本和系统类型，不保存聊天、账号、项目或 IP 地址。可以随时在「设置 → 关于」里关闭。",
-  "Turn off": "关闭统计",
-  "Count me as an active Stardust user": "计入星尘版活跃用户",
-  "Off by default. When on, once a day sends a random install ID, the app version and your system type to xiaoxin666.cn so the author knows how many people use T3 Stardust. No chats, accounts, projects or IP addresses are stored.":
-    "默认关闭。开启后每天向 xiaoxin666.cn 发送一次随机安装 ID、应用版本和系统类型，让作者知道有多少人在用 T3 星尘版。不保存聊天、账号、项目或 IP 地址。",
-  "{version} available · {action}": "发现 {version}；{action}",
   "Edit exchange rate": "编辑汇率",
   "Yuan per US dollar": "1 美元兑人民币",
   "Decrease exchange rate": "降低汇率",

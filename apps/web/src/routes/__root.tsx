@@ -1,5 +1,3 @@
-import { CommunityUpdateCoordinator } from "../components/settings/CommunityUpdates";
-import { StardustStatsCoordinator } from "../components/settings/StardustStats";
 import { type ServerLifecycleWelcomePayload } from "@t3tools/contracts";
 import { scopedProjectKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
 import {
@@ -202,8 +200,6 @@ function RootRouteBranch() {
       <ReopenClosedViewShortcut />
       <ConfirmDialogHost />
       <CustomSnoozeDialogHost />
-      <CommunityUpdateCoordinator />
-      <StardustStatsCoordinator />
       <GuestShareDialogHost />
       <ProjectCloneToastCoordinator />
       <ConnectDeviceApprovalCoordinator />

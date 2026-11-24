@@ -156,10 +156,10 @@ describe("desktop update UI helpers", () => {
     "falls back to the default repository for an invalid configured repository: %s",
     (repository) => {
       expect(getDesktopUpdateReleaseHistoryUrl(repository)).toBe(
-        "https://github.com/zds-xiaoxin/xiaoxin-t3code/releases",
+        "https://github.com/whocare0012-wq/t3-nebula/releases",
       );
       expect(getDesktopUpdateReleaseUrl("1.2.3", repository)).toBe(
-        "https://github.com/zds-xiaoxin/xiaoxin-t3code/releases/tag/v1.2.3",
+        "https://github.com/whocare0012-wq/t3-nebula/releases/tag/v1.2.3",
       );
     },
   );

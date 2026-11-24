@@ -1,5 +1,4 @@
 import { SidebarCategorySettingsSection } from "./SidebarCategorySettings";
-import { CommunityUpdateSettings } from "./CommunityUpdates";
 import { thrownErrorMessage } from "@t3tools/client-runtime/errors";
 import { m as resolveMessage } from "~/i18n/messages";
 import { useAtomValue } from "@effect/atom-react";
@@ -174,15 +173,6 @@ const QUIT_CONFIRMATION_MODE_LABELS: Record<QuitConfirmationMode, string> = {
 
 const DEFAULT_DRIVER_KIND = ProviderDriverKind.make("codex");
 function AboutVersionSection() {
-  return (
-    <>
-      {isElectron && <CommunityUpdateSettings />}
-      <UpstreamAboutVersionSection />
-    </>
-  );
-}
-
-function UpstreamAboutVersionSection() {
   const setting = useSearchableSetting();
   const gt = useGT();
   const messages = useMessages();

@@ -45,6 +45,6 @@ export function appDisplayName(): string {
     : formatAppDisplayName({ baseName: appBaseName(), stageLabel: APP_STAGE_LABEL });
 }
 export const APP_VERSION = import.meta.env.APP_VERSION || "0.0.0";
-export const DESKTOP_DOWNLOAD_URL = "https://github.com/zds-xiaoxin/xiaoxin-t3code/releases";
+export const DESKTOP_DOWNLOAD_URL = "https://github.com/whocare0012-wq/t3-nebula/releases";
 // Redirects to the App Store or Google Play to match the phone that opens it.
-export const MOBILE_APP_URL = "https://github.com/zds-xiaoxin/xiaoxin-t3code";
+export const MOBILE_APP_URL = "https://github.com/whocare0012-wq/t3-nebula";

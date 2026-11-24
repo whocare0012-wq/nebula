@@ -541,15 +541,15 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(release.publish, [
         {
           provider: "github",
-          owner: "zds-xiaoxin",
-          repo: "xiaoxin-t3code",
+          owner: "whocare0012-wq",
+          repo: "t3-nebula",
           releaseType: "release",
         },
       ]);
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "zds-xiaoxin/xiaoxin-t3code" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/t3-nebula" } }),
         ),
       ),
     ),
@@ -587,7 +587,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "zds-xiaoxin/xiaoxin-t3code" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/t3-nebula" } }),
         ),
       ),
     ),
@@ -1991,11 +1991,11 @@ it.effect("never bakes the upstream project's update feed into a build", () =>
     assert.isUndefined(yield* publishFor({ GITHUB_REPOSITORY: "PingDotGG/t3code" }));
     assert.isUndefined(yield* publishFor({}));
     assert.deepEqual(
-      yield* publishFor({ T3CODE_DESKTOP_UPDATE_REPOSITORY: "zds-xiaoxin/xiaoxin-t3code" }),
+      yield* publishFor({ T3CODE_DESKTOP_UPDATE_REPOSITORY: "whocare0012-wq/t3-nebula" }),
       {
         provider: "github",
-        owner: "zds-xiaoxin",
-        repo: "xiaoxin-t3code",
+        owner: "whocare0012-wq",
+        repo: "t3-nebula",
         releaseType: "release",
       },
     );

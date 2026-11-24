@@ -11,13 +11,13 @@ launch T3 Code and configure providers afterwards.
 ## Command line
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zds-xiaoxin/xiaoxin-t3-stardust/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/whocare0012-wq/t3-nebula/main/scripts/install.sh | sh
 ```
 
 On Windows, in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/zds-xiaoxin/xiaoxin-t3-stardust/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/whocare0012-wq/t3-nebula/main/scripts/install.ps1 | iex
 ```
 
 This installs the `t3` command to `~/.local/bin`. If that folder is not on your
@@ -61,7 +61,7 @@ run a server there, build it from source with `vp`, which provides the Node vers
 ([Install vp](../operations/00_development.md#first-checkout)):
 
 ```bash
-git clone https://github.com/zds-xiaoxin/xiaoxin-t3-stardust
+git clone https://github.com/whocare0012-wq/t3-nebula
 cd t3code && vp i && vp run build:desktop
 node apps/server/dist/bin.mjs
 ```
@@ -71,7 +71,7 @@ update it with `git pull` and a rebuild.
 
 ## Desktop app
 
-Download a release from [GitHub Releases](https://github.com/zds-xiaoxin/xiaoxin-t3-stardust/releases),
+Download a release from [GitHub Releases](https://github.com/whocare0012-wq/t3-nebula/releases),
 or use a package manager:
 
 | Platform           | Install                                                      |
@@ -180,7 +180,7 @@ on web and desktop. The store apps work with both stable and Nightly servers. Te
 
 - **iPhone and iPad:** TestFlight is invite-only.
 - **Android:** download an APK from the
-  [Android beta releases](https://github.com/zds-xiaoxin/xiaoxin-t3-stardust/releases?q=android-beta-).
+  [Android beta releases](https://github.com/whocare0012-wq/t3-nebula/releases?q=android-beta-).
 
 If the app crashes during launch, open Settings → Diagnostics on the next launch
 that succeeds. It lists startup crashes from the last 7 days with the error and

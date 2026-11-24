@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zds-xiaoxin/xiaoxin-t3code",
+    "url": "https://github.com/whocare0012-wq/t3-nebula",
     "directory": "apps/server"
   },
   "bin": {

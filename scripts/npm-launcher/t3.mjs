@@ -79,7 +79,7 @@ async function install(dir, key) {
   const archive = `t3-${version}-${key}.${process.platform === "win32" ? "zip" : "tar.gz"}`;
   const base = (
     process.env.T3CODE_RELEASE_BASE_URL ||
-    "https://github.com/zds-xiaoxin/xiaoxin-t3code/releases/download"
+    "https://github.com/whocare0012-wq/t3-nebula/releases/download"
   ).replace(/\/+$/, "");
   const sums = await (await get(`${base}/v${version}/SHA256SUMS`)).text();
   const expected = /^([0-9a-f]{64})\s+\*?(.+)$/im;
@@ -180,7 +180,7 @@ async function main() {
   if (!SUPPORTED.includes(key)) {
     throw new Error(
       `no T3 Code CLI build is available for ${key} (supported: ${SUPPORTED.join(", ")}).\n` +
-        "The desktop app is at https://github.com/zds-xiaoxin/xiaoxin-t3code/releases",
+        "The desktop app is at https://github.com/whocare0012-wq/t3-nebula/releases",
     );
   }
   const dir = path.join(t3Home(), "runtime", "versions", version);

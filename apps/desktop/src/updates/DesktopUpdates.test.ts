@@ -1536,7 +1536,7 @@ describe("DesktopUpdates feed ownership", () => {
   it.effect("keeps updates on for this fork's own feed", () =>
     Effect.gen(function* () {
       const result = yield* configured(
-        "provider: github\nowner: zds-xiaoxin\nrepo: xiaoxin-t3code\n",
+        "provider: github\nowner: whocare0012-wq\nrepo: t3-nebula\n",
       );
       assert.equal(result.state.status, "idle");
       assert.isTrue(result.canInstallUpdates);
@@ -1556,9 +1556,7 @@ describe("updateFeedPointsUpstream", () => {
       }),
     );
     assert.isTrue(upstream({ provider: "generic", url: "https://updates.t3.codes/latest" }));
-    assert.isFalse(
-      upstream({ provider: "github", owner: "zds-xiaoxin", repo: "xiaoxin-t3code" }),
-    );
+    assert.isFalse(upstream({ provider: "github", owner: "whocare0012-wq", repo: "t3-nebula" }));
     assert.isFalse(upstream({ provider: "generic", url: "https://mirror.example.com/t3" }));
   });
 });
