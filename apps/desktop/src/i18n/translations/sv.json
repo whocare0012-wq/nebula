@@ -38,6 +38,7 @@
   "00ad8aeed0a6c461": "Avbryt",
   "2107cc3e7c4ac833": "Öppna den här {protocol}-länken?",
   "050db36de6624203": "En sida i webbläsaren vill öppna ett annat program:\n\n{url}",
+  "b7a85fca167eb7a1": "Avbryt blockerar webbplatsens applänkar i den här fliken. Öppna en ny flik för att försöka igen.",
   "c1d7515ac0214ca1": "Lita på och kom ihåg",
   "e89b5b30b1bc99bb": "{host} har ett certifikat som inte är betrott",
   "16d4c8a1431bd8c2": "Utfärdat till: {name}",

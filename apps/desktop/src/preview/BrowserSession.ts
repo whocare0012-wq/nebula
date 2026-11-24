@@ -359,9 +359,23 @@ export const make = Effect.gen(function* BrowserSessionMake() {
         promptPermission(
           requester,
           {
-            buttons: ["Open", "Cancel"],
-            message: `Open this ${new URL(url).protocol.slice(0, -1)} link?`,
-            detail: `A page in the browser wants to open another application:\n\n${truncateForPrompt(url)}\n\nCancel blocks this site's app links in this tab. Open a new tab to try again.`,
+            buttons: [
+              m(msg("Open", { $context: "button, opens a link in another app" })),
+              m(msg("Cancel")),
+            ],
+            message: m(msg("Open this {protocol} link?"), {
+              protocol: new URL(url).protocol.slice(0, -1),
+            }),
+            detail: [
+              m(msg("A page in the browser wants to open another application:\n\n{url}"), {
+                url: truncateForPrompt(url),
+              }),
+              m(
+                msg(
+                  "Cancel blocks this site's app links in this tab. Open a new tab to try again.",
+                ),
+              ),
+            ].join("\n\n"),
           },
           (answer) => {
             if (answer === false) {

@@ -7,7 +7,8 @@ import { customMessageSource } from "./customMessageSource";
 
 /** Custom terms use GT's reactive locale and shipped catalog, with no remote translation. */
 export function useUiText() {
-  const gt = useGT();
+  // Custom sources are looked up at runtime; the destructuring keeps `gt generate` from scanning them.
+  const [gt] = [useGT()];
   const requestedLocale = useLocale();
   const locale = isChineseLocale(requestedLocale) ? "zh" : requestedLocale;
   return (source: string, values?: Readonly<Record<string, unknown>>) => {

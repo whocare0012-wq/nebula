@@ -38,6 +38,7 @@
   "00ad8aeed0a6c461": "Annuler",
   "2107cc3e7c4ac833": "Ouvrir ce lien {protocol} ?",
   "050db36de6624203": "Une page du navigateur veut ouvrir une autre application :\n\n{url}",
+  "b7a85fca167eb7a1": "Annuler bloque les liens d’application de ce site dans cet onglet. Ouvrez un nouvel onglet pour réessayer.",
   "c1d7515ac0214ca1": "Faire confiance et mémoriser",
   "e89b5b30b1bc99bb": "{host} a un certificat non fiable",
   "16d4c8a1431bd8c2": "Délivré à : {name}",

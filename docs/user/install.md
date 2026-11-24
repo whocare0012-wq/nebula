@@ -62,7 +62,7 @@ run a server there, build it from source with `vp`, which provides the Node vers
 
 ```bash
 git clone https://github.com/whocare0012-wq/nebula
-cd t3code && vp i && vp run build:desktop
+cd nebula && vp i && vp run build:desktop
 node apps/server/dist/bin.mjs
 ```
 

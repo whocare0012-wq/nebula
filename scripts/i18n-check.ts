@@ -4,13 +4,15 @@
 // en.json, or a locale catalog's keys differ from en.json. Needs no GT credentials or network.
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";
+import * as NodeModule from "node:module";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as NodeURL from "node:url";
 
 // Desktop only depends on gt-i18n, so the gt CLI hides `generate` there; its script adds it back.
 const GENERATE: Record<string, readonly [string, ...string[]]> = {
-  "apps/web": ["node_modules/.bin/gt", "generate"],
-  "apps/mobile": ["node_modules/.bin/gt", "generate"],
+  "apps/web": [process.execPath, "node_modules/gt/bin/main.js", "generate"],
+  "apps/mobile": [process.execPath, "node_modules/gt/bin/main.js", "generate"],
   "apps/desktop": [process.execPath, "scripts/i18n-generate.mjs"],
 };
 const APPS = Object.keys(GENERATE);
@@ -23,6 +25,35 @@ const missingFrom = (from: Catalog, catalog: Catalog) =>
 
 const root = NodePath.resolve(import.meta.dirname, "..");
 const problems: string[] = [];
+
+// The web app's custom Chinese terms (src/i18n/catalog.ts) are looked up at runtime under the
+// "stardust-custom" context, so zh.json carries their hashes while en.json does not.
+async function webCustomKeys(): Promise<ReadonlySet<string>> {
+  const web = NodePath.join(root, "apps/web");
+  const load = (file: string) => import(NodeURL.pathToFileURL(file).href);
+  const gtReact = NodeModule.createRequire(NodePath.join(web, "package.json")).resolve("gt-react");
+  const { hashSource } = (await load(
+    NodeModule.createRequire(gtReact).resolve("generaltranslation/id"),
+  )) as {
+    hashSource: (input: { source: string; context: string; dataFormat: "ICU" }) => string;
+  };
+  const { zhCN } = (await load(NodePath.join(web, "src/i18n/catalog.ts"))) as {
+    zhCN: Readonly<Record<string, string>>;
+  };
+  const { customMessageSource } = (await load(
+    NodePath.join(web, "src/i18n/customMessageSource.ts"),
+  )) as { customMessageSource: (source: string) => string };
+  return new Set(
+    Object.keys(zhCN).map((source) =>
+      hashSource({
+        source: customMessageSource(source),
+        context: "stardust-custom",
+        dataFormat: "ICU",
+      }),
+    ),
+  );
+}
+const customKeys: Record<string, ReadonlySet<string>> = { "apps/web": await webCustomKeys() };
 
 for (const [app, [command, ...args]] of Object.entries(GENERATE)) {
   const appDir = NodePath.join(root, app);
@@ -69,6 +100,7 @@ for (const [app, [command, ...args]] of Object.entries(GENERATE)) {
       problems.push(`${app}: ${locale}.json is missing ${key} ${JSON.stringify(source[key])}`);
     }
     for (const key of missingFrom(catalog, source)) {
+      if (customKeys[app]?.has(key)) continue;
       problems.push(`${app}: ${locale}.json has ${key}, which en.json lacks`);
     }
   }

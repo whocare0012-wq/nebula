@@ -36,7 +36,7 @@ the resource monitor and an authenticated `gh` (or set `GH` to its path).
 Many upstream tests assume macOS or Linux: POSIX paths, symlinks (which need Developer Mode or
 admin rights on Windows), and `/bin/sh` scripts. Nebula does not edit them, so upstream merges
 stay clean. `scripts/windows-known-failures.json` lists the tests known to fail on Windows instead.
-`node scripts/windows-test-baseline.ts apps/server apps/web scripts` runs those packages and fails
+`node scripts/windows-test-baseline.ts apps/server apps/web apps/desktop scripts` runs those packages and fails
 only on tests outside the list; it also names listed tests that now pass. After a merge, review the
 new failures, fix any real Windows bug, and rerun with `--update` to record the rest.
 

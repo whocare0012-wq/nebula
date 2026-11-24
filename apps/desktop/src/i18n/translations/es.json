@@ -38,6 +38,7 @@
   "00ad8aeed0a6c461": "Cancelar",
   "2107cc3e7c4ac833": "¿Abrir este enlace {protocol}?",
   "050db36de6624203": "Una página del navegador quiere abrir otra aplicación:\n\n{url}",
+  "b7a85fca167eb7a1": "Cancelar bloquea los enlaces a apps de este sitio en esta pestaña. Abre una pestaña nueva para volver a intentarlo.",
   "c1d7515ac0214ca1": "Confiar y recordar",
   "e89b5b30b1bc99bb": "{host} tiene un certificado que no es de confianza",
   "16d4c8a1431bd8c2": "Emitido para: {name}",

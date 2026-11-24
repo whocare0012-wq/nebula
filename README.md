@@ -141,7 +141,7 @@ The generated installer is written to `release/Nebula-<version>-x64.exe`.
 
 - Full user and developer documentation: [docs/README.md](docs/README.md)
 - Development runbook: [docs/operations/00_development.md](docs/operations/00_development.md)
-- Windows test baseline: `vp run test:windows` (runs package tests while filtering known upstream POSIX-only test assumptions on Windows)
+- Windows test baseline: `vp run test:windows apps/server apps/web apps/desktop scripts` (runs package tests while filtering known upstream POSIX-only test assumptions on Windows)
 
 <a id="privacy"></a>
 

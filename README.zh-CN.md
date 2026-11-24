@@ -141,7 +141,7 @@ vp run dist:desktop:win:x64
 
 - 完整使用与开发文档：[docs/README.md](docs/README.md)
 - 开发指南：[docs/operations/00_development.md](docs/operations/00_development.md)
-- Windows 测试基线：`vp run test:windows`（运行各包测试并自动过滤上游仅适用于 POSIX 环境的已知测试项）
+- Windows 测试基线：`vp run test:windows apps/server apps/web apps/desktop scripts`（运行各包测试并自动过滤上游仅适用于 POSIX 环境的已知测试项）
 
 <a id="privacy"></a>
 

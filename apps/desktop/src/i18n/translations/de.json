@@ -38,6 +38,7 @@
   "00ad8aeed0a6c461": "Abbrechen",
   "2107cc3e7c4ac833": "Diesen {protocol}-Link öffnen?",
   "050db36de6624203": "Eine Seite im Browser möchte eine andere Anwendung öffnen:\n\n{url}",
+  "b7a85fca167eb7a1": "„Abbrechen“ blockiert die App-Links dieser Website in diesem Tab. Öffne einen neuen Tab, um es erneut zu versuchen.",
   "c1d7515ac0214ca1": "Vertrauen und merken",
   "e89b5b30b1bc99bb": "{host} hat ein nicht vertrauenswürdiges Zertifikat",
   "16d4c8a1431bd8c2": "Ausgestellt für: {name}",
