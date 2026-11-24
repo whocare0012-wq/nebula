@@ -45,6 +45,7 @@ import { isWithinRoot } from "./KnownWorkspaces.ts";
 import * as TaskFolderStore from "./TaskFolderStore.ts";
 import { projectFolders, parseGitmodulesPaths } from "./WorkspaceFolders.ts";
 import { withWorkspaceLease } from "./workspaceLease.ts";
+import { isLinkedEntry, linkEntry } from "../fileLinks.ts";
 
 // Each worktree is a checkout: enough at once to finish four repositories together, few enough
 // to leave Git's server-wide process slots to running threads.
@@ -570,7 +571,7 @@ const make = Effect.gen(function* () {
         if (trackedRepositories.some((repository) => isWithinRoot(path, repository, entry))) {
           yield* linkFolder(entry, link, trackedRepositories);
         } else {
-          yield* fileSystem.symlink(entry, link);
+          yield* linkEntry(fileSystem, entry, link);
         }
       }
     },
@@ -607,7 +608,7 @@ const make = Effect.gen(function* () {
     target: string,
   ) => Effect.Effect<boolean, PlatformError.PlatformError | RemoveEmptyDirectoryError> =
     Effect.fnUntraced(function* (target) {
-      if (Option.isSome(yield* fileSystem.readLink(target).pipe(Effect.option))) {
+      if (yield* isLinkedEntry(fileSystem, target)) {
         yield* fileSystem.remove(target);
         return true;
       }
@@ -624,7 +625,7 @@ const make = Effect.gen(function* () {
   /** Whether `removeLinks` would leave nothing: only links and folders of links are inside. */
   const holdsOnlyLinks: (target: string) => Effect.Effect<boolean, PlatformError.PlatformError> =
     Effect.fnUntraced(function* (target) {
-      if (Option.isSome(yield* fileSystem.readLink(target).pipe(Effect.option))) return true;
+      if (yield* isLinkedEntry(fileSystem, target)) return true;
       if (!(yield* exists(target))) return true;
       if ((yield* fileSystem.stat(target)).type !== "Directory") return false;
       if (yield* isRepository(target)) return false;
@@ -1250,7 +1251,7 @@ const make = Effect.gen(function* () {
           ? // Git may or may not have left an empty folder where the link was.
             removeEmptyDirectory(worktreePath).pipe(
               Effect.ignore,
-              Effect.andThen(fileSystem.symlink(repositoryPath, worktreePath)),
+              Effect.andThen(linkEntry(fileSystem, repositoryPath, worktreePath)),
               Effect.ignoreCause({ log: true }),
             )
           : Effect.void;

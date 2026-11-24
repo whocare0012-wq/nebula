@@ -7,6 +7,9 @@ import * as PlatformError from "effect/PlatformError";
 
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as Option from "effect/Option";
+
+import { linkEntry } from "../../fileLinks.ts";
 
 export interface CodexHomeLayout {
   readonly mode: "direct" | "authOverlay";
@@ -235,6 +238,60 @@ const removePrivateSymlink = Effect.fn("CodexHomeLayout.removePrivateSymlink")(f
   }
 });
 
+/**
+ * On Windows a shared file is a hard link, which Codex detaches when it rewrites the file by
+ * replacing it. The newer copy then becomes the shared content again (written in place, so other
+ * homes' links keep it) and the link is restored. Returns false for anything that is not a file.
+ */
+const relinkWindowsSharedFile = Effect.fn("CodexHomeLayout.relinkWindowsSharedFile")(
+  function* (input: {
+    readonly fileSystem: FileSystem.FileSystem;
+    readonly sharedHomePath: string;
+    readonly effectiveHomePath: string;
+    readonly entryName: string;
+    readonly target: string;
+    readonly link: string;
+  }): Effect.fn.Return<boolean, CodexShadowHomeError> {
+    const fail = (operation: "remove" | "symlink") => (cause: PlatformError.PlatformError) =>
+      new CodexShadowHomeFileSystemError({
+        sharedHomePath: input.sharedHomePath,
+        effectiveHomePath: input.effectiveHomePath,
+        operation,
+        path: input.link,
+        targetPath: input.target,
+        entryName: input.entryName,
+        cause,
+      });
+    const [shared, local] = yield* Effect.all([
+      input.fileSystem.stat(input.target).pipe(Effect.option),
+      input.fileSystem.stat(input.link).pipe(Effect.option),
+    ]);
+    if (Option.isNone(shared) || Option.isNone(local)) return false;
+    if (shared.value.type !== "File" || local.value.type !== "File") return false;
+    const sameFile =
+      shared.value.dev === local.value.dev &&
+      Option.isSome(shared.value.ino) &&
+      Option.isSome(local.value.ino) &&
+      shared.value.ino.value === local.value.ino.value;
+    if (sameFile) return true;
+    const modified = (info: FileSystem.File.Info) =>
+      Option.match(info.mtime, { onNone: () => 0, onSome: (date) => date.getTime() });
+    if (modified(local.value) > modified(shared.value)) {
+      const content = yield* input.fileSystem
+        .readFile(input.link)
+        .pipe(Effect.mapError(fail("symlink")));
+      yield* input.fileSystem
+        .writeFile(input.target, content)
+        .pipe(Effect.mapError(fail("symlink")));
+    }
+    yield* input.fileSystem.remove(input.link).pipe(Effect.mapError(fail("remove")));
+    yield* linkEntry(input.fileSystem, input.target, input.link).pipe(
+      Effect.mapError(fail("symlink")),
+    );
+    return true;
+  },
+);
+
 const ensureSymlink = Effect.fn("CodexHomeLayout.ensureSymlink")(function* (input: {
   readonly fileSystem: FileSystem.FileSystem;
   readonly sharedHomePath: string;
@@ -249,7 +306,7 @@ const ensureSymlink = Effect.fn("CodexHomeLayout.ensureSymlink")(function* (inpu
     linkPath: link,
   });
 
-  const createLink = input.fileSystem.symlink(target, link).pipe(
+  const createLink = linkEntry(input.fileSystem, target, link).pipe(
     Effect.catchTags({
       PlatformError: (cause) =>
         new CodexShadowHomeFileSystemError({
@@ -263,6 +320,11 @@ const ensureSymlink = Effect.fn("CodexHomeLayout.ensureSymlink")(function* (inpu
         }),
     }),
   );
+
+  if (state._tag === "NotSymlink" && (yield* HostProcess.Platform) === "win32") {
+    const relinked = yield* relinkWindowsSharedFile({ ...input, target, link });
+    if (relinked) return;
+  }
 
   if (state._tag === "NotSymlink") {
     if (!REPLACEABLE_SHARED_RUNTIME_ENTRIES.has(input.entryName)) {
