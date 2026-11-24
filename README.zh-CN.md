@@ -1,140 +1,168 @@
 <p align="center">
-  <img src="assets/nebula-icon.svg" width="112" height="112" alt="T3 星云图标：环绕明亮核心的旋涡星系" />
+  <img src="assets/nebula-icon.svg" width="112" height="112" alt="T3 星云图标" />
 </p>
 
-<h1 align="center">T3 星云 · Nebula</h1>
+<h1 align="center">T3 Nebula · 星云</h1>
 
 <p align="center">
-  <strong>以 Windows 为主的 T3 Code 社区版，开源的编程智能体图形界面。</strong><br />
-  官方 T3 Code + T3 星尘版的全部功能 + 一些自己的改进。
+  <strong>以 Windows 体验为核心的 T3 Code 开源社区发行版 — 统一调度本地编程智能体的桌面工作台。</strong><br />
+  多智能体统一管理 · 多账号实时额度洞察 · 人民币/美元用量分析 · 完整中英文双语界面
 </p>
 
 <p align="center">
   <a href="README.md"><strong>English</strong></a> ·
-  <a href="#credits">引用的项目</a> ·
-  <a href="#whats-new">新增功能</a> ·
-  <a href="#build">在 Windows 上构建</a> ·
-  <a href="#providers">服务商</a> ·
-  <a href="#notes">注意事项</a>
+  <a href="#features">核心特性</a> ·
+  <a href="#download">下载与安装</a> ·
+  <a href="#providers">支持的智能体</a> ·
+  <a href="#build">从源码构建</a> ·
+  <a href="#privacy">隐私与更新</a> ·
+  <a href="#credits">致谢</a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/whocare0012-wq/t3-nebula/releases">
+    <img src="https://img.shields.io/github/v/release/whocare0012-wq/t3-nebula?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=7b5cff" alt="最新版本" />
+  </a>
   <img src="https://img.shields.io/badge/Windows-x64-0078d4" alt="Windows x64" />
-  <img src="https://img.shields.io/badge/UI-English%20%7C%20%E4%B8%AD%E6%96%87-7b5cff" alt="中英文界面" />
-  <img src="https://img.shields.io/badge/License-MIT-30d158" alt="MIT 许可证" />
+  <img src="https://img.shields.io/badge/UI-English%20%7C%20%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-6e56cf" alt="中英文界面" />
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-30d158" alt="MIT 开源协议" />
+  </a>
 </p>
 
 ---
 
-T3 星云是一个个人分支：在一个桌面应用里使用你已有的各家智能体订阅，包括 Codex、Claude、Antigravity、
-Cursor、OpenCode、DeepSeek Harness 以及其他 ACP 智能体。它以 **T3 星尘版**为基础（一个深度定制、
-带完整中文界面和用量分析的 T3 Code），合并了最新的**官方 T3 Code**，并补上了在 Windows 上构建和日常
-使用所需的改动。
+**T3 星云（T3 Nebula）** 是一款开源编程智能体桌面工作台，可在同一个简洁高效的图形界面中统一驱动你本机已安装并登录的各类编程智能体，包括 **Codex**、**Claude Code**、**Antigravity**、**Cursor**、**OpenCode**、**DeepSeek Harness** 以及任意 **ACP（Agent Client Protocol）** 智能体。
 
-界面语言跟随系统，英文和简体中文都完整支持。
+本项目基于上游 [**T3 Code**](https://github.com/pingdotgg/t3code) 与 [**T3 星尘版（Stardust）**](https://github.com/zds-xiaoxin/xiaoxin-t3code) 的界面体验打造，重点增强了 Windows 平台的原生兼容性、多账号额度管理、多币种费用统计以及默认隐私保护。
 
-<a id="credits"></a>
+界面语言自动跟随系统设置，完整支持 **简体中文** 与 **English**。
 
-## 引用的项目
+<a id="features"></a>
 
-T3 星云建立在以下三个项目之上，相关功能的功劳归原作者所有。
+## 核心特性
 
-| 项目                                                                                         | T3 星云从中继承的内容                                                                                                                                                                        |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                                  | 整体基础：应用、服务端、各服务商接入、编排与检查点。已合并到 2026 年 11 月下旬的版本。官方 README 保留在 [README.upstream.md](README.upstream.md)。                                          |
-| [**zds-xiaoxin/xiaoxin-t3code**](https://github.com/zds-xiaoxin/xiaoxin-t3code)（T3 星尘版） | 本分支的直接基础：所有定制功能的中文界面、Composer V9 模型胶囊、星舰推理强度滑块、会话与令牌浮层、顶栏额度胶囊、多账号额度环与燃尽预测、四标签用量工作台、任务步骤卡、预览图钉标注和产物墙。 |
-| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)                  | 费用币种切换的思路来源。它的其他额度功能（顶栏额度胶囊、模型选择器额度徽章、燃尽预测）星尘版已经有了，所以只移植了人民币 / 美元切换。                                                        |
+### 统一多智能体工作台
 
-T3 星云是独立的社区项目，与 T3 Tools 及 T3 星尘版的维护者均无关联。
+- **复用已有订阅**：不转售 Token，也不需要额外中转账户，直接驱动你本机已登录的智能体 CLI 与运行时。
+- **内置 Git 与 Worktree 工作流**：支持为不同对话创建独立 Git Worktree，直接在应用内查看 Diff、回滚检查点，以及执行提交、推送和创建 PR。
+- **跨设备远程协作**：支持将服务端部署在本地或远程主机，通过局域网、Tailscale 或 T3 Connect 连接访问。
 
-<a id="whats-new"></a>
+### Composer V9 与推理强度交互
 
-## T3 星云的新增功能
+- **按服务商分组的模型选择器**：同一服务商下的多个账号合并在同一个标签页中，标签下方提供带剩余额度提示的账号切换栏；自动记忆各服务商上次使用的账号，并在 **全部** 视图中对模型去重展示。
+- **V18 星舰推理强度滑块**：采用离屏精灵贴图缓存与闲置自动休眠机制，交互流畅且低开销；更多滑块主题可在 [`stardust-kit/`](stardust-kit/README.md) 中体验。
+- **实时输出统计与弹簧浮层**：回合进行中在输入框下方实时显示轮次、状态、耗时与每秒输出速率（`tok/s`），点击可展开 **会话概览** 与 **令牌与缓存** 统计浮层。
 
-相比 T3 星尘版，T3 星云新增或改动了以下内容：
+### 多账号托管与实时额度洞察
 
-| 方面                        | 改动                                                                                                                                                                                                                                                           |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **合并上游**                | 把最新的官方 T3 Code 合并进星尘版，冲突逐一手动解决。                                                                                                                                                                                                          |
-| **费用币种**                | 用量页面的费用可以按美元或人民币显示。汇率可以修改并会被记住，图表坐标轴也按所选币种取整。                                                                                                                                                                     |
-| **Codex 多账号**            | 在 **设置 → 服务商 → 添加 ChatGPT 账户** 里可以为 Codex 连接多个 ChatGPT 账号。每个账号都用 Codex 自带的 ChatGPT 登录，登录信息保存在各自独立的 Codex 主目录，不会影响 `~/.codex` 里 Codex CLI 的登录。托管账号会显示 Codex 用量额度，也能使用 Fast 服务档位。 |
-| **模型选择器**              | 同一服务商的多个账号合并为一个标签，标签下有一行账号切换，并显示每个账号的剩余额度。每个服务商会记住上次使用的账号，**全部** 里每个模型只列一次。                                                                                                              |
-| **额度胶囊**                | 顶部额度胶囊跟随当前对话的账号：对话用的账号未被固定时，会临时替换同一服务商下固定的账号，关闭对话后恢复。Antigravity 按当前模型显示对应额度，默认显示 Gemini 额度，Claude 和 GPT 模型显示两者共用的额度。                                                     |
-| **实时输出速度**            | 回合进行中，输入框下方的统计条除了轮次、状态和已用时间，还会显示当前的每秒 token 输出速度。                                                                                                                                                                    |
-| **Windows 上的 npm 智能体** | 用 `npm install -g` 安装的本地 ACP 命令可以直接填名字使用。T3 星云会读取 npm 生成的 `.cmd` 包装文件，直接启动它背后的程序，依然不经过 shell。                                                                                                                  |
-| **DeepSeek Harness**        | 能识别桌面版自带的 CLI，状态检测不会再往你的 DeepSeek 历史里留下空会话。                                                                                                                                                                                       |
-| **隐私默认值**              | 发给上游 T3 Code 项目的匿名使用数据默认关闭，需要时在「设置 → 关于」里打开，欢迎页也会这样提示。已移除星尘版的匿名使用统计（发往 xiaoxin666.cn）和针对星尘版仓库的社区更新检查。官方自动更新已禁用，官方版本不会覆盖本版本。                                   |
-| **Windows 打包**            | 能打出可用的 NSIS 安装包。安装包文件数上限为服务端字节码缓存留出了空间，Windows 的 `.ico` 图标也换成了本应用的图标。                                                                                                                                           |
-| **名称与图标**              | 应用改名为 T3 星云（英文 T3 Nebula），新图标是一个旋涡星系，源文件在 [assets/nebula-icon.svg](assets/nebula-icon.svg)。GitHub 星标提示和手机 App 二维码都指向本仓库。                                                                                          |
-| **Sub2API 额度**            | 如果 Claude Code 走的是你自己搭的 Sub2API 中转站，在 **设置 → 服务商 → 添加 Hub → Sub2API** 填入中转站地址和管理员 API Key，用量页就会显示中转站背后 Claude 账号的 5 小时和每周额度。                                                                          |
-| **Windows 细节**            | 只在 macOS 服务端有效的功能（磁盘清理中心、Cursor 钥匙串开关）在 Windows 上隐藏；产物墙里的「Finder」改为「文件资源管理器」；`vp run dev` 在 Windows 上默认优先用 IPv4 访问 `localhost`。                                                                      |
-| **代码清理**                | 删除合并后不再使用的文件和导出，提交前检查重新可以全部通过。                                                                                                                                                                                                   |
+- **独立的 Codex 多账号管理**：在 **设置 → 服务商 → 添加 ChatGPT 账户** 中可同时接入多个 ChatGPT 账号。每个托管账号均通过 Codex 原生登录流程认证，并将凭证保存在各自独立的 Codex 主目录中，不会影响 `~/.codex` 中原有 Codex CLI 的登录状态，同时完整支持额度查看与 Fast 服务档位。
+- **跟随当前对话的顶栏额度胶囊**：顶部额度胶囊会自动跟随当前打开对话所使用的账号；当对话使用了未固定在顶栏的账号时，会临时替换同服务商固定槽位展示，关闭对话后恢复。对于 Antigravity，额度胶囊与模型选择器会根据当前运行的模型自动对应相应额度池（默认展示 Gemini 额度，Claude 与 GPT 模型展示两者共用额度）。
+
+### 用量、费用与中转站分析
+
+- **多标签用量工作台**：集成了 **费用 / 令牌 / 限额 / 磁盘空间** 视图，提供趋势曲线、额度圆环、燃尽预测与前一时段对比。
+- **美元 / 人民币币种切换**：支持在美元（USD）和人民币（CNY）之间自由切换费用显示，汇率可自定义并持久化保存，图表坐标轴同步按所选币种取整。
+- **Sub2API 中转站额度监控**：若 Claude Code 通过 Sub2API 中转站接入，可在 **设置 → 服务商 → 添加 Hub → Sub2API** 添加配置，直接在用量页面查看背后 Claude 账号的 5 小时与每周额度，以及当前密钥的余额、消费与请求数统计。
+
+### 效率与审查工具
+
+- **任务步骤卡**：将冗长的终端输出折叠为清晰易读的步骤时间线，展示耗时与产出数，并支持随时展开查看原始命令。
+- **内置预览图钉批注**：在内置浏览器预览中直接点击页面元素添加图钉标注，按「待改 / 已改」筛选，发送给智能体时自动附带局部截图。
+- **产物墙**：集中浏览当前对话与项目生成的文件、文档与图片，在 Windows 上支持直接定位到 **文件资源管理器**。
+
+### Windows 平台原生优化
+
+- **免管理员权限的目录链接**：Windows 下的任务目录与 Codex 独立主目录采用目录联接（Junction）与硬链接实现，无需开启「开发者模式」或管理员权限即可正常使用。
+- **更顺畅的本地 CLI 发现与启动**：自动识别 Codex 桌面版自带 CLI；支持直接按命令名启动通过 `npm install -g` 安装的本地 ACP 智能体（自动解析 `.cmd` 包装脚本且不经过 shell）；识别 DeepSeek Harness 桌面版 CLI，状态检测不会在历史记录中残留空会话。
+- **贴合系统的界面呈现**：自动隐藏仅适用于 macOS 服务端的功能入口（如 macOS 磁盘清理中心与 Cursor 钥匙串开关），同时保留磁盘占用统计视图。
+
+<a id="download"></a>
+
+## 下载与安装
+
+预编译的 Windows 安装包发布在 [GitHub Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 页面：
+
+1. 前往 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 下载最新版本的 `T3-Nebula-<版本号>-x64.exe`。
+2. 运行安装程序。由于社区构建包未进行代码签名，Windows SmartScreen 可能会弹出安全提示，点击 **更多信息** → **仍要运行** 即可。
+3. 启动 **T3 星云** 后，前往 **设置 → 服务商** 启用并配置至少一个智能体即可开始使用。
+
+> [!NOTE]
+> **共用数据目录说明**：T3 星云沿用 T3 Code 的应用 ID 与本地数据目录（`~/.t3`），原有的项目和对话历史会自动保留。但因此无法与官方 T3 Code 在同一台机器上并存安装。
+
+<a id="providers"></a>
+
+## 支持的智能体
+
+打开 **设置 → 服务商** 即可启用与管理各家编程智能体：
+
+| 服务商                                                          | 配置方式                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Codex**                                                       | 无需手动安装。在 **设置 → 服务商** 中直接登录一个或多个 ChatGPT 账号即可自动部署受管运行时；也兼容已通过 `codex login` 登录的环境或 Codex 桌面版。                                                                                                                                                                                                                                                        |
+| **Claude Code**                                                 | 安装 [Claude Code](https://claude.com/product/claude-code) 后运行 `claude auth login` 登录。如需查看 Sub2API 中转站额度，可在 **设置 → 服务商 → 添加 Hub → Sub2API** 中添加。                                                                                                                                                                                                                             |
+| **Antigravity**                                                 | 在 **设置 → 服务商** 中启用，按提示安装托管运行时（需约 1.25 GB 可用磁盘空间）并使用 Google 账号登录。                                                                                                                                                                                                                                                                                                    |
+| **Cursor / OpenCode / Grok Build / Kiro / Pi / Muse Code / fx** | 在本机安装对应 CLI 并完成登录后启用，详细命令可查阅 [服务商配置指南](docs/user/install.md#providers)。                                                                                                                                                                                                                                                                                                    |
+| **DeepSeek Harness**                                            | 添加为 **本地 ACP 命令**。使用 npm CLI 时，可执行文件填 `dsh`，参数填 `--profile` 与 `acp`；使用桌面版时，可执行文件填 `DeepSeek Harness.exe`，参数依次填 `--expose-internals`、`resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js`、`--profile`、`acp`，并设置环境变量 `ELECTRON_RUN_AS_NODE=1`。_（官方 ACP 接口暂不上报 Token 统计，因此用量、费用与输出速度会显示为空。）_ |
+| **其他 ACP 智能体**                                             | 在 **设置 → 服务商 → 添加服务商 → 显示更多** 中从 ACP 注册表安装，或直接添加任意本地 ACP 命令。                                                                                                                                                                                                                                                                                                           |
 
 <a id="build"></a>
 
-## 在 Windows 上构建
+## 从源码构建
 
-预编译的安装包在 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 页面。自己构建的方法如下：
+### 环境要求
 
-**环境要求**
+- **Node.js** `26.13.1`（Node.js 26）
+- [**Vite+**](https://viteplus.dev)（`vp` 命令）
+- **Rust**（`rustup`）与 **Visual Studio 2022 生成工具**（需勾选「使用 C++ 的桌面开发」工作负载，用于编译原生资源监视器）
 
-- Node.js 26（仓库指定 26.13.1）
-- [Vite+](https://viteplus.dev)（`vp` 命令）
-- Rust（`rustup`）和带 C++ 工作负载的 Visual Studio 2022 生成工具，用于编译原生资源监视器
-
-**开发模式运行**
+### 开发模式运行
 
 ```powershell
+git clone https://github.com/whocare0012-wq/t3-nebula.git
+cd t3-nebula
 vp i
 vp run dev
 ```
 
-打开终端里输出的 `pairingUrl` 链接即可。
+打开终端输出的 `pairingUrl` 链接即可访问 Web 界面；如需直接启动 Electron 桌面端，可运行 `vp run dev:desktop`。
 
-**打包安装程序**
-
-```powershell
-node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64
-```
-
-安装包会生成在 `release/T3-Nebula-<版本号>-x64.exe`。安装包没有代码签名，Windows SmartScreen 会弹出提示，
-点「更多信息」再点「仍要运行」即可。
-
-**发布新版本**
-
-一条命令即可完成：自动确定下一个版本号，带上本仓库的更新源打包安装程序，推送 `main`，
-再发布 GitHub Release，已安装的应用会从这里获取更新。需要先登录 `gh` CLI，并添加一个指向本仓库、名为 `nebula` 的 git 远程。
+### 打包 Windows 安装程序（x64 NSIS）
 
 ```powershell
-node scripts/release-nebula.ts --bump patch --notes notes.md
+vp run dist:desktop:win:x64
 ```
 
-用 `--version X.Y.Z` 指定确切版本号，用 `--dry-run` 只查看计划而不打包和发布。
+打包完成后，安装程序会生成在 `release/T3-Nebula-<版本号>-x64.exe`。
 
-<a id="providers"></a>
+### 文档与测试
 
-## 服务商
+- 完整使用与开发文档：[docs/README.md](docs/README.md)
+- 开发指南：[docs/operations/00_development.md](docs/operations/00_development.md)
+- Windows 测试基线：`vp run test:windows`（运行各包测试并自动过滤上游仅适用于 POSIX 环境的已知测试项）
 
-| 服务商               | 配置方法                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Codex**            | 不用手动安装。在 **设置 → 服务商** 里用 ChatGPT 连接，T3 星云会自动安装 Codex。已经用 `codex login` 登录过的也能直接用。                                                                                                                                                                                                                                                                             |
-| **Antigravity**      | 不用手动安装。在 **设置 → 服务商** 里启用，在那里安装运行时，再用 Google 账号登录。需要约 1.25 GB 可用空间。                                                                                                                                                                                                                                                                                         |
-| **Claude**           | 需要自己安装 Claude Code，并运行 `claude auth login` 登录。                                                                                                                                                                                                                                                                                                                                          |
-| **DeepSeek Harness** | 添加一个 **本地 ACP 命令**。用 npm 装的 CLI：可执行文件填 `dsh`，参数填 `--profile` 和 `acp`。用桌面版：可执行文件填 `DeepSeek Harness.exe`，参数依次填 `--expose-internals`、桌面版目录下的 `resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js`、`--profile`、`acp`，并添加环境变量 `ELECTRON_RUN_AS_NODE=1`。官方 ACP 接口不上报 token 数，所以费用和速度对它显示为空。 |
-| **其他 ACP 智能体**  | 在 **设置 → 服务商 → 添加服务商 → 显示更多** 里可以搜索 ACP 注册表，或添加任意本地 ACP 命令。                                                                                                                                                                                                                                                                                                        |
+<a id="privacy"></a>
 
-<a id="notes"></a>
+## 隐私与更新
 
-## 注意事项
+- **匿名统计默认关闭**：发往上游 T3 Code 的匿名使用统计默认处于关闭状态，仅在 **设置 → 关于** 中由你手动开启后才会生效。
+- **零第三方分支遥测**：已移除第三方社区分支的活跃统计上报以及外部社区更新检查。
+- **凭证仅本地保存**：各类服务商令牌与中转站 API Key 仅存储在本地服务端，只发往你配置的目标服务商或中转站。
+- **独立更新通道**：已禁用上游官方自动更新，避免官方版本覆盖本发行版。安装后的应用会检查本仓库的 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases)，有新版本时在应用内提示更新。
 
-- **共用数据。** T3 星云沿用 T3 Code 的应用 ID 和数据目录（`~/.t3`），原有的项目和对话会直接带过来，
-  但不能和官方 T3 Code 同时安装。
-- **更新。** 安装后的应用会检查本仓库的 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases)，
-  有新版本时在应用内提示。
-- **仅限 macOS 的功能。** 星尘版的磁盘清理中心和 Cursor 钥匙串开关只在 macOS 服务端上有效，Windows 上会隐藏，用量页仍会显示磁盘占用。
-- **Windows 上的测试。** 部分官方和星尘版原有的测试在 Windows 上会失败（符号链接权限、路径假设等），
-  去掉本分支的改动后同样失败。
+<a id="credits"></a>
 
-## 许可证
+## 致谢
 
-[MIT](LICENSE)，与官方 T3 Code 相同。原作品的版权归原作者所有。
+T3 星云的构建离不开以下开源项目的贡献：
+
+| 项目                                                                                         | 继承与参考内容                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                                  | 核心应用架构、服务端运行时、各服务商适配、编排引擎与检查点机制。上游官方 README 保留于 [README.upstream.md](README.upstream.md)。                                                                         |
+| [**zds-xiaoxin/xiaoxin-t3code**](https://github.com/zds-xiaoxin/xiaoxin-t3code)（T3 星尘版） | Composer V9、V18 星舰推理强度滑块及 [`stardust-kit/`](stardust-kit/README.md)、会话与令牌浮层、顶栏额度胶囊、多账号额度环与燃尽预测、四标签用量工作台、任务步骤卡、预览图钉批注、产物墙及定制功能中文化。 |
+| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)                  | 美元 / 人民币费用币种切换的设计思路来源。                                                                                                                                                                 |
+
+T3 星云为独立的开源社区维护项目，与 T3 Tools Inc. 及 T3 星尘版维护者均无隶属关系。
+
+## 开源协议
+
+本项目沿用上游 T3 Code 的 [MIT 协议](LICENSE) 发布，原始组件的版权归原作者所有。
