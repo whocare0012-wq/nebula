@@ -29,7 +29,7 @@ export function codexAuthorizationRequest(value: string) {
   if (
     value.length > 16_384 ||
     url.origin !== "https://auth.openai.com" ||
-    url.pathname !== "/api/accounts/authorize" ||
+    (url.pathname !== "/api/accounts/authorize" && url.pathname !== "/oauth/authorize") ||
     url.username ||
     url.password ||
     url.hash
@@ -50,7 +50,7 @@ export function codexAuthorizationRequest(value: string) {
     single("response_type") !== "code" ||
     single("code_challenge_method") !== "S256" ||
     !/^[\w-]{43}$/u.test(single("code_challenge")) ||
-    !/^(dynamic_agent_client|oaiapp_[\w-]+)$/u.test(single("client_id"))
+    !/^(dynamic_agent_client|oaiapp_[\w-]+|app_[\w-]+)$/u.test(single("client_id"))
   )
     throw new Error("Invalid ChatGPT sign-in request.");
   return { authorizationUrl: url.toString(), redirectUri, state };

@@ -120,11 +120,7 @@ describe("AddCodexAccountDialog", () => {
     // Telling the owner about the account does not skip the dialog's own sign-in.
     await expect.element(page.getByText("Sign in to ChatGPT")).toBeVisible();
 
-    await act(() =>
-      registry.set(atom, [
-        codexProvider(instanceId, { status: "authenticated", subscriptionSharing: true }),
-      ]),
-    );
+    await act(() => registry.set(atom, [codexProvider(instanceId, { status: "authenticated" })]));
     // Closing the dialog starts its exit animation; unmounting now would cut it off.
     await vi.waitFor(() => expect(document.getAnimations()).not.toHaveLength(0));
     expect(onClose).not.toHaveBeenCalled();

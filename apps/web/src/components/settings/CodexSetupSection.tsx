@@ -18,6 +18,7 @@ import type {
 import { codexAuthHandoffUrl } from "@t3tools/shared/codexAuthHandoff";
 import { providerAuthReturnUrl } from "@t3tools/shared/providerAuthReturnUrl";
 import { isLoopbackHost } from "@t3tools/shared/preview";
+import { usesChatGptSharing } from "@t3tools/shared/usageLimits";
 import { CheckIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 import {
   Children,
@@ -34,8 +35,6 @@ import { ensureLocalApi } from "../../localApi";
 import { managedInstanceLocks, useManagedPolicy } from "../../state/managedPolicy";
 import { ManagedControl } from "../ManagedPolicy";
 import { useEnvironmentHttpBaseUrl } from "../../state/environments";
-import { environmentPresentations } from "../../state/presentation";
-import { primaryEnvironmentIdAtom } from "../../state/primaryEnvironment";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -62,9 +61,9 @@ const noop = () => undefined;
 
 const isLoopbackUrl = (url: string | null) => url !== null && isLoopbackHost(new URL(url).hostname);
 
-// A loopback server can receive the provider's callback itself, unless the
-// desktop shell offers to catch it on the client.
-const prefersClientCallback = (local: boolean) => !local || window.desktopBridge !== undefined;
+// Native Codex OAuth (`account/login/start`) binds its own loopback callback listener on the
+// server; only a remote server needs client-side callback capture or redirect URL pasting.
+const prefersClientCallback = (local: boolean) => !local;
 
 /**
  * How a sign-in started now reaches the provider. Read at use time, because a
@@ -74,20 +73,10 @@ const prefersClientCallback = (local: boolean) => !local || window.desktopBridge
 function readSignInRouting(environmentId: EnvironmentId) {
   const local = isLoopbackUrl(readPreparedConnection(environmentId)?.httpBaseUrl ?? null);
   const clientCallback = prefersClientCallback(local);
-  const primaryEnvironmentId = appAtomRegistry.get(primaryEnvironmentIdAtom);
-  const primaryAuthEnvironmentId =
-    !local &&
-    primaryEnvironmentId !== null &&
-    appAtomRegistry.get(environmentPresentations.presentationAtom(primaryEnvironmentId))?.connection
-      .phase === "connected" &&
-    isLoopbackUrl(readPreparedConnection(primaryEnvironmentId)?.httpBaseUrl ?? null) &&
-    (window.desktopBridge !== undefined || isLoopbackHost(window.location.hostname))
-      ? primaryEnvironmentId
-      : null;
   return {
     clientCallback,
     remoteWeb: clientCallback && !window.desktopBridge,
-    primaryAuthEnvironmentId,
+    primaryAuthEnvironmentId: null as EnvironmentId | null,
   };
 }
 
@@ -1039,7 +1028,10 @@ function ManagedCodexSetup({
                   size="sm"
                   variant="outline"
                   disabled={unavailable || busy}
-                  onClick={() => setAccountPickerOpen(true)}
+                  onClick={() => {
+                    if (hasSavedAccount) setAccountPickerOpen(true);
+                    else void setup("chatgpt-change-account");
+                  }}
                 >
                   <T>Change account</T>
                 </Button>
@@ -1097,7 +1089,7 @@ function ManagedCodexSetup({
           </div>
         }
       />
-      {authenticated ? (
+      {authenticated && usesChatGptSharing(provider) ? (
         <div className={"flex justify-end px-3 py-1 sm:px-4"}>
           <ChatGptUsageButton />
         </div>

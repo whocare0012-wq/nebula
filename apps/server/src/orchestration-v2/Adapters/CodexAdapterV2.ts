@@ -7808,7 +7808,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
               agentFeedback: turnInput.agentFeedback ?? "off",
               browserToolsAvailable: mcpSession?.browserToolsAvailable ?? true,
               deviceToolsAvailable: mcpSession?.capabilities?.has("device") ?? false,
-              omitServiceTier: adapterOptions.resolveRuntime !== undefined,
+              omitServiceTier: resolvedRuntime?.omitServiceTier === true,
               ...(turnInput.appContext === undefined ? {} : { appContext: turnInput.appContext }),
               ...(configuredReasoningSummary === undefined ? {} : { configuredReasoningSummary }),
             });
@@ -8120,9 +8120,9 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
           modelSelection: ModelSelection | undefined,
         ) {
           const serviceTier =
-            adapterOptions.resolveRuntime === undefined
-              ? getCodexServiceTierOptionValue(modelSelection)
-              : undefined;
+            resolvedRuntime?.omitServiceTier === true
+              ? undefined
+              : getCodexServiceTierOptionValue(modelSelection);
           if (serviceTier === undefined) return;
           const applied = yield* client
             .request("thread/settings/update", { threadId, serviceTier })

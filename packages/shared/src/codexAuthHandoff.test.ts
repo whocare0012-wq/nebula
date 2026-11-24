@@ -77,6 +77,24 @@ describe("Codex desktop handoff", () => {
     expect(() => codexAuthorizationRequest(url.toString())).toThrow();
     expect(() => codexAuthDeliveryUrl(input, callbackUrl + "&state=another")).toThrow();
   });
+  it("accepts native Codex OAuth /oauth/authorize requests and callbacks", () => {
+    const nativeAuthUrl = new URL("https://auth.openai.com/oauth/authorize");
+    nativeAuthUrl.search = new URLSearchParams({
+      response_type: "code",
+      client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
+      redirect_uri: "http://127.0.0.1:1455/auth/callback",
+      code_challenge: "1Qm45W4iPKW2qCzy9sKE4IDAwK3aUR5R-Xbq5dylMc0",
+      code_challenge_method: "S256",
+      state: "_u9AnurYMIcKvkSoYtC5b1ULlHiFkLS3q-ts7xWUHss",
+    }).toString();
+    const parsed = codexAuthorizationRequest(nativeAuthUrl.toString());
+    expect(parsed.redirectUri).toBe("http://127.0.0.1:1455/auth/callback");
+    const nativeCallback =
+      "http://127.0.0.1:1455/auth/callback?code=auth-code&state=_u9AnurYMIcKvkSoYtC5b1ULlHiFkLS3q-ts7xWUHss";
+    expect(codexCallbackUrl(nativeCallback, parsed.redirectUri, parsed.state).toString()).toBe(
+      nativeCallback,
+    );
+  });
 });
 
 describe("pasted Codex callback", () => {

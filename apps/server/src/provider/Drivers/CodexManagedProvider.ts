@@ -1,9 +1,5 @@
-import {
-  ProviderDriverKind,
-  ProviderSetupError,
-  TextGenerationError,
-  type CodexSettings,
-} from "@t3tools/contracts";
+import { ProviderDriverKind, TextGenerationError, type CodexSettings } from "@t3tools/contracts";
+import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -11,16 +7,20 @@ import * as Stream from "effect/Stream";
 import * as Option from "effect/Option";
 import { ChildProcessSpawner } from "effect/process";
 import { makeCodexTextGeneration } from "../../textGeneration/CodexTextGeneration.ts";
+import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
 import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
-import { chatGptModels } from "../CodexChatGptModels.ts";
 import { makeCodexManagedRuntime } from "../CodexManagedRuntime.ts";
 import { ProviderDriverError } from "../Errors.ts";
+import * as ResetCreditCoordinator from "../resetCreditCoordinator.ts";
 import { createCodexAdapterV2 } from "../../orchestration-v2/Adapters/CodexAdapterV2.ts";
 import {
   checkCodexProviderStatus,
   makePendingCodexProvider,
   probeCodexSkillsForCwd,
+  withCodexAppServerClient,
 } from "../CodexProvider.ts";
+import { applyCodexModelCatalog } from "../codexModelCatalog.ts";
+import { resolveCodexLaunchArgs } from "../codexLaunchArgs.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
 import {
@@ -29,18 +29,20 @@ import {
 } from "@t3tools/provider-core/server/driver";
 import { codexContinuationIdentity } from "./CodexHomeLayout.ts";
 import { withInstanceIdentity } from "@t3tools/provider-core/server/instanceIdentity";
-import { HttpClient } from "effect/http";
+
 const DRIVER = ProviderDriverKind.make("codex");
 
 export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(function* (
   input: ProviderDriverCreateInput<CodexSettings>,
 ) {
   const { instanceId, enabled, displayName, accentColor, config } = input;
-  const http = yield* HttpClient.HttpClient;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const host = yield* ProviderHost.ProviderHost;
+  const modelCatalog = yield* ModelCatalog.ModelCatalog;
+  const resetCreditCoordinator = yield* ResetCreditCoordinator.ResetCreditCoordinator;
+  const currentCatalog = modelCatalog.current(DRIVER);
   const runtime = yield* makeCodexManagedRuntime({
     instanceId,
     enabled,
@@ -82,131 +84,56 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
         message: "Set up Codex to get started.",
         auth: { status: "unauthenticated" as const },
       };
-    const saved = yield* runtime.auth.read.pipe(Effect.orElseSucceed(() => Option.none()));
-    if (Option.isSome(saved) && !saved.value.scopes.includes("chatgpt.tokens.use.direct"))
-      return {
-        ...base,
-        installed: true,
-        version: executable.value.version,
-        models: [],
-        message:
-          "Signed in with ChatGPT, but token sharing is disabled. Sign in again and enable token sharing, or use another provider.",
-        auth: {
-          status: "unauthenticated" as const,
-          label: "ChatGPT",
-          ...(saved.value.email?.trim() ? { email: saved.value.email.trim() } : {}),
-        },
-      };
-    if (Option.isNone(saved))
-      return {
-        ...base,
-        installed: true,
-        version: executable.value.version,
-        models: [],
-        message: "Sign in with ChatGPT to use Codex.",
-        auth: { status: "unauthenticated" as const },
-      };
-    const usageLimits = {
-      checkedAt: base.checkedAt,
-      windows: [],
-      unavailable: {
-        reason: "unsupported" as const,
-        message:
-          "ChatGPT tracks subscription usage across connected apps. Open Usage settings with the account you connected to Codex.",
-      },
-      externalUsage: { label: "ChatGPT usage", url: "https://chatgpt.com/#settings/Usage" },
-    };
-    const managedAuth = {
-      subscriptionSharing: true,
-      profileId: saved.value.clientId,
-      status: "authenticated" as const,
-      type: "chatgpt",
-      label: "ChatGPT",
-      ...(saved.value.email?.trim() ? { email: saved.value.email.trim() } : {}),
-    };
     return yield* runtime.auth.controller.withAccess!(runtime.resolve).pipe(
       Effect.flatMap((effective) =>
-        Effect.gen(function* () {
-          const draft = yield* checkCodexProviderStatus(
-            effective.config,
-            undefined,
-            effective.environment,
-            managedAuth,
-          );
-          const credentials = yield* runtime.auth.access;
-          // Another server can replace the saved profile while the native probe runs.
-          // Never send that account's token with the launch profile's catalog labels.
-          if (
-            (yield* runtime.auth.profileKey(credentials)) !== effective.revision ||
-            (yield* runtime.auth.profileKey(saved.value)) !== effective.revision
-          )
-            return yield* new ProviderSetupError({
-              instanceId,
-              operation: "models",
-              detail: "The ChatGPT connection changed while checking Codex. Retry.",
-            });
-          const models = yield* chatGptModels(credentials.accessToken, draft.models).pipe(
-            Effect.provideService(HttpClient.HttpClient, http),
-          );
-          return { ...draft, models };
-        }),
+        modelCatalog.refreshInBackground.pipe(
+          Effect.andThen(
+            Effect.zipWith(
+              checkCodexProviderStatus(effective.config, undefined, effective.environment),
+              currentCatalog,
+              (draft, catalog) => applyCodexModelCatalog(draft, catalog),
+              { concurrent: true },
+            ),
+          ),
+        ),
       ),
-      Effect.map((draft) =>
-        stamp({
+      Effect.map((draft) => {
+        if (draft.auth.status === "unauthenticated") {
+          const { usageLimits: _unusedLimits, ...withoutLimits } = draft;
+          return stamp({
+            ...withoutLimits,
+            installed: true,
+            version: draft.version ?? executable.value.version,
+            status: "warning",
+            models: [],
+            message: "Sign in with ChatGPT to use Codex.",
+            auth: { status: "unauthenticated" as const, label: "ChatGPT" },
+            setup,
+            runtimePaths,
+          });
+        }
+        return stamp({
           ...draft,
-          auth: managedAuth,
+          auth: {
+            ...draft.auth,
+            ...(draft.auth.status === "authenticated" ? { canLogout: true } : {}),
+          },
           version: draft.version ?? executable.value.version,
-          usageLimits,
-          models: draft.models.map((model) => ({
-            ...model,
-            ...(model.capabilities
-              ? {
-                  capabilities: {
-                    ...model.capabilities,
-                    optionDescriptors: (model.capabilities.optionDescriptors ?? []).filter(
-                      (option) => option.id !== "serviceTier",
-                    ),
-                  },
-                }
-              : {}),
-          })),
           setup,
           runtimePaths,
-          ...(draft.slashCommands
-            ? {
-                slashCommands: draft.slashCommands.filter((command) => command.name !== "feedback"),
-              }
-            : {}),
+        });
+      }),
+      Effect.orElseSucceed(() =>
+        stamp({
+          ...base,
+          installed: true,
+          version: executable.value.version,
+          models: [],
+          auth: { status: "unknown" as const, label: "ChatGPT" },
+          message: "Could not check Codex right now. Retry, or reconnect in provider settings.",
+          setup,
+          runtimePaths,
         }),
-      ),
-      Effect.catch(() =>
-        runtime.auth.read.pipe(
-          Effect.orElseSucceed(() => Option.none()),
-          Effect.map((current) => ({
-            ...base,
-            installed: true,
-            version: executable.value.version,
-            models: [],
-            auth: {
-              status:
-                Option.isSome(current) && current.value.scopes.includes("chatgpt.tokens.use.direct")
-                  ? ("authenticated" as const)
-                  : ("unauthenticated" as const),
-              label: "ChatGPT",
-              ...(Option.isSome(current) &&
-              current.value.scopes.includes("chatgpt.tokens.use.direct")
-                ? { subscriptionSharing: true, profileId: current.value.clientId }
-                : {}),
-              ...(Option.isSome(current) && current.value.email?.trim()
-                ? { email: current.value.email.trim() }
-                : {}),
-            },
-            ...(Option.isSome(current) && current.value.scopes.includes("chatgpt.tokens.use.direct")
-              ? { usageLimits }
-              : {}),
-            message: "Could not check Codex right now. Retry, or reconnect in provider settings.",
-          })),
-        ),
       ),
       Effect.scoped,
     );
@@ -239,14 +166,24 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
     Stream.runForEach(() => snapshot.refresh.pipe(Effect.ignoreCause({ log: true }))),
     Effect.forkScoped,
   );
+  if (enabled) {
+    yield* fileSystem.watch(runtime.homePath).pipe(
+      Stream.filter((event) => path.basename(event.path) === "auth.json"),
+      Stream.debounce(Duration.millis(250)),
+      Stream.runForEach(() => snapshot.refresh.pipe(Effect.ignoreCause({ log: true }))),
+      Effect.catchReason("PlatformError", "NotFound", () => Effect.void),
+      Effect.ignoreCause({ log: true }),
+      Effect.forkScoped,
+    );
+  }
   const resolveRuntime = runtime.auth.controller.withAccess!(runtime.resolve);
-  // Launch settings bind the refresh command to the signed-in profile. The registry
-  // already wraps openSession in withAccess, so resolve without re-entering it.
+  // The registry already wraps openSession in withAccess, so resolve without re-entering it.
   const models = snapshot.getSnapshot.pipe(Effect.map((value) => value.models));
   const orchestrationAdapter = yield* createCodexAdapterV2(input, {
     onUsageLimits: (update) => snapshot.applyUsageLimits(update),
     models,
     resolveRuntime: runtime.resolve,
+    compatibility: runtime.installation.compatibility,
   }).pipe(
     Effect.mapError(
       (cause) =>
@@ -258,6 +195,59 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
         }),
     ),
   );
+  const consumeResetCredit: NonNullable<ProviderInstance["consumeResetCredit"]> = () =>
+    resetCreditCoordinator
+      .redeem(runtime.homePath, (idempotencyKey) =>
+        Effect.gen(function* () {
+          const effective = yield* resolveRuntime;
+          const { client } = yield* withCodexAppServerClient({
+            binaryPath: effective.config.binaryPath,
+            homePath: effective.config.homePath,
+            launchArgs: resolveCodexLaunchArgs(effective.config.launchArgs, effective.environment),
+            cwd: process.cwd(),
+            environment: effective.environment,
+          });
+          const response = yield* client.request("account/rateLimitResetCredit/consume", {
+            idempotencyKey,
+          });
+          return response.outcome;
+        }).pipe(
+          Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+          Effect.provideService(FileSystem.FileSystem, fileSystem),
+          Effect.provideService(Path.Path, path),
+          Effect.scoped,
+          Effect.timeout("20 seconds"),
+        ),
+      )
+      .pipe(
+        Effect.mapError(
+          (cause) =>
+            new ProviderDriverError({
+              driver: DRIVER,
+              instanceId,
+              detail: "Codex could not redeem the reset credit.",
+              cause,
+            }),
+        ),
+        Effect.tap((outcome) =>
+          ResetCreditCoordinator.refreshAfterRedemption({
+            outcome,
+            getSnapshot: snapshot.getSnapshot,
+            refresh: snapshot.refresh,
+          }).pipe(
+            Effect.filterOrFail(
+              (confirmed) => confirmed,
+              () =>
+                new ProviderDriverError({
+                  driver: DRIVER,
+                  instanceId,
+                  detail:
+                    "The reset was applied, but Codex could not confirm the new limits. Refresh to check.",
+                }),
+            ),
+          ),
+        ),
+      );
   const nativeGeneration = yield* makeCodexTextGeneration(
     config,
     undefined,
@@ -300,36 +290,34 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
     accentColor,
     enabled,
     snapshot,
+    consumeResetCredit,
     orchestrationAdapter,
     textGeneration,
     auth: runtime.auth.controller,
     snapshotForCwd: (cwd: string) =>
       enabled
-        ? resolveRuntime.pipe(
-            Effect.matchEffect({
-              // Signed-out snapshots have an empty inventory; a signed-in runtime failure must fail the scan.
-              onFailure: (cause) =>
-                snapshot.getSnapshot.pipe(
-                  Effect.filterOrFail(
-                    (machine) => machine.auth.status === "unauthenticated",
-                    () => cause,
+        ? snapshot.getSnapshot.pipe(
+            Effect.flatMap((machine) =>
+              machine.auth.status === "unauthenticated"
+                ? Effect.succeed({ ...machine, skills: [] })
+                : resolveRuntime.pipe(
+                    Effect.flatMap((effective) =>
+                      probeCodexSkillsForCwd({
+                        binaryPath: effective.config.binaryPath,
+                        homePath: effective.config.homePath,
+                        launchArgs: effective.config.launchArgs,
+                        cwd,
+                        environment: effective.environment,
+                      }).pipe(
+                        Effect.flatMap((skills) =>
+                          snapshot.getSnapshot.pipe(Effect.map((draft) => ({ ...draft, skills }))),
+                        ),
+                      ),
+                    ),
+                    Effect.scoped,
+                    Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
                   ),
-                ),
-              onSuccess: (effective) =>
-                probeCodexSkillsForCwd({
-                  binaryPath: effective.config.binaryPath,
-                  homePath: effective.config.homePath,
-                  launchArgs: effective.config.launchArgs,
-                  cwd,
-                  environment: effective.environment,
-                }).pipe(
-                  Effect.flatMap((skills) =>
-                    snapshot.getSnapshot.pipe(Effect.map((draft) => ({ ...draft, skills }))),
-                  ),
-                ),
-            }),
-            Effect.scoped,
-            Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+            ),
             // Fail instead of returning machine inventory, which the registry would publish as workspace inventory.
             Effect.mapError(
               (cause) =>

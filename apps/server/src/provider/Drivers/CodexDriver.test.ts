@@ -10,7 +10,6 @@ import { expect, it } from "@effect/vitest";
 import { EnvironmentId, ProviderInstanceId, ProviderSessionId, ThreadId } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
@@ -18,7 +17,6 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as PlatformError from "effect/PlatformError";
 import * as Queue from "effect/Queue";
-import * as Schema from "effect/Schema";
 import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
@@ -44,7 +42,6 @@ import * as CodexAdapterV2 from "../../orchestration-v2/Adapters/CodexAdapterV2.
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
 import * as PortScanner from "../../preview/PortScanner.ts";
-import * as ProviderCredentialStore from "../ProviderCredentialStore.ts";
 import * as ProviderHostLive from "../ProviderHostLive.ts";
 
 const layerDeps = ServerConfig.layerTest(process.cwd(), {
@@ -106,91 +103,171 @@ const windowsHost = HostProcess.Platform.defaultValue() === "win32";
 const noSpawn = ChildProcessSpawner.make(() =>
   Effect.die("Disabled Codex must not spawn a process"),
 );
-const encodeCredentials = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 it.layer(layerTest)("CodexDriver", (it) => {
-  const checkManagedAccount = (replacementTiming: "unchanged" | "during-probe") =>
-    Effect.gen(function* () {
-      const instanceId = ProviderInstanceId.make("restored-managed-account");
-      const credentials = new Map<string, Uint8Array>();
-      const catalogTokens: Array<string | undefined> = [];
-      const probeEntered = yield* Deferred.make<void>();
-      const resumeProbe = yield* Deferred.make<void>();
-      const secrets = ServerSecretStore.ServerSecretStore.of({
-        get: (key) => Effect.sync(() => Option.fromUndefinedOr(credentials.get(key))),
-        set: (key, value) =>
-          Effect.sync(() => {
-            credentials.set(key, value);
-          }),
-        remove: (key) =>
-          Effect.sync(() => {
-            credentials.delete(key);
-          }),
-        create: () => Effect.die("unused"),
-        getOrCreateRandom: () => Effect.die("unused"),
-      });
-      yield* Effect.gen(function* () {
-        const store = yield* ProviderCredentialStore.make("codex-chatgpt", instanceId);
-        const json = yield* encodeCredentials({
-          clientId: "oaiapp_test",
-          accessToken: "dummy-owned-access",
-          refreshToken: "dummy-refresh",
-          expiresAt: Number.MAX_SAFE_INTEGER,
-          earliestRefreshAt: null,
-          scopes: ["chatgpt.tokens.use.direct"],
-          subject: "test-user",
-          email: "account@example.test",
-        });
-        yield* store.set(new TextEncoder().encode(json));
-        const replacement = yield* encodeCredentials({
-          clientId: "oaiapp_replacement",
-          subject: "replacement-user",
-          email: "replacement@example.test",
-          accessToken: "replacement-access",
-          refreshToken: "replacement-refresh",
-          expiresAt: Number.MAX_SAFE_INTEGER,
-          earliestRefreshAt: null,
-          scopes: ["chatgpt.tokens.use.direct"],
-        });
-        const replaceAccount = store.set(new TextEncoder().encode(replacement)).pipe(Effect.orDie);
+  it.effect(
+    "managed Codex account uses native Codex OAuth in a shadow home and reports subscription usage limits",
+    () =>
+      Effect.gen(function* () {
+        const instanceId = ProviderInstanceId.make("restored-managed-account");
+        const fs = yield* FileSystem.FileSystem;
+        const installation = yield* CodexInstallation.CodexInstallation;
+        const serverConfig = yield* ServerConfig.ServerConfig;
+        const sharedHome = NodePath.join(serverConfig.stateDir, "shared-codex-home");
+        yield* fs.makeDirectory(NodePath.join(sharedHome, "sessions"), { recursive: true });
+        yield* fs.writeFileString(NodePath.join(sharedHome, "auth.json"), "primary-cli-auth");
+        const shadowHome = NodePath.join(
+          serverConfig.stateDir,
+          "providers",
+          "codex",
+          instanceId,
+          "shadow",
+        );
+        yield* fs.makeDirectory(shadowHome, { recursive: true });
+        yield* fs.writeFileString(
+          NodePath.join(shadowHome, "auth.json"),
+          '{"tokens":{"access_token":"managed-native-token"}}',
+        );
+
         const executable = {
           executablePath: "/user/bin/codex",
           managedVersionDirectory: null,
           source: "local" as const,
-          version: "0.156.1",
+          version: "0.166.0",
         };
-        const installation = yield* CodexInstallation.CodexInstallation;
-        const serverConfig = yield* ServerConfig.ServerConfig;
-        const sharedHome = NodePath.join(serverConfig.stateDir, "shared-codex-home");
         const launches: Array<
           Parameters<CodexAdapterV2.CodexAppServerClientFactoryShape["open"]>[0]
         > = [];
+        let signedIn = true;
 
-        let interruptedChecks = 0;
-        let failAcquire = false;
-        const startupChecksInterrupted = yield* Deferred.make<void>();
-        const acquire = () =>
-          Effect.suspend(() => {
-            if (failAcquire)
-              return Effect.fail(
-                new CodexInstallation.CodexInstallationError({
-                  operation: "acquire",
-                  detail: "The fixture runtime is unavailable",
-                }),
-              );
-            if (interruptedChecks === 2) return Effect.succeed(executable);
-            interruptedChecks += 1;
-            return (
-              interruptedChecks === 2
-                ? Deferred.succeed(startupChecksInterrupted, undefined)
-                : Effect.void
-            ).pipe(Effect.andThen(Effect.interrupt));
-          });
+        const mockAppServerSpawner = ChildProcessSpawner.make(() =>
+          Effect.gen(function* () {
+            const outbound = yield* Queue.unbounded<string>();
+            const handleFrame = (line: string): Effect.Effect<void> => {
+              const trimmed = line.trim();
+              if (!trimmed) return Effect.void;
+              const frame = JSON.parse(trimmed) as {
+                readonly id?: number | string;
+                readonly method?: string;
+              };
+              if (frame.id === undefined) return Effect.void;
+              const respond = (result: unknown) =>
+                Queue.offer(outbound, `${JSON.stringify({ id: frame.id, result })}\n`).pipe(
+                  Effect.asVoid,
+                );
+              switch (frame.method) {
+                case "initialize":
+                  return respond({
+                    userAgent: "T3 Code/0.166.0 (test)",
+                    codexHome: shadowHome,
+                    platformFamily: "unix",
+                    platformOs: "linux",
+                  });
+                case "account/read":
+                  return respond(
+                    signedIn
+                      ? {
+                          requiresOpenaiAuth: true,
+                          account: {
+                            type: "chatgpt",
+                            email: "account@example.test",
+                            planType: "plus",
+                          },
+                        }
+                      : {
+                          requiresOpenaiAuth: true,
+                          account: null,
+                        },
+                  );
+                case "skills/list":
+                  return respond({ data: [] });
+                case "model/list":
+                  return Effect.gen(function* () {
+                    yield* fs
+                      .writeFileString(
+                        NodePath.join(shadowHome, "models_cache.json"),
+                        JSON.stringify({ fetched_at: "2099-01-01T00:00:00.000Z" }),
+                      )
+                      .pipe(Effect.ignore);
+                    yield* respond({
+                      data: [
+                        {
+                          id: "gpt-5.4",
+                          model: "gpt-5.4",
+                          displayName: "GPT-5.4",
+                          description: "",
+                          hidden: false,
+                          isDefault: true,
+                          defaultReasoningEffort: "medium",
+                          supportedReasoningEfforts: [
+                            { reasoningEffort: "medium", description: "" },
+                          ],
+                          serviceTiers: [{ id: "fast", name: "Fast", description: "" }],
+                        },
+                      ],
+                      nextCursor: null,
+                    });
+                  });
+                case "config/read":
+                  return respond({ config: {}, origins: {} });
+                case "account/rateLimits/read":
+                  return respond({
+                    accountId: "ws_test",
+                    rateLimits: {
+                      limitId: "codex",
+                      planType: "plus",
+                      primary: {
+                        usedPercent: 15,
+                        windowDurationMins: 300,
+                        resetsAt: 1_900_000_000,
+                      },
+                      secondary: {
+                        usedPercent: 30,
+                        windowDurationMins: 10_080,
+                        resetsAt: 1_900_500_000,
+                      },
+                    },
+                    rateLimitsByLimitId: null,
+                    rateLimitResetCredits: null,
+                  });
+                case "account/logout":
+                  signedIn = false;
+                  return respond({});
+                default:
+                  return respond({});
+              }
+            };
+            let buffer = "";
+            const stdin = Sink.forEach<Uint8Array, void, never, never>((chunk) => {
+              buffer += new TextDecoder().decode(chunk);
+              const lines = buffer.split("\n");
+              buffer = lines.pop() ?? "";
+              return Effect.forEach(lines, handleFrame, { discard: true });
+            });
+            return ChildProcessSpawner.makeHandle({
+              pid: ChildProcessSpawner.ProcessId(1),
+              exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
+              isRunning: Effect.succeed(true),
+              kill: () => Queue.shutdown(outbound),
+              unref: Effect.succeed(Effect.void),
+              stdin,
+              stdout: Stream.encodeText(Stream.fromQueue(outbound)),
+              stderr: Stream.empty,
+              all: Stream.empty,
+              getInputFd: () => Sink.drain,
+              getOutputFd: () => Stream.empty,
+            });
+          }),
+        );
+
         const instance = yield* CodexDriver.create({
           instanceId,
           displayName: "Restored account",
           enabled: true,
-          environment: [{ name: "OPENAI_API_KEY", value: "ambient-key", sensitive: true }],
+          environment: [
+            { name: "OPENAI_API_KEY", value: "ambient-key", sensitive: true },
+            { name: "ACCESS_TOKEN", value: "ambient-bearer", sensitive: true },
+          ],
           config: { ...CodexDriver.defaultConfig(), setupMode: "managed", homePath: sharedHome },
         }).pipe(
           Effect.provideService(
@@ -208,72 +285,46 @@ it.layer(layerTest)("CodexDriver", (it) => {
               ...installation,
               managedDirectory: "unused-managed-installation",
               resolve: () => Effect.succeed(executable),
-              acquire,
+              acquire: () => Effect.succeed(executable),
             }),
           ),
+          Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, mockAppServerSpawner),
           Effect.provideService(
-            ChildProcessSpawner.ChildProcessSpawner,
-            ChildProcessSpawner.make(() =>
-              Effect.gen(function* () {
-                if (replacementTiming === "during-probe") {
-                  yield* Deferred.succeed(probeEntered, undefined);
-                  yield* Deferred.await(resumeProbe);
-                }
-                return yield* PlatformError.badArgument({
-                  module: "ChildProcessSpawner",
-                  method: "spawn",
-                  description: "The fixture app-server is unavailable",
-                });
-              }),
+            HttpClient.HttpClient,
+            HttpClient.make((request) =>
+              Effect.succeed(
+                HttpClientResponse.fromWeb(request, new Response(null, { status: 200 })),
+              ),
             ),
           ),
         );
-        const observedAccount = yield* Deferred.make<void>();
-        const disconnected = yield* instance.snapshot.streamChanges.pipe(
-          Stream.tap((provider) =>
-            provider.auth.status === "authenticated"
-              ? Deferred.succeed(observedAccount, undefined).pipe(Effect.asVoid)
-              : Effect.void,
+
+        const ready = yield* instance.snapshot.refresh;
+        expect(ready.auth.status).toBe("authenticated");
+        expect(ready.auth.email).toBe("account@example.test");
+        expect(ready.auth.subscriptionSharing).toBeUndefined();
+        expect(ready.usageLimits?.unavailable).toBeUndefined();
+        expect(ready.usageLimits?.windows).toMatchObject([
+          { id: "primary", kind: "session", usedPercent: 15 },
+          { id: "secondary", kind: "weekly", usedPercent: 30 },
+        ]);
+        expect(
+          ready.models[0]?.capabilities?.optionDescriptors?.some(
+            (descriptor) => descriptor.id === "serviceTier",
           ),
+        ).toBe(true);
+        expect(ready.runtimePaths?.homePath).toBe(sharedHome);
+        expect(ready.runtimePaths?.shadowHomePath).toBe(shadowHome);
+
+        const disconnected = yield* instance.snapshot.streamChanges.pipe(
           Stream.filter((provider) => provider.auth.status === "unauthenticated"),
           Stream.runHead,
           Effect.forkScoped,
         );
-        yield* Deferred.await(startupChecksInterrupted);
-        const refresh = yield* instance.snapshot.refresh.pipe(Effect.forkChild);
-        if (replacementTiming === "during-probe") {
-          yield* Deferred.await(probeEntered);
-          yield* replaceAccount;
-          yield* Deferred.succeed(resumeProbe, undefined);
-        }
-        const restored = yield* Fiber.join(refresh);
-        if (replacementTiming === "during-probe") {
-          expect(catalogTokens).toEqual([]);
-          expect(restored.models).toEqual([]);
-          expect(restored.auth.email).toBe("replacement@example.test");
-          expect(restored.auth.profileId).toBe("oaiapp_replacement");
-          return;
-        }
-        expect(catalogTokens).toEqual(["Bearer dummy-owned-access"]);
-        expect(restored.auth.email).toBe("account@example.test");
-        expect(restored.runtimePaths?.homePath).toBe(sharedHome);
-        expect(restored.runtimePaths?.shadowHomePath).toContain(
-          NodePath.join("providers", "codex", instanceId, "shadow"),
-        );
-        const scan = yield* instance.snapshotForCwd!(serverConfig.stateDir).pipe(Effect.exit);
-        expect(Exit.isFailure(scan)).toBe(true);
-        failAcquire = true;
-        const runtimeScan = yield* instance.snapshotForCwd!(serverConfig.stateDir).pipe(
-          Effect.exit,
-        );
-        failAcquire = false;
-        expect(Exit.isFailure(runtimeScan)).toBe(true);
-        yield* Deferred.await(observedAccount);
 
-        const threadId = ThreadId.make("managed-account-thread");
         yield* instance.orchestrationAdapter
           .openSession({
-            threadId,
+            threadId: ThreadId.make("managed-account-thread"),
             providerSessionId: ProviderSessionId.make("managed-account-session"),
             modelSelection: { instanceId, model: "gpt-5.4" },
             runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
@@ -286,60 +337,26 @@ it.layer(layerTest)("CodexDriver", (it) => {
         expect(launches).toHaveLength(1);
         const launch = launches[0]!;
         expect(launch.settings.binaryPath).toBe(executable.executablePath);
-        expect(launch.settings.launchArgs).toContain("openai_token_sharing");
+        expect(codexAppServerArgs(launch.settings.launchArgs)).toContain(
+          'cli_auth_credentials_store="file"',
+        );
+        expect(launch.settings.launchArgs).not.toContain("openai_token_sharing");
         expect(launch.environment.ACCESS_TOKEN).toBeUndefined();
-        expect(launch.settings.launchArgs).toContain("__managed-chatgpt-token");
-        expect(launch.settings.launchArgs).not.toContain("dummy-owned-access");
         expect(launch.environment.OPENAI_API_KEY).toBeUndefined();
-        expect(launch.environment.CODEX_HOME).toBe(launch.settings.homePath);
-        const before = yield* instance.auth!.subscribe("test-owner").pipe(Stream.runHead);
-        expect(Option.getOrThrow(before).phase).toBe("idle");
+        expect(launch.environment.CODEX_HOME).toBe(shadowHome);
+
         yield* instance.auth!.logout(Effect.void);
         const after = Option.getOrThrow(yield* Fiber.join(disconnected));
         expect(after.auth.status).toBe("unauthenticated");
-        expect(after.auth.email).toBeUndefined();
-        expect(after.installed).toBe(true);
         expect(after.models).toEqual([]);
-        expect(Option.isNone(yield* store.get)).toBe(true);
+        expect(after.usageLimits).toBeUndefined();
+        expect(yield* fs.exists(NodePath.join(shadowHome, "auth.json"))).toBe(false);
+        expect(yield* fs.readFileString(NodePath.join(sharedHome, "auth.json"))).toBe(
+          "primary-cli-auth",
+        );
         const signedOutScan = yield* instance.snapshotForCwd!(serverConfig.stateDir);
         expect(signedOutScan.skills).toEqual([]);
-      }).pipe(
-        Effect.provideService(ServerSecretStore.ServerSecretStore, secrets),
-        Effect.provideService(
-          HttpClient.HttpClient,
-          HttpClient.make((request) =>
-            Effect.sync(() => {
-              expect([
-                "https://auth.openai.com/.well-known/openid-configuration",
-                "https://auth.openai.com/revoke",
-                "https://api.openai.com/v1/models",
-              ]).toContain(request.url);
-              if (request.url.endsWith("/models")) {
-                catalogTokens.push(request.headers.authorization);
-                return HttpClientResponse.fromWeb(request, Response.json({ models: [] }));
-              }
-              return HttpClientResponse.fromWeb(
-                request,
-                request.url.endsWith("/revoke")
-                  ? new Response(null, { status: 200 })
-                  : Response.json({
-                      issuer: "https://auth.openai.com",
-                      authorization_endpoint: "https://auth.openai.com/api/accounts/authorize",
-                      token_endpoint: "https://auth.openai.com/api/accounts/oauth/token",
-                      jwks_uri: "https://auth.openai.com/jwks",
-                      revocation_endpoint: "https://auth.openai.com/revoke",
-                    }),
-              );
-            }),
-          ),
-        ),
-      );
-    }).pipe(Effect.scoped);
-  // regression: a sign-in that replaces the account mid-probe must not label the old
-  // account's catalog with the new identity.
-  it.effect.each(["unchanged", "during-probe"] as const)(
-    "managed catalog keeps its account label and token together: %s",
-    checkManagedAccount,
+      }).pipe(Effect.scoped),
   );
 
   it.effect.skipIf(windowsHost)(
