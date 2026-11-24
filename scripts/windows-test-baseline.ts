@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off - a synchronous test-report wrapper.
 // Many upstream tests assume macOS or Linux (POSIX paths, symlinks without privileges, /bin/sh).
-// Rather than editing them, T3 Nebula keeps the list of tests known to fail on Windows and only
+// Rather than editing them, Nebula keeps the list of tests known to fail on Windows and only
 // reports failures outside it, so a real regression still stands out.
 //
 //   node scripts/windows-test-baseline.ts [--update] [--from <report.json>] <package dir>...

@@ -191,7 +191,7 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
   );
 }
 /** The English product wordmark; it is a name, not copy, so it is never translated. */
-const WORDMARK = "T3 Nebula";
+const WORDMARK = "Nebula";
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
     <span

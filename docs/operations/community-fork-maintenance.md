@@ -18,10 +18,10 @@ Fork pull requests use standard GitHub-hosted Ubuntu and macOS runners; the offi
 
 Install only after the storage guard passes and the candidate is verified. Wait for the existing task/input idle gates, take the protected cold backup, and verify the program, data, authentication and configuration after replacement. A program rollback never restores an old database over new conversations.
 
-## Releasing T3 Nebula
+## Releasing Nebula
 
 From a clean, merged checkout, `vp run release:nebula` releases the Windows build to
-`whocare0012-wq/t3-nebula`. It takes the next patch version after the newest `vX.Y.Z` tag on the
+`whocare0012-wq/nebula`. It takes the next patch version after the newest `vX.Y.Z` tag on the
 `nebula` remote (or `--bump minor|major`, `--version X.Y.Z`), builds the x64 NSIS installer with the
 update feed pointed at that repository, pushes `HEAD` to `nebula/main`, and publishes the installer,
 blockmap and `latest.yml` as a GitHub release. The in-app updater reads that release.
@@ -34,7 +34,7 @@ the resource monitor and an authenticated `gh` (or set `GH` to its path).
 ## Tests on Windows
 
 Many upstream tests assume macOS or Linux: POSIX paths, symlinks (which need Developer Mode or
-admin rights on Windows), and `/bin/sh` scripts. T3 Nebula does not edit them, so upstream merges
+admin rights on Windows), and `/bin/sh` scripts. Nebula does not edit them, so upstream merges
 stay clean. `scripts/windows-known-failures.json` lists the tests known to fail on Windows instead.
 `node scripts/windows-test-baseline.ts apps/server apps/web scripts` runs those packages and fails
 only on tests outside the list; it also names listed tests that now pass. After a merge, review the

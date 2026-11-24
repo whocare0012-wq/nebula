@@ -199,7 +199,7 @@ function namedProjectReadme(name: string): string {
     "",
     `# ${name}`,
     "",
-    "Created in [T3 Nebula](https://github.com/whocare0012-wq/t3-nebula).",
+    "Created in [Nebula](https://github.com/whocare0012-wq/nebula).",
     "",
   ].join("\n");
 }

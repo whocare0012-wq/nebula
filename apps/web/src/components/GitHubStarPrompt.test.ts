@@ -178,7 +178,7 @@ describe("recordPromptSent", () => {
     await (await startSession()).send();
     click(add.mock.lastCall?.[0].actionProps);
     await vi.advanceTimersByTimeAsync(0);
-    expect(openExternal).toHaveBeenCalledWith("https://github.com/whocare0012-wq/t3-nebula");
+    expect(openExternal).toHaveBeenCalledWith("https://github.com/whocare0012-wq/nebula");
     expect(update.mock.lastCall?.[1]).not.toMatchObject({
       actionProps: { children: "Open GitHub" },
     });

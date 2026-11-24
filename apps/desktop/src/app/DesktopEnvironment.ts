@@ -98,7 +98,7 @@ function resolveDesktopAppStageLabel(input: {
   return isNightlyDesktopVersion(input.appVersion) ? "Nightly" : "Beta";
 }
 
-const NEBULA_DISPLAY_NAME = "T3 Nebula";
+const NEBULA_DISPLAY_NAME = "Nebula";
 
 export function resolveDesktopAppBranding(input: {
   readonly isDevelopment: boolean;

@@ -1,8 +1,8 @@
 import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
 
 const FALLBACK_TRIAGE_COMMAND = "npx t3 triage";
-const DOWNLOAD_URL = "https://github.com/whocare0012-wq/t3-nebula/releases";
-const ISSUE_URL = "https://github.com/whocare0012-wq/t3-nebula/issues/new";
+const DOWNLOAD_URL = "https://github.com/whocare0012-wq/nebula/releases";
+const ISSUE_URL = "https://github.com/whocare0012-wq/nebula/issues/new";
 const LAST_FAILURE_KEY = "t3code:boot-failed-at";
 const REPEAT_FAILURE_MS = 5 * 60_000;
 const MAX_CAUSES = 3;

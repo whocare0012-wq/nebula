@@ -333,7 +333,7 @@ describe("ssh tunnel scripts", () => {
           assert.include(result.stderr, ARCHIVE.archiveVersion);
           assert.include(
             result.stderr,
-            "https://github.com/whocare0012-wq/t3-nebula/releases/download",
+            "https://github.com/whocare0012-wq/nebula/releases/download",
           );
         } else {
           assert.notInclude(result.stderr, "download attempt");

@@ -32,7 +32,7 @@ describe("release-nebula", () => {
         subject: "Merge remote-tracking branch 'origin/main' into stardust-fusion",
         mergedCount: 42,
       },
-      { subject: "Merge upstream T3 Code main into T3 Nebula", mergedCount: 8 },
+      { subject: "Merge upstream T3 Code main into Nebula", mergedCount: 8 },
       { subject: "Find the Codex desktop app's bundled CLI on Windows" },
     ]);
     expect(notes).toContain("- Find the Codex desktop app's bundled CLI on Windows");

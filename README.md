@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="assets/nebula-icon.svg" width="112" height="112" alt="T3 Nebula logo" />
+  <img src="assets/nebula-icon.svg" width="112" height="112" alt="Nebula logo" />
 </p>
 
-<h1 align="center">T3 Nebula</h1>
+<h1 align="center">Nebula</h1>
 
 <p align="center">
-  <strong>A Windows-first community edition of T3 Code — the open-source desktop workspace for coding agents.</strong><br />
+  <strong>A Windows-first open-source desktop workspace for coding agents.</strong><br />
   Multi-Agent Control · Multi-Account Quota Insights · CNY/USD Cost Analytics · Bilingual EN / ZH UI
 </p>
 
@@ -20,8 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/whocare0012-wq/t3-nebula/releases">
-    <img src="https://img.shields.io/github/v/release/whocare0012-wq/t3-nebula?label=Release&color=7b5cff" alt="Latest Release" />
+  <a href="https://github.com/whocare0012-wq/nebula/releases">
+    <img src="https://img.shields.io/github/v/release/whocare0012-wq/nebula?label=Release&color=7b5cff" alt="Latest Release" />
   </a>
   <img src="https://img.shields.io/badge/Windows-x64-0078d4" alt="Windows x64" />
   <img src="https://img.shields.io/badge/UI-English%20%7C%20%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-6e56cf" alt="English and Simplified Chinese UI" />
@@ -32,11 +32,14 @@
 
 ---
 
-**T3 Nebula** is an open-source desktop workspace that orchestrates the coding agents already installed and authenticated on your machine — including **Codex**, **Claude Code**, **Antigravity**, **Cursor**, **OpenCode**, **DeepSeek Harness**, and any **ACP (Agent Client Protocol)** agent — inside one fast, unified interface.
+**Nebula** (星云) is an open-source desktop workspace that orchestrates the coding agents already installed and authenticated on your machine — including **Codex**, **Claude Code**, **Antigravity**, **Cursor**, **OpenCode**, **DeepSeek Harness**, and any **ACP (Agent Client Protocol)** agent — inside one fast, unified interface.
 
-Built upon upstream [**T3 Code**](https://github.com/pingdotgg/t3code) and the [**T3 Stardust**](https://github.com/zds-xiaoxin/xiaoxin-t3code) interface refinements, T3 Nebula focuses on first-class Windows desktop support, multi-account quota visibility, multi-currency cost analytics, and privacy-first defaults.
+Built upon the MIT-licensed [**T3 Code**](https://github.com/pingdotgg/t3code) codebase and interface refinements from [**Stardust**](https://github.com/zds-xiaoxin/stardust), Nebula focuses on first-class Windows desktop support, multi-account quota visibility, multi-currency cost analytics, and privacy-first defaults.
 
 The interface automatically follows your system language, with complete **English** and **Simplified Chinese** support.
+
+> [!IMPORTANT]
+> **Unofficial community fork.** Nebula is an independent fork of the MIT-licensed [pingdotgg/t3code](https://github.com/pingdotgg/t3code) project. "T3" and "T3 Code" belong to their original authors; Nebula is not affiliated with or endorsed by T3 Tools Inc. or the [Stardust](https://github.com/zds-xiaoxin/stardust) maintainers. Please report issues to this repository rather than upstream.
 
 <a id="features"></a>
 
@@ -44,9 +47,9 @@ The interface automatically follows your system language, with complete **Englis
 
 ### Unified Multi-Agent Workspace
 
-- **Bring your own subscriptions.** T3 Nebula does not resell tokens or require an intermediary account — it drives the agent CLIs and runtimes you are already signed in to.
+- **Bring your own subscriptions.** Nebula does not resell tokens or require an intermediary account — it drives the agent CLIs and runtimes you are already signed in to.
 - **Built-in Git & worktree workflow.** Isolate threads in dedicated Git worktrees, inspect diffs inline, restore checkpoints, and commit, push, or open pull requests directly from the app.
-- **Multi-device ready.** Run the server locally or on a remote host and connect over LAN, Tailscale, or T3 Connect.
+- **Multi-device ready.** Run the server locally or on a remote host and connect over LAN, Tailscale, or remote pairing links.
 
 ### Composer V9 & Reasoning Effort Controls
 
@@ -81,14 +84,14 @@ The interface automatically follows your system language, with complete **Englis
 
 ## Download & Install
 
-Prebuilt Windows installers are published on the [GitHub Releases](https://github.com/whocare0012-wq/t3-nebula/releases) page.
+Prebuilt Windows installers are published on the [GitHub Releases](https://github.com/whocare0012-wq/nebula/releases) page.
 
-1. Download the latest `T3-Nebula-<version>-x64.exe` installer from [Releases](https://github.com/whocare0012-wq/t3-nebula/releases).
+1. Download the latest Windows x64 installer (`Nebula-<version>-x64.exe`, or `T3-Nebula-<version>-x64.exe` for v1.0.7 and earlier) from [Releases](https://github.com/whocare0012-wq/nebula/releases).
 2. Run the installer. Because community installers are not code-signed, Windows SmartScreen may ask for confirmation — click **More info**, then **Run anyway**.
-3. Launch **T3 Nebula** and enable at least one provider under **Settings → Providers**.
+3. Launch **Nebula** and enable at least one provider under **Settings → Providers**.
 
 > [!NOTE]
-> **Shared data directory:** T3 Nebula shares T3 Code's application ID and local data directory (`~/.t3`), so existing projects and thread histories carry over automatically. Because of this shared ID, T3 Nebula and official T3 Code cannot be installed side by side.
+> **Shared data directory:** Nebula shares upstream T3 Code's application ID and local data directory (`~/.t3`), so existing projects and thread histories carry over automatically. Because of this shared ID, Nebula and upstream T3 Code cannot be installed side by side.
 
 <a id="providers"></a>
 
@@ -118,8 +121,8 @@ Open **Settings → Providers** to enable and configure your coding agents:
 ### Development
 
 ```powershell
-git clone https://github.com/whocare0012-wq/t3-nebula.git
-cd t3-nebula
+git clone https://github.com/whocare0012-wq/nebula.git
+cd nebula
 vp i
 vp run dev
 ```
@@ -132,7 +135,7 @@ Open the `pairingUrl` printed in the terminal to access the web interface, or ru
 vp run dist:desktop:win:x64
 ```
 
-The generated installer is written to `release/T3-Nebula-<version>-x64.exe`.
+The generated installer is written to `release/Nebula-<version>-x64.exe`.
 
 ### Documentation & Testing
 
@@ -144,24 +147,24 @@ The generated installer is written to `release/T3-Nebula-<version>-x64.exe`.
 
 ## Privacy & Updates
 
-- **Telemetry off by default.** Upstream T3 Code anonymous usage reporting stays disabled until you explicitly enable it under **Settings → About**.
+- **Telemetry off by default.** Upstream anonymous usage reporting stays disabled until you explicitly enable it under **Settings → About**.
 - **No third-party fork tracking.** All third-party active-user counting and external fork update endpoints have been removed.
 - **Local credentials.** Provider tokens and relay API keys remain on your local server and are only sent to their respective configured endpoints.
-- **Independent update channel.** The official T3 Code auto-updater is disabled so upstream builds will never overwrite this installation. Installed builds check this repository's [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) and notify you in-app when a new version is available.
+- **Independent update channel.** The upstream official auto-updater is disabled so upstream builds will never overwrite this installation. Installed builds check this repository's [Releases](https://github.com/whocare0012-wq/nebula/releases) and notify you in-app when a new version is available.
 
 <a id="credits"></a>
 
 ## Credits
 
-T3 Nebula builds upon the work of the following open-source projects:
+Nebula builds upon the work of the following open-source projects:
 
-| Project                                                                                       | Contribution                                                                                                                                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                                   | Core architecture, server runtime, provider adapters, orchestration engine, and checkpoints. The original upstream README is preserved in [README.upstream.md](README.upstream.md).                                                                                                                               |
-| [**zds-xiaoxin/xiaoxin-t3code**](https://github.com/zds-xiaoxin/xiaoxin-t3code) (T3 Stardust) | Composer V9, V18 Starship reasoning-effort slider & [`stardust-kit/`](stardust-kit/README.md), session/token popovers, topbar quota capsule, multi-account quota rings & burn-down forecasts, four-tab usage workbench, task step cards, preview pin annotations, artifact wall, and custom Chinese localization. |
-| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)                   | Inspiration for the USD / CNY cost currency toggle.                                                                                                                                                                                                                                                               |
+| Project                                                                        | Contribution                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                    | Core architecture, server runtime, provider adapters, orchestration engine, and checkpoints. The original upstream README is preserved in [README.upstream.md](README.upstream.md).                                                                                                                               |
+| [**zds-xiaoxin/stardust**](https://github.com/zds-xiaoxin/stardust) (Stardust) | Composer V9, V18 Starship reasoning-effort slider & [`stardust-kit/`](stardust-kit/README.md), session/token popovers, topbar quota capsule, multi-account quota rings & burn-down forecasts, four-tab usage workbench, task step cards, preview pin annotations, artifact wall, and custom Chinese localization. |
+| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)    | Inspiration for the USD / CNY cost currency toggle.                                                                                                                                                                                                                                                               |
 
-T3 Nebula is an independent community-maintained project and is not affiliated with T3 Tools Inc. or the T3 Stardust maintainers.
+"T3" and "T3 Code" belong to their original authors. Nebula is an independent community-maintained project and is not affiliated with or endorsed by T3 Tools Inc. or the Stardust maintainers.
 
 ## License
 

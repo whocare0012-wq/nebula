@@ -374,7 +374,7 @@ export function DraftHeroHeadline({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col items-center" data-stardust-heading>
-      <img src="/nebula-icon.png" alt={uiText("T3 Nebula")} className="mb-3 size-14" />
+      <img src="/nebula-icon.png" alt={uiText("Nebula")} className="mb-3 size-14" />
       <h1 className="text-center text-2xl font-semibold tracking-tight">
         {hasResolvedProject && !isScratchDraft ? (
           <>

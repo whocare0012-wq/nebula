@@ -542,14 +542,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         {
           provider: "github",
           owner: "whocare0012-wq",
-          repo: "t3-nebula",
+          repo: "nebula",
           releaseType: "release",
         },
       ]);
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/t3-nebula" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/nebula" } }),
         ),
       ),
     ),
@@ -587,7 +587,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/t3-nebula" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "whocare0012-wq/nebula" } }),
         ),
       ),
     ),
@@ -1991,11 +1991,11 @@ it.effect("never bakes the upstream project's update feed into a build", () =>
     assert.isUndefined(yield* publishFor({ GITHUB_REPOSITORY: "PingDotGG/t3code" }));
     assert.isUndefined(yield* publishFor({}));
     assert.deepEqual(
-      yield* publishFor({ T3CODE_DESKTOP_UPDATE_REPOSITORY: "whocare0012-wq/t3-nebula" }),
+      yield* publishFor({ T3CODE_DESKTOP_UPDATE_REPOSITORY: "whocare0012-wq/nebula" }),
       {
         provider: "github",
         owner: "whocare0012-wq",
-        repo: "t3-nebula",
+        repo: "nebula",
         releaseType: "release",
       },
     );

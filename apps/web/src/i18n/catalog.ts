@@ -451,7 +451,7 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Used {count} times": "使用过 {count} 次",
   "Use skill": "使用技能",
   "T3 Stardust": "T3 星尘版",
-  "T3 Nebula": "T3 星云",
+  Nebula: "星云",
   "Good morning": "上午好",
   "Good afternoon": "下午好",
   "Good evening": "晚上好",

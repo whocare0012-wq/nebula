@@ -204,7 +204,7 @@ describe("DesktopAppIdentity", () => {
         assert.match(runtimeName.replaceAll(" ", ""), /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/);
         assert.equal(
           calls.setAboutPanelOptions[0]?.applicationName,
-          stage === "Dev" ? "T3 Code (Dev)" : "T3 Nebula",
+          stage === "Dev" ? "T3 Code (Dev)" : "Nebula",
         );
       }),
       { calls, environment },

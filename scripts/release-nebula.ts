@@ -1,5 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off - a synchronous release checklist.
-// Releases T3 Nebula (the Windows fork) in one command: picks the next version, builds the NSIS
+// Releases Nebula (the Windows fork) in one command: picks the next version, builds the NSIS
 // installer, pushes the branch and publishes a GitHub release that the in-app updater reads.
 //
 //   node scripts/release-nebula.ts [--bump patch|minor|major | --version X.Y.Z]
@@ -8,7 +8,7 @@ import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
 
-export const REPOSITORY = "whocare0012-wq/t3-nebula";
+export const REPOSITORY = "whocare0012-wq/nebula";
 const REMOTE = "nebula";
 const ARCH = "x64";
 
@@ -180,13 +180,13 @@ function main() {
 
   const releaseDir = NodePath.resolve("release");
   const artifacts = [
-    `T3-Nebula-${versionText}-${ARCH}.exe`,
-    `T3-Nebula-${versionText}-${ARCH}.exe.blockmap`,
+    `Nebula-${versionText}-${ARCH}.exe`,
+    `Nebula-${versionText}-${ARCH}.exe.blockmap`,
     "latest.yml",
   ].map((name) => NodePath.join(releaseDir, name));
   const notesFile = NodePath.join(releaseDir, `release-notes-${versionText}.md`);
 
-  console.log(`Releasing T3 Nebula ${tag} from ${head.slice(0, 10)} to ${REPOSITORY}.`);
+  console.log(`Releasing Nebula ${tag} from ${head.slice(0, 10)} to ${REPOSITORY}.`);
   console.log(`\n${notes}`);
   if (dryRun) {
     console.log("Dry run: nothing was built, pushed or published.");
@@ -230,7 +230,7 @@ function main() {
       "--target",
       head,
       "--title",
-      `T3 Nebula ${versionText}`,
+      `Nebula ${versionText}`,
       "--notes-file",
       notesFile,
     ],

@@ -1,5 +1,5 @@
 /*
- * The "T3 Nebula" wordmark in the app icon's blue → cyan → violet → pink.
+ * The "Nebula" wordmark in the app icon's blue → cyan → violet → pink.
  * The gradient is one seamless period (first stop == last stop) tiled twice the text width and
  * scrolled by exactly one period with linear timing, so the sheen flows left → right without a
  * pause, a restart jump, or a second color pass.

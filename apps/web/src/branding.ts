@@ -23,7 +23,7 @@ export const HOSTED_APP_CHANNEL =
 export const HOSTED_APP_CHANNEL_LABEL = resolveHostedAppChannelLabel(HOSTED_APP_CHANNEL);
 export function appBaseName(): string {
   const name = injectedDesktopAppBranding?.baseName;
-  return !name || name === uiText("T3 Nebula", undefined, "zh-CN") ? uiText("T3 Nebula") : name;
+  return !name || name === uiText("Nebula", undefined, "zh-CN") ? uiText("Nebula") : name;
 }
 // Set by the stable release build (VITE_RELEASE_CHANNEL=stable). Such a build hides the Nightly
 // stage even though it carries the upstream nightly version stamp.
@@ -45,6 +45,6 @@ export function appDisplayName(): string {
     : formatAppDisplayName({ baseName: appBaseName(), stageLabel: APP_STAGE_LABEL });
 }
 export const APP_VERSION = import.meta.env.APP_VERSION || "0.0.0";
-export const DESKTOP_DOWNLOAD_URL = "https://github.com/whocare0012-wq/t3-nebula/releases";
+export const DESKTOP_DOWNLOAD_URL = "https://github.com/whocare0012-wq/nebula/releases";
 // Redirects to the App Store or Google Play to match the phone that opens it.
-export const MOBILE_APP_URL = "https://github.com/whocare0012-wq/t3-nebula";
+export const MOBILE_APP_URL = "https://github.com/whocare0012-wq/nebula";

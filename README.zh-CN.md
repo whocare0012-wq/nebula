@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="assets/nebula-icon.svg" width="112" height="112" alt="T3 星云图标" />
+  <img src="assets/nebula-icon.svg" width="112" height="112" alt="星云（Nebula）图标" />
 </p>
 
-<h1 align="center">T3 Nebula · 星云</h1>
+<h1 align="center">星云 · Nebula</h1>
 
 <p align="center">
-  <strong>以 Windows 体验为核心的 T3 Code 开源社区发行版 — 统一调度本地编程智能体的桌面工作台。</strong><br />
+  <strong>以 Windows 体验为核心的开源编程智能体桌面工作台。</strong><br />
   多智能体统一管理 · 多账号实时额度洞察 · 人民币/美元用量分析 · 完整中英文双语界面
 </p>
 
@@ -20,8 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/whocare0012-wq/t3-nebula/releases">
-    <img src="https://img.shields.io/github/v/release/whocare0012-wq/t3-nebula?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=7b5cff" alt="最新版本" />
+  <a href="https://github.com/whocare0012-wq/nebula/releases">
+    <img src="https://img.shields.io/github/v/release/whocare0012-wq/nebula?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=7b5cff" alt="最新版本" />
   </a>
   <img src="https://img.shields.io/badge/Windows-x64-0078d4" alt="Windows x64" />
   <img src="https://img.shields.io/badge/UI-English%20%7C%20%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-6e56cf" alt="中英文界面" />
@@ -32,11 +32,14 @@
 
 ---
 
-**T3 星云（T3 Nebula）** 是一款开源编程智能体桌面工作台，可在同一个简洁高效的图形界面中统一驱动你本机已安装并登录的各类编程智能体，包括 **Codex**、**Claude Code**、**Antigravity**、**Cursor**、**OpenCode**、**DeepSeek Harness** 以及任意 **ACP（Agent Client Protocol）** 智能体。
+**星云（Nebula）** 是一款开源编程智能体桌面工作台，可在同一个简洁高效的图形界面中统一驱动你本机已安装并登录的各类编程智能体，包括 **Codex**、**Claude Code**、**Antigravity**、**Cursor**、**OpenCode**、**DeepSeek Harness** 以及任意 **ACP（Agent Client Protocol）** 智能体。
 
-本项目基于上游 [**T3 Code**](https://github.com/pingdotgg/t3code) 与 [**T3 星尘版（Stardust）**](https://github.com/zds-xiaoxin/xiaoxin-t3code) 的界面体验打造，重点增强了 Windows 平台的原生兼容性、多账号额度管理、多币种费用统计以及默认隐私保护。
+本项目基于 MIT 协议开源项目 [**T3 Code**](https://github.com/pingdotgg/t3code) 与 [**星尘（Stardust）**](https://github.com/zds-xiaoxin/stardust) 的界面体验打造，重点增强了 Windows 平台的原生兼容性、多账号额度管理、多币种费用统计以及默认隐私保护。
 
 界面语言自动跟随系统设置，完整支持 **简体中文** 与 **English**。
+
+> [!IMPORTANT]
+> **非官方社区分支声明**：星云（Nebula）是基于 MIT 协议开源项目 [pingdotgg/t3code](https://github.com/pingdotgg/t3code) 维护的独立分支。“T3”与“T3 Code”归其原作者所有，本项目与 T3 Tools Inc. 及 [星尘（Stardust）](https://github.com/zds-xiaoxin/stardust) 维护者均无任何关联或背书关系。使用中遇到的问题请反馈至本仓库，勿提交给上游项目。
 
 <a id="features"></a>
 
@@ -46,7 +49,7 @@
 
 - **复用已有订阅**：不转售 Token，也不需要额外中转账户，直接驱动你本机已登录的智能体 CLI 与运行时。
 - **内置 Git 与 Worktree 工作流**：支持为不同对话创建独立 Git Worktree，直接在应用内查看 Diff、回滚检查点，以及执行提交、推送和创建 PR。
-- **跨设备远程协作**：支持将服务端部署在本地或远程主机，通过局域网、Tailscale 或 T3 Connect 连接访问。
+- **跨设备远程协作**：支持将服务端部署在本地或远程主机，通过局域网、Tailscale 或远程配对连接访问。
 
 ### Composer V9 与推理强度交互
 
@@ -81,14 +84,14 @@
 
 ## 下载与安装
 
-预编译的 Windows 安装包发布在 [GitHub Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 页面：
+预编译的 Windows 安装包发布在 [GitHub Releases](https://github.com/whocare0012-wq/nebula/releases) 页面：
 
-1. 前往 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases) 下载最新版本的 `T3-Nebula-<版本号>-x64.exe`。
+1. 前往 [Releases](https://github.com/whocare0012-wq/nebula/releases) 下载最新版本的 Windows x64 安装包（`Nebula-<版本号>-x64.exe`，v1.0.7 及更早版本为 `T3-Nebula-<版本号>-x64.exe`）。
 2. 运行安装程序。由于社区构建包未进行代码签名，Windows SmartScreen 可能会弹出安全提示，点击 **更多信息** → **仍要运行** 即可。
-3. 启动 **T3 星云** 后，前往 **设置 → 服务商** 启用并配置至少一个智能体即可开始使用。
+3. 启动 **星云（Nebula）** 后，前往 **设置 → 服务商** 启用并配置至少一个智能体即可开始使用。
 
 > [!NOTE]
-> **共用数据目录说明**：T3 星云沿用 T3 Code 的应用 ID 与本地数据目录（`~/.t3`），原有的项目和对话历史会自动保留。但因此无法与官方 T3 Code 在同一台机器上并存安装。
+> **共用数据目录说明**：星云（Nebula）沿用上游 T3 Code 的应用 ID 与本地数据目录（`~/.t3`），原有的项目和对话历史会自动保留。但因此无法与上游 T3 Code 在同一台机器上并存安装。
 
 <a id="providers"></a>
 
@@ -118,8 +121,8 @@
 ### 开发模式运行
 
 ```powershell
-git clone https://github.com/whocare0012-wq/t3-nebula.git
-cd t3-nebula
+git clone https://github.com/whocare0012-wq/nebula.git
+cd nebula
 vp i
 vp run dev
 ```
@@ -132,7 +135,7 @@ vp run dev
 vp run dist:desktop:win:x64
 ```
 
-打包完成后，安装程序会生成在 `release/T3-Nebula-<版本号>-x64.exe`。
+打包完成后，安装程序会生成在 `release/Nebula-<版本号>-x64.exe`。
 
 ### 文档与测试
 
@@ -144,24 +147,24 @@ vp run dist:desktop:win:x64
 
 ## 隐私与更新
 
-- **匿名统计默认关闭**：发往上游 T3 Code 的匿名使用统计默认处于关闭状态，仅在 **设置 → 关于** 中由你手动开启后才会生效。
+- **匿名统计默认关闭**：发往上游的匿名使用统计默认处于关闭状态，仅在 **设置 → 关于** 中由你手动开启后才会生效。
 - **零第三方分支遥测**：已移除第三方社区分支的活跃统计上报以及外部社区更新检查。
 - **凭证仅本地保存**：各类服务商令牌与中转站 API Key 仅存储在本地服务端，只发往你配置的目标服务商或中转站。
-- **独立更新通道**：已禁用上游官方自动更新，避免官方版本覆盖本发行版。安装后的应用会检查本仓库的 [Releases](https://github.com/whocare0012-wq/t3-nebula/releases)，有新版本时在应用内提示更新。
+- **独立更新通道**：已禁用上游官方自动更新，避免官方版本覆盖本发行版。安装后的应用会检查本仓库的 [Releases](https://github.com/whocare0012-wq/nebula/releases)，有新版本时在应用内提示更新。
 
 <a id="credits"></a>
 
 ## 致谢
 
-T3 星云的构建离不开以下开源项目的贡献：
+星云（Nebula）的构建离不开以下开源项目的贡献：
 
-| 项目                                                                                         | 继承与参考内容                                                                                                                                                                                            |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                                  | 核心应用架构、服务端运行时、各服务商适配、编排引擎与检查点机制。上游官方 README 保留于 [README.upstream.md](README.upstream.md)。                                                                         |
-| [**zds-xiaoxin/xiaoxin-t3code**](https://github.com/zds-xiaoxin/xiaoxin-t3code)（T3 星尘版） | Composer V9、V18 星舰推理强度滑块及 [`stardust-kit/`](stardust-kit/README.md)、会话与令牌浮层、顶栏额度胶囊、多账号额度环与燃尽预测、四标签用量工作台、任务步骤卡、预览图钉批注、产物墙及定制功能中文化。 |
-| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)                  | 美元 / 人民币费用币种切换的设计思路来源。                                                                                                                                                                 |
+| 项目                                                                                   | 继承与参考内容                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**pingdotgg/t3code**](https://github.com/pingdotgg/t3code)                            | 核心应用架构、服务端运行时、各服务商适配、编排引擎与检查点机制。上游官方 README 保留于 [README.upstream.md](README.upstream.md)。                                                                         |
+| [**zds-xiaoxin/stardust**](https://github.com/zds-xiaoxin/stardust)（星尘 · Stardust） | Composer V9、V18 星舰推理强度滑块及 [`stardust-kit/`](stardust-kit/README.md)、会话与令牌浮层、顶栏额度胶囊、多账号额度环与燃尽预测、四标签用量工作台、任务步骤卡、预览图钉批注、产物墙及定制功能中文化。 |
+| [**Leobai03/t3code-quota-ui**](https://github.com/Leobai03/t3code-quota-ui)            | 美元 / 人民币费用币种切换的设计思路来源。                                                                                                                                                                 |
 
-T3 星云为独立的开源社区维护项目，与 T3 Tools Inc. 及 T3 星尘版维护者均无隶属关系。
+“T3”与“T3 Code”归其原作者所有。星云（Nebula）为独立的开源社区维护项目，与 T3 Tools Inc. 及星尘（Stardust）维护者均无隶属或背书关系。
 
 ## 开源协议
 

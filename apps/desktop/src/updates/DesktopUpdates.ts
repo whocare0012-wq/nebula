@@ -496,7 +496,8 @@ export const make = Effect.gen(function* () {
     const customBuild = yield* fileSystem
       .exists(environment.path.join(environment.resourcesPath, "stardust-build.json"))
       .pipe(Effect.orElseSucceed(() => false));
-    if (customBuild) return Option.some("T3 星云版需重新安装新版本来更新；官方自动更新已禁用。");
+    if (customBuild)
+      return Option.some("星云（Nebula）需重新安装新版本来更新；官方自动更新已禁用。");
     const bakedFeed = Option.getOrUndefined(yield* Ref.get(appUpdateYmlConfigRef));
     if (
       bakedFeed !== undefined &&
