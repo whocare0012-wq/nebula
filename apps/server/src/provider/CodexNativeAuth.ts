@@ -68,6 +68,14 @@ export function resolveNativeCodexCallbackForwardUrl(
   }
 }
 
+// Codex's authorize URL reuses the browser's OpenAI session; changing accounts must ask for a fresh login.
+export function nativeCodexSignInUrl(authUrl: string, methodId: string): string {
+  if (methodId !== "chatgpt-change-account") return authUrl;
+  const url = new URL(authUrl);
+  url.searchParams.set("prompt", "login");
+  return url.toString();
+}
+
 export const makeCodexNativeAuth = Effect.fn("makeCodexNativeAuth")(function* (options: {
   readonly instanceId: ProviderInstanceId;
   readonly homePath: string;
@@ -85,7 +93,7 @@ export const makeCodexNativeAuth = Effect.fn("makeCodexNativeAuth")(function* (o
     credentialBinding: { owner: "provider", key: options.homePath },
     methods: Effect.succeed(NATIVE_CODEX_AUTH_METHODS),
     defaultMethodId: "chatgpt",
-    authenticate: Effect.fn("CodexNativeAuth.authenticate")(function* (_methodId, context) {
+    authenticate: Effect.fn("CodexNativeAuth.authenticate")(function* (methodId, context) {
       const effective = yield* options.resolveRuntime;
       const completed = yield* Deferred.make<{
         readonly success: boolean;
@@ -155,7 +163,7 @@ export const makeCodexNativeAuth = Effect.fn("makeCodexNativeAuth")(function* (o
         {
           type: "browser",
           id: started.loginId,
-          url: started.authUrl,
+          url: nativeCodexSignInUrl(started.authUrl, methodId),
           requiresConsent: false,
           acceptsCallback: true,
         },

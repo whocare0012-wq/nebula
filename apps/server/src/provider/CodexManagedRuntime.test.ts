@@ -15,7 +15,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as ServerConfig from "../config.ts";
 import * as CodexInstallation from "./CodexInstallation.ts";
 import { makeCodexManagedRuntime } from "./CodexManagedRuntime.ts";
-import { resolveNativeCodexCallbackForwardUrl } from "./CodexNativeAuth.ts";
+import { nativeCodexSignInUrl, resolveNativeCodexCallbackForwardUrl } from "./CodexNativeAuth.ts";
 import { codexAppServerArgs } from "./codexLaunchArgs.ts";
 
 const decodeSettings = Schema.decodeSync(CodexSettings);
@@ -160,5 +160,18 @@ it("validates and normalizes native Codex OAuth callback URLs", () => {
       authUrl,
       "http://127.0.0.1:1455/auth/callback?code=abc123&state=wrong-state",
     ),
+  );
+});
+
+it("asks OpenAI for a fresh login only when changing accounts", () => {
+  const authUrl =
+    "https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_EMoamEEZ73f0CkXaXp7hrann&redirect_uri=http%3A%2F%2F127.0.0.1%3A1455%2Fauth%2Fcallback&state=_u9AnurYMIcKvkSoYtC5b1ULlHiFkLS3q-ts7xWUHss";
+  assert.equal(nativeCodexSignInUrl(authUrl, "chatgpt"), authUrl);
+  const changed = new URL(nativeCodexSignInUrl(authUrl, "chatgpt-change-account"));
+  assert.equal(changed.searchParams.get("prompt"), "login");
+  assert.equal(changed.searchParams.get("state"), new URL(authUrl).searchParams.get("state"));
+  assert.equal(
+    changed.searchParams.get("redirect_uri"),
+    new URL(authUrl).searchParams.get("redirect_uri"),
   );
 });

@@ -970,4 +970,67 @@ it.layer(layerTest)("CodexDriver", (it) => {
       yield* Queue.take(probes);
     }),
   );
+
+  it.effect("watches a new managed account's home even before its first probe", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const installation = yield* CodexInstallation.CodexInstallation;
+      const serverConfig = yield* ServerConfig.ServerConfig;
+      const instanceId = ProviderInstanceId.make("new-managed-account");
+      const shadowHome = NodePath.resolve(
+        serverConfig.stateDir,
+        "providers",
+        "codex",
+        instanceId,
+        "shadow",
+      );
+      expect(yield* fs.exists(shadowHome)).toBe(false);
+      const watched = yield* Deferred.make<{ readonly path: string; readonly existed: boolean }>();
+      const executable = {
+        executablePath: "/user/bin/codex",
+        managedVersionDirectory: null,
+        source: "local" as const,
+        version: "0.166.0",
+      };
+      yield* CodexDriver.create({
+        instanceId,
+        displayName: "New account",
+        enabled: true,
+        environment: [],
+        config: { ...CodexDriver.defaultConfig(), setupMode: "managed" },
+      }).pipe(
+        Effect.provideService(FileSystem.FileSystem, {
+          ...fs,
+          watch: (path) =>
+            Stream.unwrap(
+              fs.exists(path).pipe(
+                Effect.orElseSucceed(() => false),
+                Effect.flatMap((existed) => Deferred.succeed(watched, { path, existed })),
+                Effect.as(Stream.never),
+              ),
+            ),
+        }),
+        Effect.provideService(
+          CodexInstallation.CodexInstallation,
+          CodexInstallation.CodexInstallation.of({
+            ...installation,
+            managedDirectory: "unused-managed-installation",
+            resolve: () => Effect.succeed(executable),
+            acquire: () => Effect.succeed(executable),
+          }),
+        ),
+        Effect.provideService(
+          ChildProcessSpawner.ChildProcessSpawner,
+          ChildProcessSpawner.make(() =>
+            PlatformError.badArgument({
+              module: "ChildProcessSpawner",
+              method: "spawn",
+              description: "The fixture has no Codex executable",
+            }),
+          ),
+        ),
+      );
+      expect(yield* Deferred.await(watched)).toEqual({ path: shadowHome, existed: true });
+    }),
+  );
 });

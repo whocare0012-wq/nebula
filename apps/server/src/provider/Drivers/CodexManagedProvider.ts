@@ -167,10 +167,16 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
     Effect.forkScoped,
   );
   if (enabled) {
-    yield* fileSystem.watch(runtime.homePath).pipe(
-      Stream.filter((event) => path.basename(event.path) === "auth.json"),
-      Stream.debounce(Duration.millis(250)),
-      Stream.runForEach(() => snapshot.refresh.pipe(Effect.ignoreCause({ log: true }))),
+    // A new account's home does not exist until its first probe, and a missing path ends the watch.
+    yield* fileSystem.makeDirectory(runtime.homePath, { recursive: true }).pipe(
+      Effect.ignore,
+      Effect.andThen(
+        fileSystem.watch(runtime.homePath).pipe(
+          Stream.filter((event) => path.basename(event.path) === "auth.json"),
+          Stream.debounce(Duration.millis(250)),
+          Stream.runForEach(() => snapshot.refresh.pipe(Effect.ignoreCause({ log: true }))),
+        ),
+      ),
       Effect.catchReason("PlatformError", "NotFound", () => Effect.void),
       Effect.ignoreCause({ log: true }),
       Effect.forkScoped,
