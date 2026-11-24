@@ -257,6 +257,18 @@ html:root[data-theme-id="apple"].dark [data-v9-mp-search] input:focus-visible {
   flex-shrink: 0;
 }
 
+/* Accounts of the open provider tab: a quieter second row, so the provider tabs stay primary. */
+[data-v9-mp-tabs][data-v9-mp-accounts] {
+  margin-top: -2px;
+  padding-bottom: 6px;
+}
+
+[data-v9-mp-accounts] [data-v9-mp-tab][aria-pressed="true"] {
+  background: var(--v9-fill);
+  color: var(--v9-fg);
+  box-shadow: inset 0 0 0 0.5px var(--v9-hair);
+}
+
 /* ==================== 4. Model List & Row (V9 .mp-list / .mp-item / .logo-chip) ==================== */
 
 [data-v9-mp-list-wrap] {

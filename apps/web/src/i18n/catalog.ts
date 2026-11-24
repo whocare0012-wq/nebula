@@ -9292,6 +9292,7 @@ export const zhCN: Readonly<Record<string, string>> = {
   "{count} more steps": "另外 {count} 步",
   "No result": "无结果",
   "Share anonymous usage data": "共享匿名使用数据",
+  Accounts: "账号",
   "Anonymous usage data is off until you turn it on in Settings → About.":
     "匿名使用数据默认关闭，可以在「设置 → 关于」里打开。",
   "How the upstream T3 Code project handles the anonymous usage data you can choose to share.":

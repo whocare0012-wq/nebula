@@ -46,6 +46,13 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
   disabledInstanceIds?: ReadonlySet<ProviderInstanceId>;
   selectableUnavailableInstanceIds?: ReadonlySet<ProviderInstanceId>;
   getDisabledInstanceTooltip?: (entry: ProviderInstanceEntry) => string;
+  /** The account row under a provider tab that holds several accounts. */
+  variant?: "providers" | "accounts";
+  /** Remaining quota shown beside each account in the account row. */
+  quotaByInstanceId?: ReadonlyMap<
+    ProviderInstanceId,
+    { readonly label: string; readonly remaining: number; readonly low: boolean } | null
+  >;
 }) {
   const uiText = useUiText();
   const handleSelect = (instanceId: ModelPickerTabId) => {
@@ -53,12 +60,14 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
   };
   const showFavorites = props.showFavorites ?? true;
   const showAll = props.showAll ?? true;
+  const accounts = props.variant === "accounts";
 
   return (
     <Toolbar.Root
       data-model-picker-sidebar="true"
       data-v9-mp-tabs
-      aria-label={uiText("Providers")}
+      data-v9-mp-accounts={accounts ? "true" : undefined}
+      aria-label={accounts ? uiText("Accounts") : uiText("Providers")}
       orientation="horizontal"
       onKeyDown={(event) => {
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -100,6 +109,7 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
         const isDisabled = (isUnavailable && !unavailableSelectionIsReachable) || isContextDisabled;
         const isSelected = props.selectedInstanceId === entry.instanceId;
         const showInstanceBadge = shouldShowInstanceBadge(entry, props.instanceEntries);
+        const quota = accounts ? props.quotaByInstanceId?.get(entry.instanceId) : null;
 
         const tooltip = isUnavailable
           ? describeUnavailableInstance(entry, uiText)
@@ -117,7 +127,9 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
             disabled={isDisabled}
             focusableWhenDisabled={!isDisabled}
             aria-pressed={isSelected}
-            aria-label={tooltip ?? entry.displayName}
+            aria-label={
+              tooltip ?? (quota ? `${entry.displayName}, ${quota.label}` : entry.displayName)
+            }
             onClick={() => !isDisabled && handleSelect(entry.instanceId)}
           >
             <ProviderInstanceIcon
@@ -132,6 +144,11 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
               iconClassName={cn("size-3")}
             />
             <span>{entry.displayName}</span>
+            {quota ? (
+              <span data-v9-mp-meta data-low={quota.low ? "true" : undefined} aria-hidden="true">
+                {quota.remaining}%
+              </span>
+            ) : null}
           </Toolbar.Button>
         );
 

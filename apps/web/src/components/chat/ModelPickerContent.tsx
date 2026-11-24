@@ -23,6 +23,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
+import * as Schema from "effect/Schema";
 import {
   memo,
   useState,
@@ -35,6 +36,11 @@ import {
 } from "react";
 import { ModelListRow } from "./ModelListRow";
 import { ModelPickerSidebar, type ModelPickerTabId } from "./ModelPickerSidebar";
+import {
+  groupModelPickerEntries,
+  modelPickerGroupKey,
+  resolveModelPickerGroupAccount,
+} from "./modelPickerGroups";
 import {
   computeModelPickerTags,
   modelPickerQuotaInfo,
@@ -66,6 +72,7 @@ import {
   useEnvironmentModelPreferences,
   useToggleEnvironmentModelFavorite,
 } from "~/hooks/useSettings";
+import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { announce } from "~/lib/announce";
 import { cn } from "~/lib/utils";
 import { getVirtualizedScrollFadeClassName } from "../ui/scroll-area";
@@ -178,6 +185,10 @@ function adjacentModelPickerProvider(input: {
 }
 
 const EMPTY_MODEL_JUMP_LABELS = new Map<string, string>();
+/** The account each provider last ran a model on, so its tab reopens on that account. */
+const REMEMBERED_ACCOUNTS_KEY = "t3code:model-picker:accounts:v1";
+const RememberedAccounts = Schema.Record(Schema.String, Schema.String);
+const NO_REMEMBERED_ACCOUNTS: Record<string, string> = {};
 const MODEL_LIST_ESTIMATED_ITEM_SIZE = 34;
 const VIRTUALIZE_THRESHOLD = 48;
 
@@ -531,6 +542,13 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
           : [],
       ),
   );
+  const [rememberedAccounts, setRememberedAccounts] = useLocalStorage(
+    REMEMBERED_ACCOUNTS_KEY,
+    NO_REMEMBERED_ACCOUNTS,
+    RememberedAccounts,
+  );
+  // Accounts picked in the account row, which their provider tab returns to.
+  const [chosenAccounts, setChosenAccounts] = useState<Record<string, ProviderInstanceId>>({});
   const serverKeybindings = useAtomValue(primaryServerKeybindingsAtom);
   const keybindings = providedKeybindings ?? serverKeybindings;
   const toggleFavorite = useToggleEnvironmentModelFavorite(props.environmentId);
@@ -540,6 +558,13 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   };
 
   const handleSelectInstance = (instanceId: ModelPickerTabId) => {
+    const entry = instanceEntries.find((candidate) => candidate.instanceId === instanceId);
+    if (entry) {
+      setChosenAccounts((chosen) => ({
+        ...chosen,
+        [modelPickerGroupKey(entry)]: entry.instanceId,
+      }));
+    }
     setSelectedInstanceId(instanceId);
     // Focusing the search on touch raises the on-screen keyboard on every provider tap.
     if (window.matchMedia("(pointer: coarse)").matches) return;
@@ -578,6 +603,10 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     }
     const resolvedModel = resolveSelectableModel(entry.driverKind, modelSlug, options);
     if (!resolvedModel) return null;
+    const groupKey = modelPickerGroupKey(entry);
+    if (rememberedAccounts[groupKey] !== instanceId) {
+      setRememberedAccounts((remembered) => ({ ...remembered, [groupKey]: instanceId }));
+    }
     if (additive && onToggleModel) {
       onToggleModel(instanceId, resolvedModel);
     } else {
@@ -719,14 +748,46 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     return [...available, ...disabled];
   })();
   const showSidebar = sidebarInstanceEntries.length > 0;
+  // Several accounts of one provider share a tab; the account row under it switches between them.
+  const isAccountSelectable = (entry: ProviderInstanceEntry) =>
+    !lockedDisabledInstanceIds?.has(entry.instanceId) &&
+    (isProviderInstancePickerReady(entry) ||
+      selectableUnavailableInstanceIds?.has(entry.instanceId) === true);
+  const providerGroups = groupModelPickerEntries(sidebarInstanceEntries).map((group) => ({
+    group,
+    account: resolveModelPickerGroupAccount({
+      group,
+      selectedInstanceId,
+      chosenInstanceId: chosenAccounts[group.key],
+      activeInstanceId: props.activeInstanceId,
+      rememberedInstanceId: rememberedAccounts[group.key],
+      isSelectable: isAccountSelectable,
+    }),
+  }));
+  const providerTabEntries = providerGroups.map(({ group, account }) =>
+    group.entries.length > 1 ? { ...account, displayName: group.label } : account,
+  );
+  const openGroup = providerGroups.find(({ group }) =>
+    group.entries.some((entry) => entry.instanceId === selectedInstanceId),
+  )?.group;
+  const accountRowEntries = openGroup && openGroup.entries.length > 1 ? openGroup.entries : null;
+  // "All" and search list each provider once, through the account its tab shows.
+  const otherAccountIds = new Set(
+    providerGroups.flatMap(({ group, account }) =>
+      group.entries
+        .filter((entry) => entry.instanceId !== account.instanceId)
+        .map((entry) => entry.instanceId),
+    ),
+  );
   const instanceOrder = instanceEntries.map((entry) => entry.instanceId);
 
   const filteredModels = (() => {
     let result = flatModels;
 
     if (searchQuery.trim()) {
-      const candidates =
-        lockedProvider !== null ? result.filter((m) => matchesLockedProvider(m)) : result;
+      const candidates = result.filter(
+        (m) => !otherAccountIds.has(m.instanceId) && matchesLockedProvider(m),
+      );
       return rankModelPickerSearch(candidates, searchQuery, (model) => ({
         name: model.name,
         ...(model.shortName ? { shortName: model.shortName } : {}),
@@ -739,14 +800,12 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
 
     if (lockedProvider !== null) {
       result = result.filter((m) => matchesLockedProvider(m));
-      if (selectedInstanceId === "favorites") {
-        result = result.filter((m) => favoritesSet.has(providerModelKey(m.instanceId, m.slug)));
-      } else if (selectedInstanceId !== "all") {
-        result = result.filter((m) => m.instanceId === selectedInstanceId);
-      }
-    } else if (selectedInstanceId === "favorites") {
+    }
+    if (selectedInstanceId === "favorites") {
       result = result.filter((m) => favoritesSet.has(providerModelKey(m.instanceId, m.slug)));
-    } else if (selectedInstanceId !== "all") {
+    } else if (selectedInstanceId === "all") {
+      result = result.filter((m) => !otherAccountIds.has(m.instanceId));
+    } else {
       result = result.filter((m) => m.instanceId === selectedInstanceId);
     }
 
@@ -889,7 +948,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       event.preventDefault();
       event.stopPropagation();
       const next = adjacentModelPickerProvider({
-        entries: sidebarInstanceEntries,
+        entries: providerTabEntries,
         selectedInstanceId,
         direction: command === "modelPicker.nextProvider" ? 1 : -1,
         disabledInstanceIds: lockedDisabledInstanceIds,
@@ -902,7 +961,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
           ? uiText("Frequent")
           : next === "all"
             ? uiText("All")
-            : (entryByInstanceId.get(next)?.displayName ?? next),
+            : (providerTabEntries.find((entry) => entry.instanceId === next)?.displayName ?? next),
         "model-picker",
       );
       return;
@@ -931,6 +990,16 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   };
 
   const toggleShortcutHint = shortcutLabelForCommand(keybindings, "modelPicker.toggle") || "⌘/";
+  const sidebarAvailabilityProps = {
+    ...(selectableUnavailableInstanceIds ? { selectableUnavailableInstanceIds } : {}),
+    ...(lockedDisabledInstanceIds
+      ? {
+          disabledInstanceIds: lockedDisabledInstanceIds,
+          getDisabledInstanceTooltip: (entry: ProviderInstanceEntry) =>
+            `${entry.displayName} is unavailable in this thread. Start a new thread to switch providers.`,
+        }
+      : {}),
+  };
 
   return (
     <TooltipProvider delay={0}>
@@ -1085,17 +1154,23 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                 selectedInstanceId={selectedInstanceId}
                 onSelectInstance={handleSelectInstance}
                 onFocusSearch={focusSearchInput}
-                instanceEntries={sidebarInstanceEntries}
+                instanceEntries={providerTabEntries}
                 showFavorites
                 showAll
-                {...(selectableUnavailableInstanceIds ? { selectableUnavailableInstanceIds } : {})}
-                {...(lockedDisabledInstanceIds
-                  ? {
-                      disabledInstanceIds: lockedDisabledInstanceIds,
-                      getDisabledInstanceTooltip: (entry: ProviderInstanceEntry) =>
-                        `${entry.displayName} is unavailable in this thread. Start a new thread to switch providers.`,
-                    }
-                  : {})}
+                {...sidebarAvailabilityProps}
+              />
+            )}
+            {showSidebar && accountRowEntries && (
+              <ModelPickerSidebar
+                variant="accounts"
+                selectedInstanceId={selectedInstanceId}
+                onSelectInstance={handleSelectInstance}
+                onFocusSearch={focusSearchInput}
+                instanceEntries={accountRowEntries}
+                quotaByInstanceId={quotaByInstanceId}
+                showFavorites={false}
+                showAll={false}
+                {...sidebarAvailabilityProps}
               />
             )}
 
