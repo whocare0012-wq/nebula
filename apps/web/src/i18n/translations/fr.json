@@ -3071,7 +3071,6 @@
   "c646366e142ba05f": "L’état WSL de l’app desktop n’est pas disponible.",
   "228dcd284ea651b3": "Échec du chargement de l’état WSL.",
   "b08d105dd2553f8d": "Le projet n’est pas apparu dans l’app desktop.",
-  "7a4b3f3b83e121d7": "{organization} a désactivé les données d’utilisation anonymes.",
   "d85822b18e9475df": "Géré par {organization}.",
   "a6dd531d58080010": "Connectez-vous à ce serveur pour vérifier les versions.",
   "314cdccee9c14774": "Ce serveur ne prend pas en charge les recherches dans le registre. Mettez-le à jour avant de changer de canal.",
@@ -6094,16 +6093,6 @@
   ],
   "216ab7514aea1d61": "Commencer sans agent",
   "501ce2d99da8bfd1": "Configurez un agent pour commencer.",
-  "b33f35083757b42c": [
-    "Consultez la",
-    " ",
-    {
-      "t": "a",
-      "i": 1,
-      "c": "politique de confidentialité"
-    },
-    "."
-  ],
   "f77d000c0710f066": "Activer",
   "4ed27bf946e504db": "Configurer",
   "7a26eaacff0607f7": [
@@ -10067,7 +10056,6 @@
   "c424bee294b9f778": "Cet environnement est géré par {organization}. Certains paramètres et fonctionnalités suivent sa politique.",
   "82d9538af590f58c": "Voyez vos agents, importez des projets et configurez votre téléphone.",
   "6a48fd0a37e725a1": "Mentions légales",
-  "e741b1ab9396053a": "Comment nous traitons vos données. {telemetryOff}",
   "0bffbbf4d7f780c0": "Mentions relatives aux dépendances, ressources et outils facultatifs utilisés par T3 Code.",
   "e39a57514be028e9": "Consulter",
   "7c0512387c3a42ea": "Stable",
@@ -10096,7 +10084,6 @@
   "5fe5a45199fa9c07": "Aucun fournisseur de génération de texte disponible.",
   "99ceba64591c9257": "Voir les diagnostics",
   "eb576a5feda7b535": "Ouvrir",
-  "66647e8c8123a51f": "Voir la politique",
   "6d59e1e516e53d17": "Voir les licences",
   "941d08db15f62d17": "Archivé",
   "e122b2428c0d03a5": "Ouvrir tous les environnements",
@@ -11725,8 +11712,6 @@
   "dc2a999ca67ccf31": "téléphone tablette iPhone iPad iOS Android App Store Google Play QR",
   "6310b97b04ef239f": "Page d’accueil",
   "df9fa3a9cb004b9b": "prise en main configuration premier lancement démarrer agents importer projets",
-  "3188bc3b3c4508bc": "Politique de confidentialité",
-  "901a823214edc8c4": "télémétrie analytique données d’utilisation suivi mentions légales refuser",
   "82136480255a5106": "OTel OTLP télémétrie export points de terminaison journaux traces métriques Grafana",
   "659d081051faf7ff": "journaux traces processus historique des ressources échecs spans cpu mémoire",
   "5eaeacfa9f82051a": "rapport bug problème t3 équipe envoyer retour agents outils automatique à ma demande",

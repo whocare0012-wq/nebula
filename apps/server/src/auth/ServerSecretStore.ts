@@ -1,3 +1,4 @@
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
@@ -11,6 +12,9 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 
 import * as ServerConfig from "../config.ts";
+import { DpapiRejectedError, isDpapiSealed, openWithDpapi, sealWithDpapi } from "./windowsDpapi.ts";
+
+const isDpapiRejectedError = Schema.is(DpapiRejectedError);
 
 const secretStoreErrorContext = {
   resource: Schema.String,
@@ -187,6 +191,56 @@ export const make = Effect.gen(function* () {
       ? Effect.fail(new SecretStoreNameError({ resource: `secret ${JSON.stringify(name)}` }))
       : Effect.succeed(path.join(serverConfig.secretsDir, `${name}.bin`));
   const emptySecretRepair = yield* Semaphore.make(1);
+  const platform = yield* HostProcess.Platform;
+  const architecture = yield* HostProcess.Architecture;
+  // DPAPI binds each secret to this Windows account on this machine, so a copied or backed-up
+  // file is useless anywhere else.
+  const sealsSecrets = platform === "win32" && (architecture === "x64" || architecture === "arm64");
+  const seal = (name: string, value: Uint8Array) =>
+    sealsSecrets
+      ? Effect.try({
+          try: () => sealWithDpapi(value),
+          catch: (cause) => new SecretStoreSecureError({ resource: `secret ${name}`, cause }),
+        }).pipe(
+          // Keep working unsealed rather than lose the secret; the next read seals it.
+          Effect.catch((error) =>
+            Effect.logWarning("ServerSecretStore.seal-failed", {
+              secret: name,
+              cause: error.cause,
+            }).pipe(Effect.as(value)),
+          ),
+        )
+      : Effect.succeed(value);
+  const unseal = (
+    name: string,
+    secretPath: string,
+    stored: Uint8Array,
+  ): Effect.Effect<Option.Option<Uint8Array>, SecretStoreReadError> => {
+    if (!sealsSecrets || stored.byteLength === 0) return Effect.succeedSome(stored);
+    if (!isDpapiSealed(stored)) {
+      // A plaintext secret from an older build is sealed in place on first read.
+      return setAt(name, secretPath, stored).pipe(Effect.ignore, Effect.as(Option.some(stored)));
+    }
+    return Effect.try({
+      try: () => openWithDpapi(stored),
+      catch: (cause) => new SecretStoreReadError({ resource: `secret ${name}`, cause }),
+    }).pipe(
+      Effect.asSome,
+      // Sealed for another Windows account or machine, as a restored backup is: it can never
+      // open here, so drop it like a missing secret. A DPAPI that fails to load is an error.
+      Effect.catchIf(
+        (error) => isDpapiRejectedError(error.cause),
+        (error) =>
+          Effect.logWarning("ServerSecretStore.unseal-rejected", {
+            secret: name,
+            cause: error.cause,
+          }).pipe(
+            Effect.andThen(fileSystem.remove(secretPath).pipe(Effect.ignore)),
+            Effect.as(Option.none<Uint8Array>()),
+          ),
+      ),
+    );
+  };
   const isMissingOrNonEmpty = (secret: Option.Option<Uint8Array>) =>
     Option.isNone(secret) || secret.value.byteLength > 0;
 
@@ -204,6 +258,9 @@ export const make = Effect.gen(function* () {
                     cause,
                   }),
                 ),
+          ),
+          Effect.filterOrElse(Option.isNone, (secret) =>
+            unseal(name, secretPath, Option.getOrThrow(secret)),
           ),
         ),
       ),
@@ -228,7 +285,7 @@ export const make = Effect.gen(function* () {
       Effect.flatMap((uuid) => {
         const tempPath = `${secretPath}.${uuid}.tmp`;
         return Effect.gen(function* () {
-          yield* fileSystem.writeFile(tempPath, value);
+          yield* fileSystem.writeFile(tempPath, yield* seal(name, value));
           yield* fileSystem.chmod(tempPath, 0o600);
           yield* fileSystem.rename(tempPath, secretPath);
           yield* fileSystem.chmod(secretPath, 0o600);
@@ -270,7 +327,7 @@ export const make = Effect.gen(function* () {
           yield* Effect.scoped(
             Effect.gen(function* () {
               const file = yield* fileSystem.open(tempPath, { flag: "wx", mode: 0o600 });
-              yield* file.writeAll(value);
+              yield* file.writeAll(yield* seal(name, value));
               yield* file.sync;
             }),
           );

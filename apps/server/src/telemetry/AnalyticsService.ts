@@ -377,3 +377,13 @@ export const make = Effect.gen(function* () {
 });
 
 export const layer = Layer.effect(AnalyticsService, make);
+
+/** Nebula sends no usage analytics or feedback reports anywhere, whatever the settings say. */
+export const layerDisabled = Layer.succeed(
+  AnalyticsService,
+  AnalyticsService.of({
+    record: Effect.fn("AnalyticsService.record")(() => Effect.succeed(false)),
+    flush: Effect.void,
+    recordOwners: Effect.fn("AnalyticsService.recordOwners")(() => Effect.void),
+  }),
+);

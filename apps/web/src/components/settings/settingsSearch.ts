@@ -798,7 +798,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/general",
     searchTerms: [
       msg(
-      // oxlint-disable-next-line t3code/no-hardcoded-ui-han -- search keywords in every supported language
+        // oxlint-disable-next-line t3code/no-hardcoded-ui-han -- search keywords in every supported language
         "locale translation english deutsch german español spanish français french português portuguese brasil brazilian chinese 中文 japanese 日本語 korean 한국어 russian русский swedish svenska sprache idioma langue 语言 言語 언어 язык",
       ),
     ],
@@ -1038,19 +1038,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/about",
     primaryEnvironmentOnly: true,
     searchTerms: [msg("onboarding setup first run getting started agents import projects")],
-  },
-  {
-    id: "telemetry-opt-in",
-    title: "Share anonymous usage data",
-    to: "/settings/about",
-    scope: "environment",
-    searchTerms: ["telemetry analytics usage statistics tracking privacy opt in off default"],
-  },
-  {
-    id: "privacy-policy",
-    title: msg("Privacy policy"),
-    to: "/settings/about",
-    searchTerms: [msg("telemetry analytics usage data tracking legal opt out")],
   },
   {
     id: "telemetry-export",
@@ -1691,7 +1678,7 @@ export function isSettingsSearchScopeAvailable(
       );
   }
 }
-export function searchableSetting(id: SettingsSearchItemId): {
+function searchableSetting(id: SettingsSearchItemId): {
   readonly id: string;
   readonly title: string;
 } {

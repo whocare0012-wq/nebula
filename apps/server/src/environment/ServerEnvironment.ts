@@ -308,7 +308,8 @@ export const make = Effect.gen(function* () {
       mcpHostedApproval: true,
       shellThreadFamilies: true,
       shellOlderSettled: true,
-      agentFeedback: true,
+      // Feedback reports would be sent as analytics, which Nebula never sends.
+      agentFeedback: false,
     },
   };
 

@@ -293,7 +293,8 @@ const makeMcpAuthMiddleware = Effect.gen(function* () {
   const settingsFlags = serverSettings.getSettings.pipe(
     Effect.map((settings) => ({
       linkedEnvironments: settings.linkedEnvironmentsEnabled,
-      agentFeedback: settings.agentFeedback.mode,
+      // Feedback reports would be sent as analytics, which Nebula never sends.
+      agentFeedback: "off" as const,
       workflows: settings.workflowsEnabled,
     })),
     Effect.orElseSucceed(() => ({

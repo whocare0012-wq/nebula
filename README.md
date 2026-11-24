@@ -147,9 +147,9 @@ The generated installer is written to `release/Nebula-<version>-x64.exe`.
 
 ## Privacy & Updates
 
-- **Telemetry off by default.** Upstream anonymous usage reporting stays disabled until you explicitly enable it under **Settings → About**.
+- **No telemetry.** Usage analytics and agent feedback reports to the upstream T3 Code project are removed, with no setting to turn them back on. T3 Connect, which relays through upstream servers, is not built in.
 - **No third-party fork tracking.** All third-party active-user counting and external fork update endpoints have been removed.
-- **Local credentials.** Provider tokens and relay API keys remain on your local server and are only sent to their respective configured endpoints.
+- **Local credentials.** Provider tokens and relay API keys remain on your local server and are only sent to their respective configured endpoints. On Windows, the secrets Nebula stores itself (provider credentials, relay API keys, signing keys) are encrypted with DPAPI for your Windows account, so a copied or backed-up file cannot be read elsewhere. Sign-in files written by the agent CLIs themselves, such as Codex's `auth.json` and Antigravity's token, stay in their own format.
 - **Independent update channel.** The upstream official auto-updater is disabled so upstream builds will never overwrite this installation. Installed builds check this repository's [Releases](https://github.com/whocare0012-wq/nebula/releases) and notify you in-app when a new version is available.
 
 <a id="credits"></a>
