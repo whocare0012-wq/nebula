@@ -44,6 +44,7 @@ import { TYPOGRAPHY_ADVANCED_STORAGE_KEY } from "../../appearanceFonts";
 import { MOBILE_APP_URL } from "../../branding";
 import { isElectron } from "../../env";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useUiText } from "../../i18n/useUiText";
 import { usePersistEnvironmentProviderInstanceMutation } from "../../hooks/useSettings";
 import { useCloudLinkState } from "../../cloud/cloudLinkState";
 import { hasCloudPublicConfig } from "../../cloud/publicConfig";
@@ -346,38 +347,23 @@ export function WelcomePage({
 function TelemetryNotice({ environmentId }: { readonly environmentId: EnvironmentId }) {
   const messages = useMessages();
   const telemetryOff = managedTelemetryOffMessage(useManagedPolicy(environmentId), messages);
+  const text = useUiText();
   return (
     <p className="mt-auto pt-12 text-2xs leading-relaxed text-muted-foreground/70">
-      {telemetryOff === undefined ? (
-        <T>
-          T3 Code collects anonymous usage data to improve the app. To opt out, see the{" "}
-          <a
-            className="underline decoration-current/40 underline-offset-2 hover:text-muted-foreground"
-            href={PRIVACY_POLICY_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            privacy policy
-          </a>
-          .
-        </T>
-      ) : (
-        <>
-          {telemetryOff}{" "}
-          <T>
-            See the{" "}
-            <a
-              className="underline decoration-current/40 underline-offset-2 hover:text-muted-foreground"
-              href={PRIVACY_POLICY_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              privacy policy
-            </a>
-            .
-          </T>
-        </>
-      )}
+      {telemetryOff ??
+        text("Anonymous usage data is off until you turn it on in Settings → About.")}{" "}
+      <T>
+        See the{" "}
+        <a
+          className="underline decoration-current/40 underline-offset-2 hover:text-muted-foreground"
+          href={PRIVACY_POLICY_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          privacy policy
+        </a>
+        .
+      </T>
     </p>
   );
 }

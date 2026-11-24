@@ -1,6 +1,7 @@
 import { SidebarCategorySettingsSection } from "./SidebarCategorySettings";
 import { thrownErrorMessage } from "@t3tools/client-runtime/errors";
 import { m as resolveMessage } from "~/i18n/messages";
+import { useUiText } from "~/i18n/useUiText";
 import { useAtomValue } from "@effect/atom-react";
 import { NotificationSettings } from "./NotificationSettings";
 import { PRIVACY_POLICY_URL } from "../../legalLinks";
@@ -2531,6 +2532,7 @@ export function AboutSettingsPanel() {
   // The Welcome page sets up this computer, so it needs one.
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const telemetryOff = managedTelemetryOffMessage(primaryPolicy, messages);
+  const text = useUiText();
   return (
     <SettingsPageContainer>
       <SettingsSection id="about" title={gt("App")}>
@@ -2587,7 +2589,9 @@ export function AboutSettingsPanel() {
           {...setting("privacy-policy")}
           description={
             telemetryOff === undefined
-              ? gt("How we handle your data, including the anonymous usage data T3 Code collects.")
+              ? text(
+                  "How the upstream T3 Code project handles the anonymous usage data you can choose to share.",
+                )
               : gt("How we handle your data. {telemetryOff}", { telemetryOff })
           }
           control={

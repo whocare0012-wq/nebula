@@ -5063,8 +5063,6 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Not connected, so setup skips": "未连接，因此设置会跳过",
   them: "它们",
   "up later from Settings.": "稍后可在设置中配置。",
-  "T3 Code collects anonymous usage data to help us improve it. To read more about how your data is used and how to opt out, see our":
-    "T3 Code 会收集匿名用量数据，以帮助我们改进产品。若要了解数据如何使用以及如何退出，请参阅我们的",
   "privacy policy": "隐私政策",
   "npx t3 serve": "npx t3 serve",
   "--tailscale": "--tailscale",
@@ -7709,8 +7707,6 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Still waiting for the model to classify these titles…": "仍在等模型分析会话标题…",
   "Suggested categories": "分类建议",
   "Suggestion model": "建议模型",
-  "T3 Code collects anonymous usage data to improve the app.":
-    "T3 Code 收集匿名用量数据，用于改进应用。",
   "Technical details": "技术详情",
   "Temporary thread · Each task has its own folder": "临时会话 · 每个任务一个独立文件夹",
   "This connection cannot manage agents.": "当前连接没有管理模型工具的权限。",
@@ -9296,6 +9292,10 @@ export const zhCN: Readonly<Record<string, string>> = {
   "{count} more steps": "另外 {count} 步",
   "No result": "无结果",
   "Share anonymous usage data": "共享匿名使用数据",
+  "Anonymous usage data is off until you turn it on in Settings → About.":
+    "匿名使用数据默认关闭，可以在「设置 → 关于」里打开。",
+  "How the upstream T3 Code project handles the anonymous usage data you can choose to share.":
+    "上游 T3 Code 项目如何处理你可以选择共享的匿名使用数据。",
   "Off by default. When on, anonymous usage events (feature use, app version, operating system; no prompts, files or paths) are sent to ingest.t3.codes, a server run by the upstream T3 Code project. Turning it off stops sending at once and discards events not yet sent.":
     "默认关闭。开启后，匿名使用事件（功能使用情况、应用版本、操作系统；不含提示词、文件或路径）会发送到 ingest.t3.codes，该服务由上游 T3 Code 项目运营。关闭后立即停止发送，并丢弃尚未发送的事件。",
   "What this build sends and where. Usage statistics stay off unless you turn them on above.":
