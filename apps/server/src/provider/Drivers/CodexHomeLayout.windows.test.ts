@@ -55,7 +55,7 @@ it.layer(NodeServices.layer)("CodexHomeLayout on Windows", (it) => {
           const shadowConfig = path.join(shadow, "config.toml");
           yield* fileSystem.remove(shadowConfig);
           yield* fileSystem.writeFileString(shadowConfig, "model = 'b'");
-          yield* fileSystem.utimes(path.join(shared, "config.toml"), new Date(0), new Date(0));
+          yield* fileSystem.utimes(path.join(shared, "config.toml"), 0, 0);
 
           yield* materializeCodexShadowHome(layout);
 

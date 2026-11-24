@@ -161,7 +161,7 @@ export const make = Effect.gen(function* () {
       [
         Effect.result(readAccounts),
         // Needs no admin key: Claude Code's own key reads its spend at the relay.
-        config.kind === "sub2api" && base.origin ? readWallet(base.origin) : Effect.void,
+        config.kind === "sub2api" && base.origin ? readWallet(base.origin) : Effect.undefined,
       ],
       { concurrency: 2 },
     );

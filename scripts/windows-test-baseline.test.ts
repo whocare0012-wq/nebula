@@ -1,3 +1,4 @@
+// @effect-diagnostics nodeBuiltinImport:off - resolves fixture paths for the baseline script.
 import * as NodePath from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
