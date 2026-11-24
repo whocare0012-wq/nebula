@@ -10,6 +10,7 @@ import {
   DEFAULT_QUOTA_PREFERENCES,
   quotaAccounts,
   createQuotaAccountsSelector,
+  quotaModelFor,
   quotaPins,
   quotaShownIds,
   quotaState,
@@ -137,6 +138,63 @@ describe("quota topbar data", () => {
       quotaWindow(a, { ...DEFAULT_QUOTA_PREFERENCES, windows: { [a.id]: "weekly:removed" } }),
     ).toBeNull();
   });
+  describe("antigravity", () => {
+    const window = (id: string, kind: "session" | "weekly", usedPercent: number) => ({
+      id,
+      kind,
+      label: id,
+      usedPercent,
+      resetsAt: new Date(now + 3600000).toISOString(),
+    });
+    const antigravity = (windows: ReturnType<typeof window>[]) =>
+      quotaAccounts(
+        present([
+          provider({
+            instanceId: ProviderInstanceId.make("antigravity"),
+            driver: ProviderDriverKind.make("antigravity"),
+            usageLimits: { checkedAt: new Date(now).toISOString(), windows },
+          }),
+        ]),
+      )[0]!;
+    const account = antigravity([
+      window("3p-5h", "session", 0),
+      window("3p-weekly", "weekly", 0),
+      window("gemini-5h", "session", 30),
+      window("gemini-weekly", "weekly", 40),
+      window("gemini-argon-weekly", "weekly", 50),
+    ]);
+    const pick = (model?: string) => quotaWindow(account, DEFAULT_QUOTA_PREFERENCES, model)?.id;
+
+    it("shows the Gemini quota unless a Claude or GPT model is running", () => {
+      expect(pick()).toBe("gemini-weekly");
+      expect(pick("gemini-3-pro")).toBe("gemini-weekly");
+      expect(pick("claude-sonnet-4-5")).toBe("3p-weekly");
+      expect(pick("gpt-oss-120b")).toBe("3p-weekly");
+    });
+
+    it("reads older window ids and keeps a window the user chose", () => {
+      const legacy = antigravity([
+        window("claude-quota", "session", 0),
+        window("gemini-quota", "session", 20),
+      ]);
+      expect(quotaWindow(legacy, DEFAULT_QUOTA_PREFERENCES)?.id).toBe("gemini-quota");
+      expect(quotaWindow(legacy, DEFAULT_QUOTA_PREFERENCES, "claude-opus")?.id).toBe(
+        "claude-quota",
+      );
+      const chosen = {
+        ...DEFAULT_QUOTA_PREFERENCES,
+        windows: { [account.id]: "weekly:3p-weekly" },
+      };
+      expect(quotaWindow(account, chosen, "gemini-3-pro")?.id).toBe("3p-weekly");
+    });
+
+    it("takes the model only from the thread running on this account", () => {
+      const current = { environmentId: "env", instanceId: "antigravity", model: "claude-opus" };
+      expect(quotaModelFor(account, current)).toBe("claude-opus");
+      expect(quotaModelFor(account, { ...current, instanceId: "other" })).toBeUndefined();
+      expect(quotaModelFor(account, null)).toBeUndefined();
+    });
+  });
   it("keeps cached windows after probe failure, but clears unsupported quotas", () => {
     const base = provider();
     const a = quotaAccounts(
@@ -244,7 +302,7 @@ describe("quota topbar data", () => {
       const pinned = { ...DEFAULT_QUOTA_PREFERENCES, pinsEdited: true, pins: [pro2.id] };
       const on = (instanceId: string) => ({ environmentId: "env", instanceId });
       expect(quotaShownIds(pinned, accounts, on("claude-pro3"))).toEqual({
-        ids: [pro3.id, pro2.id],
+        ids: [pro3.id],
         followedId: pro3.id,
       });
       expect(quotaShownIds(pinned, accounts, on("claude-pro2"))).toEqual({
@@ -270,6 +328,27 @@ describe("quota topbar data", () => {
         ]),
       );
       expect(quotaShownIds(pinned, noQuota, on("claude-pro3")).followedId).toBeNull();
+    });
+
+    it("swaps the followed login in for a pinned login of its provider, and adds it otherwise", () => {
+      const accounts = quotaAccounts(
+        present([
+          provider(),
+          claude("claude-pro2", "a@example.invalid", "Pro"),
+          claude("claude-pro3", "b@example.invalid", "3"),
+        ]),
+      );
+      const [codex, pro2, pro3] = accounts as [
+        (typeof accounts)[0],
+        (typeof accounts)[0],
+        (typeof accounts)[0],
+      ];
+      const pinned = { ...DEFAULT_QUOTA_PREFERENCES, pinsEdited: true, pins: [codex.id, pro2.id] };
+      const on = (instanceId: string) => ({ environmentId: "env", instanceId });
+      expect(quotaShownIds(pinned, accounts, on("claude-pro3")).ids).toEqual([codex.id, pro3.id]);
+      expect(
+        quotaShownIds({ ...pinned, pins: [codex.id] }, accounts, on("claude-pro3")).ids,
+      ).toEqual([pro3.id, codex.id]);
     });
 
     it("gives each Claude login its own limits card instead of one averaged pool", () => {

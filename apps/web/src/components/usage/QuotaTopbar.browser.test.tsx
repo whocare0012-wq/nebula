@@ -362,10 +362,9 @@ it("tells two logins of one driver apart, follows the open thread's login and fa
   const name = chips()[0]!.querySelector<HTMLElement>("[data-quota-name]")!;
   expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
   await screen.rerender(<Following current={{ environmentId: "env", instanceId: "pro3" }} />);
-  expect(chips().map((chip) => chip.getAttribute("data-quota-id"))).toEqual(["pro3", "pro2"]);
+  expect(chips().map((chip) => chip.getAttribute("data-quota-id"))).toEqual(["pro3"]);
   expect(chips()[0]!.hasAttribute("data-current")).toBe(true);
   expect(chips()[0]!.textContent).toContain("40%");
-  expect(chips()[1]!.hasAttribute("data-current")).toBe(false);
   await screen.rerender(<Following current={{ environmentId: "env", instanceId: "pro2" }} />);
   expect(chips().map((chip) => chip.getAttribute("data-quota-id"))).toEqual(["pro2"]);
   expect(chips()[0]!.hasAttribute("data-current")).toBe(true);

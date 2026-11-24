@@ -48,10 +48,17 @@ export function quotaPins(
     .slice(0, 3)
     .map((a) => a.id);
 }
+/** The open thread's provider instance, and the model it runs when that model is known. */
+export interface QuotaCurrent {
+  readonly environmentId: string;
+  readonly instanceId: string;
+  readonly model?: string | undefined;
+}
+
 /** The login the open thread's provider instance signs in with, when it has a quota to show. */
 function followedQuotaAccount(
   accounts: readonly QuotaAccount[],
-  current: { readonly environmentId: string; readonly instanceId: string } | null,
+  current: QuotaCurrent | null,
 ): QuotaAccount | null {
   if (current === null) return null;
   return (
@@ -69,33 +76,68 @@ function followedQuotaAccount(
 }
 
 /**
- * Pinned accounts, plus the open thread's account first when it is not pinned and following is on.
- * The extra chip is never saved, so it leaves with the thread.
+ * Pinned accounts, with the open thread's account in view when following is on: it takes the
+ * place of a pinned account of the same provider, or comes first when none is pinned. The
+ * swap is never saved, so the pins come back when the thread closes.
  */
 export function quotaShownIds(
   preferences: QuotaPreferences,
   accounts: readonly QuotaAccount[],
-  current: { readonly environmentId: string; readonly instanceId: string } | null,
+  current: QuotaCurrent | null,
 ): { readonly ids: readonly string[]; readonly followedId: string | null } {
   const pins = quotaPins(preferences, accounts);
   const followed =
     preferences.followSession === false ? null : followedQuotaAccount(accounts, current);
   if (followed === null) return { ids: pins, followedId: null };
+  if (pins.includes(followed.id)) return { ids: pins, followedId: followed.id };
+  const sameProvider = pins.findIndex(
+    (id) => accounts.find((account) => account.id === id)?.driver === followed.driver,
+  );
   return {
-    ids: pins.includes(followed.id) ? pins : [followed.id, ...pins].slice(0, 4),
+    ids:
+      sameProvider < 0
+        ? [followed.id, ...pins].slice(0, 4)
+        : pins.map((id, index) => (index === sameProvider ? followed.id : id)),
     followedId: followed.id,
   };
 }
+
+/** The model the open thread runs on this account, which decides which of its quotas matters. */
+export function quotaModelFor(account: QuotaAccount, current: QuotaCurrent | null) {
+  if (!current?.model) return undefined;
+  return account.instances.some(
+    (instance) =>
+      instance.environmentId === current.environmentId &&
+      instance.instanceId === current.instanceId,
+  )
+    ? current.model
+    : undefined;
+}
+
+// Antigravity meters Gemini apart from Claude and GPT, which share one ("3p") quota. Gemini
+// comes first: the shared window does not move while Gemini runs.
+function antigravityWindows(
+  windows: readonly ServerProviderUsageWindow[],
+  model: string | undefined,
+): readonly ServerProviderUsageWindow[] {
+  const thirdParty = /^(claude|gpt)/i.test(model ?? "");
+  const family = windows.filter((w) =>
+    thirdParty ? /^(3p|claude|gpt)-/.test(w.id) : /^gemini-(?!argon-|carbon-)/.test(w.id),
+  );
+  return family.length ? family : windows;
+}
+
 export function quotaWindow(
   account: QuotaAccount,
   preferences: QuotaPreferences,
+  model?: string,
 ): ServerProviderUsageWindow | null {
   if (account.limits?.unavailable?.reason === "unsupported") return null;
   const wanted = preferences.windows[account.id];
   if (wanted) return account.limits?.windows.find((w) => `${w.kind}:${w.id}` === wanted) ?? null;
-  return (
-    account.limits?.windows.find((w) => w.kind === "weekly") ?? account.limits?.windows[0] ?? null
-  );
+  const all = account.limits?.windows ?? [];
+  const windows = account.driver === "antigravity" ? antigravityWindows(all, model) : all;
+  return windows.find((w) => w.kind === "weekly") ?? windows[0] ?? null;
 }
 export function quotaState(
   account: QuotaAccount,

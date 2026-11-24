@@ -38,9 +38,11 @@ import {
   createQuotaAccountsSelector,
   quotaPins,
   quotaShownIds,
+  quotaModelFor,
   quotaState,
   quotaWindow,
   type QuotaAccount,
+  type QuotaCurrent,
   type QuotaPreferences,
 } from "./quotaTopbarModel";
 import styles from "./quotaTopbar.module.css";
@@ -208,7 +210,7 @@ export function QuotaTopbarView({
   readonly onUsage: () => void;
   readonly onOpenChange?: (open: boolean) => void;
   /** The open thread's provider instance, whose login is shown first while following is on. */
-  readonly current?: { readonly environmentId: string; readonly instanceId: string } | null;
+  readonly current?: QuotaCurrent | null;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"overview" | "all" | "settings">("overview");
@@ -300,7 +302,9 @@ export function QuotaTopbarView({
   };
   const title = copy("Quotas");
   const displayAccounts = view === "all" ? accounts : selected;
-  const selectedWindows = selected.map((account) => quotaWindow(account, preferences));
+  const selectedWindows = selected.map((account) =>
+    quotaWindow(account, preferences, quotaModelFor(account, current)),
+  );
   const windowLabels = [
     ...new Set(selectedWindows.flatMap((window) => (window ? [windowName(window)] : []))),
   ];
@@ -325,7 +329,7 @@ export function QuotaTopbarView({
       </button>
       <div className={styles["quota-chips"]}>
         {selected.map((account) => {
-          const window = quotaWindow(account, preferences),
+          const window = quotaWindow(account, preferences, quotaModelFor(account, current)),
             status = quotaState(account, window, now);
           const checkedAt = Date.parse(account.limits?.checkedAt ?? "");
           const readTime =
@@ -521,7 +525,7 @@ export function QuotaTopbarView({
                   {[...selected, ...accounts.filter((a) => !pins.includes(a.id))].map((account) => {
                     const checked = pins.includes(account.id),
                       index = pins.indexOf(account.id),
-                      window = quotaWindow(account, preferences);
+                      window = quotaWindow(account, preferences, quotaModelFor(account, current));
                     return (
                       <div className={styles["quota-pick"]} key={account.id}>
                         <Checkbox
@@ -640,7 +644,11 @@ export function QuotaTopbarView({
               <>
                 <div className={styles["quota-list"]}>
                   {displayAccounts.map((account) => {
-                    const window = quotaWindow(account, preferences),
+                    const window = quotaWindow(
+                        account,
+                        preferences,
+                        quotaModelFor(account, current),
+                      ),
                       status = quotaState(account, window, now);
                     const windows =
                       account.limits?.unavailable?.reason === "unsupported"
@@ -824,13 +832,16 @@ export function QuotaTopbar() {
   const params = useParams({ strict: false });
   const routeThread = resolveThreadRouteRef(params);
   const threadShell = useQuietThreadShell(routeThread);
-  const current =
-    routeThread && threadShell
-      ? {
-          environmentId: routeThread.environmentId,
-          instanceId: resolveThreadProviderStack(threadShell).at(-1)!,
-        }
-      : null;
+  const current = (() => {
+    if (!routeThread || !threadShell) return null;
+    const instanceId = resolveThreadProviderStack(threadShell).at(-1)!;
+    // The selection names the model only for the instance it was made on.
+    const model =
+      threadShell.modelSelection.instanceId === instanceId
+        ? threadShell.modelSelection.model
+        : undefined;
+    return { environmentId: routeThread.environmentId, instanceId, model };
+  })();
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Maintain the visibility listener and minute timer that advance quota age labels.
   useEffect(() => {
     if (!panelOpen) return;

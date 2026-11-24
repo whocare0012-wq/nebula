@@ -77,6 +77,8 @@ function lookupModelUnitPrice(
 export function modelPickerQuotaInfo(
   provider: Pick<ServerProvider, "driver" | "usageLimits">,
   now: number,
+  /** Picks the quota this model draws on when a provider meters model families apart. */
+  model?: string,
 ): ModelPickerQuotaInfo | null {
   const limits = provider.usageLimits;
   const account = {
@@ -91,7 +93,7 @@ export function modelPickerQuotaInfo(
     connected: true,
     failed: !!limits?.unavailable,
   };
-  const status = quotaState(account, quotaWindow(account, DEFAULT_QUOTA_PREFERENCES), now);
+  const status = quotaState(account, quotaWindow(account, DEFAULT_QUOTA_PREFERENCES, model), now);
   if (limits?.unavailable || status.state !== "current" || status.remaining === null) return null;
   return {
     label: uiText("{remaining}% left", { remaining: status.remaining }),
