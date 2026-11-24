@@ -58,12 +58,15 @@ Compared with T3 Stardust, T3 Nebula adds or changes the following:
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Upstream**                            | The latest official T3 Code is merged into Stardust, with the conflicts resolved by hand.                                                                                                                                                                                                                                                                          |
 | **Cost currency**                       | The Usage page shows costs in US dollars or Chinese yuan. The exchange rate is editable and remembered, and chart axes round in the selected currency.                                                                                                                                                                                                             |
+| **Codex accounts**                      | Connect several ChatGPT accounts for Codex under **Settings → Providers → Add ChatGPT account**. Each one signs in with Codex's own ChatGPT login and keeps it in its own Codex home, so the Codex CLI login in `~/.codex` is never touched. Managed accounts show their Codex usage limits and can use the Fast service tier.                                     |
+| **Model picker**                        | Several accounts of one provider share one tab, with a row under it to switch accounts that shows each account's remaining quota. The picker remembers the account you last used for each provider, and **All** lists each model once.                                                                                                                             |
+| **Quota capsule**                       | The topbar quota capsule follows the open thread's account: a login you have not pinned takes the place of your pinned login of the same provider until the thread closes. Antigravity shows the quota the running model draws on, Gemini by default and the shared quota for Claude and GPT models.                                                               |
 | **Live output speed**                   | While a turn runs, the stats bar under the composer shows its output rate in tokens per second, alongside the round, status and elapsed time.                                                                                                                                                                                                                      |
 | **npm-installed ACP agents on Windows** | Local ACP commands installed with `npm install -g` work by name. T3 Nebula reads npm's `.cmd` wrapper and launches the program it starts, still without a shell.                                                                                                                                                                                                   |
 | **DeepSeek Harness**                    | The desktop app's bundled CLI is recognized, so provider status checks no longer leave empty sessions in your DeepSeek history.                                                                                                                                                                                                                                    |
 | **Privacy defaults**                    | Anonymous usage data for the upstream T3 Code project stays off until you turn it on in Settings → About, and the welcome page says so. Stardust's anonymous usage counting (sent to xiaoxin666.cn) and its community update checks against the Stardust repository are removed. The official auto-updater is disabled, so upstream builds never replace this one. |
 | **Windows packaging**                   | Builds a working NSIS installer. The payload limit now leaves room for the server bytecode cache, and the Windows `.ico` files carry the app icon.                                                                                                                                                                                                                 |
-| **Name and icon**                       | The app is renamed T3 Nebula (T3 星云 in Chinese), with a new spiral-galaxy icon. The source is [assets/nebula-icon.svg](assets/nebula-icon.svg).                                                                                                                                                                                                                  |
+| **Name and icon**                       | The app is renamed T3 Nebula (T3 星云 in Chinese), with a new spiral-galaxy icon. The source is [assets/nebula-icon.svg](assets/nebula-icon.svg). The GitHub star prompt and the mobile app QR code point to this repository.                                                                                                                                      |
 | **Sub2API quota**                       | If Claude Code goes through your own Sub2API relay, add it under **Settings → Providers → Add hub → Sub2API** with the relay's admin API key. The Usage page then shows the 5-hour and weekly quota of the Claude accounts behind the relay.                                                                                                                       |
 | **Windows polish**                      | Controls that only work against macOS servers (the disk cleanup center, the Cursor Keychain switch) are hidden on Windows, the artifact wall says File Explorer instead of Finder, and `vp run dev` prefers IPv4 for `localhost` on Windows.                                                                                                                       |
 | **Code hygiene**                        | Removes files and exports left unused after the merge, so the pre-commit checks pass again.                                                                                                                                                                                                                                                                        |
@@ -101,14 +104,16 @@ SmartScreen asks for confirmation: choose **More info**, then **Run anyway**.
 
 **Publish a release**
 
-Build with the update feed and a version above the last release, then upload the installer, its
-blockmap and `latest.yml`:
+One command picks the next version, builds the installer with this repository's update feed,
+pushes `main` and publishes the GitHub release that installed apps update from. It needs the
+`gh` CLI signed in and a git remote named `nebula` for this repository.
 
 ```powershell
-$env:T3CODE_DESKTOP_UPDATE_REPOSITORY = "whocare0012-wq/t3-nebula"
-node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64 --build-version 1.0.1
-gh release create v1.0.1 release/T3-Nebula-1.0.1-x64.exe release/T3-Nebula-1.0.1-x64.exe.blockmap release/latest.yml --title "T3 Nebula 1.0.1"
+node scripts/release-nebula.ts --bump patch --notes notes.md
 ```
+
+Use `--version X.Y.Z` for an exact version, and `--dry-run` to see the plan without building or
+publishing.
 
 <a id="providers"></a>
 
