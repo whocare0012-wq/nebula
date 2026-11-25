@@ -20,6 +20,7 @@ const NotificationBadge = Schema.Struct({
 function applyNotificationBadge(
   platform: NodeJS.Platform,
   { count, image }: typeof NotificationBadge.Type,
+  flash = false,
 ): void {
   try {
     if (Electron.BrowserWindow.getFocusedWindow()) count = 0;
@@ -31,6 +32,9 @@ function applyNotificationBadge(
             overlay?.isEmpty() ? null : overlay,
             count > 0 ? `${count} threads with new notifications` : "",
           );
+          // The taskbar button flashes until the window comes to the foreground.
+          if (count === 0) window.flashFrame(false);
+          else if (flash) window.flashFrame(true);
         }
       }
     } else if (platform === "darwin" || platform === "linux") {
@@ -46,7 +50,9 @@ export const installNotificationBadge = Effect.fn("desktop.ipc.installNotificati
     const ipc = yield* DesktopIpc.DesktopIpc;
     const app = yield* ElectronApp.ElectronApp;
     const platform = yield* HostProcess.Platform;
+    let shownCount = 0;
     const clear = () => {
+      shownCount = 0;
       applyNotificationBadge(platform, { count: 0, image: null });
       for (const window of Electron.BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) window.webContents.send(SET_NOTIFICATION_BADGE_CHANNEL);
@@ -60,7 +66,10 @@ export const installNotificationBadge = Effect.fn("desktop.ipc.installNotificati
         handler: (badge) =>
           Effect.sync(() => {
             if (badge.count > 0 && Electron.BrowserWindow.getFocusedWindow()) clear();
-            else applyNotificationBadge(platform, badge);
+            else {
+              applyNotificationBadge(platform, badge, badge.count > shownCount);
+              shownCount = badge.count;
+            }
           }),
       }),
     );

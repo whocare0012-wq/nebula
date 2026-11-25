@@ -10,7 +10,12 @@ import type { DesktopUpdateCheckResult, DesktopUpdateState } from "@t3tools/cont
 import * as Electron from "electron";
 import { vi } from "vite-plus/test";
 
+const { setUserTasks, appListeners } = vi.hoisted(() => ({
+  setUserTasks: vi.fn((_tasks: ReadonlyArray<Electron.Task>) => true),
+  appListeners: new Map<string, (...args: never[]) => void>(),
+}));
 vi.mock("electron", () => ({
+  app: { setUserTasks },
   webContents: { getAllWebContents: vi.fn(() => []), getFocusedWebContents: vi.fn() },
 }));
 
@@ -57,7 +62,10 @@ const layerElectronApp = Layer.succeed(ElectronApp.ElectronApp, {
   appendCommandLineSwitch: () => Effect.void,
   onBeforeQuitForUpdate: () => Effect.void,
   removeCommandLineSwitch: () => Effect.void,
-  on: () => Effect.void,
+  on: (eventName, listener) =>
+    Effect.sync(() => {
+      appListeners.set(eventName, listener as unknown as (...args: never[]) => void);
+    }),
 } satisfies ElectronApp.ElectronApp["Service"]);
 
 interface MenuServices {
@@ -440,6 +448,52 @@ describe("DesktopApplicationMenu", () => {
         collect(yield* Deferred.await(applicationMenuTemplate));
         assert.deepStrictEqual(unlabeled, [], platform);
       }
+    }),
+  );
+});
+
+describe("Windows jump list", () => {
+  it.effect("offers New thread and opens one when Windows starts the task", () =>
+    Effect.gen(function* () {
+      setUserTasks.mockClear();
+      appListeners.clear();
+      const selectedAction = yield* Deferred.make<string>();
+      yield* configureMenu(
+        selectedAction,
+        yield* Deferred.make<readonly Electron.MenuItemConstructorOptions[]>(),
+        {
+          platform: "win32",
+          isPackaged: true,
+        },
+      );
+      assert.deepStrictEqual(
+        setUserTasks.mock.calls.at(-1)?.[0]?.map(({ arguments: args, title }) => ({
+          args,
+          title,
+        })),
+        [{ args: DesktopApplicationMenu.NEW_THREAD_TASK_ARGUMENT, title: "New thread" }],
+      );
+
+      const secondInstance = appListeners.get("second-instance") as (
+        event: unknown,
+        argv: readonly string[],
+      ) => void;
+      secondInstance({}, ["Nebula.exe"]);
+      assert.isTrue(Option.isNone(yield* Deferred.poll(selectedAction)));
+      secondInstance({}, ["Nebula.exe", DesktopApplicationMenu.NEW_THREAD_TASK_ARGUMENT]);
+      assert.strictEqual(yield* Deferred.await(selectedAction), "chat.new");
+    }),
+  );
+
+  it.effect("sets no jump list in development, where the executable is Electron", () =>
+    Effect.gen(function* () {
+      setUserTasks.mockClear();
+      yield* configureMenu(
+        yield* Deferred.make<string>(),
+        yield* Deferred.make<readonly Electron.MenuItemConstructorOptions[]>(),
+        { platform: "win32" },
+      );
+      assert.strictEqual(setUserTasks.mock.calls.length, 0);
     }),
   );
 });

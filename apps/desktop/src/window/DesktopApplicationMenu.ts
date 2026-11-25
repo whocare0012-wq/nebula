@@ -51,6 +51,33 @@ const dispatchMenuAction = Effect.fn("desktop.menu.dispatchMenuAction")(function
   });
 });
 
+/** Jump list task argument; Windows starts a second instance with it, which this one handles. */
+export const NEW_THREAD_TASK_ARGUMENT = "--nebula-new-thread";
+
+/** Returns the failure, if Windows refused the jump list. */
+function setWindowsJumpList(locale: "zh-CN" | "en"): unknown {
+  const zh = locale === "zh-CN";
+  try {
+    if (setUserTasks(zh)) return undefined;
+    return new Error("Windows did not accept the jump list tasks.");
+  } catch (error) {
+    return error;
+  }
+}
+
+function setUserTasks(zh: boolean): boolean {
+  return Electron.app.setUserTasks([
+    {
+      program: process.execPath,
+      arguments: NEW_THREAD_TASK_ARGUMENT,
+      title: zh ? "新建会话" : "New thread",
+      description: zh ? "在 Nebula 中新建会话" : "Start a new thread in Nebula",
+      iconPath: process.execPath,
+      iconIndex: 0,
+    },
+  ]);
+}
+
 const zoomMainWindow = Effect.fn("desktop.menu.zoomMainWindow")(function* (
   direction: DesktopWindow.MainWindowZoomDirection,
 ): Effect.fn.Return<void, never, DesktopWindow.DesktopWindow> {
@@ -203,6 +230,13 @@ export const make = Effect.gen(function* () {
       ),
     );
   };
+  if (environment.platform === "win32") {
+    yield* electronApp.on("second-instance", (_event: unknown, argv: readonly string[]) => {
+      if (argv.includes(NEW_THREAD_TASK_ARGUMENT)) {
+        runMenuEffect("chat.new", dispatchMenuAction("chat.new"));
+      }
+    });
+  }
   const configure = Effect.gen(function* () {
     const checkForUpdatesClick = () => {
       runMenuEffect("check-for-updates", handleCheckForUpdatesMenuClick);
@@ -433,6 +467,13 @@ export const make = Effect.gen(function* () {
       ? "zh-CN"
       : "en";
     yield* electronMenu.setApplicationMenu(localizeApplicationMenu(template, locale));
+    // A development build's executable is Electron itself, which cannot open this app alone.
+    if (environment.platform === "win32" && environment.isPackaged) {
+      const failure = setWindowsJumpList(locale);
+      if (failure !== undefined) {
+        yield* logMenuError("could not set the Windows jump list", { error: failure });
+      }
+    }
   }).pipe(Effect.withSpan("desktop.menu.configure"));
 
   // Load the saved language before the first build so the menu never starts in English.

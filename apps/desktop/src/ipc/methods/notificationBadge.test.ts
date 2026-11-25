@@ -6,6 +6,7 @@ import * as HostProcess from "@t3tools/shared/HostProcess";
 const native = vi.hoisted(() => ({
   setBadgeCount: vi.fn(),
   setOverlayIcon: vi.fn(),
+  flashFrame: vi.fn(),
   isDestroyed: vi.fn(() => false),
   getFocusedWindow: vi.fn(() => null as object | null),
   image: { isEmpty: vi.fn(() => false) },
@@ -95,5 +96,44 @@ it.effect("validates IPC and clears on native focus, quit, and disposal", () =>
     expect(native.setBadgeCount).toHaveBeenLastCalledWith(0);
     expect(native.listeners.size).toBe(0);
     expect(handlers.size).toBe(0);
+  }),
+);
+
+it.effect("flashes the Windows taskbar button only for new notifications, until focus", () =>
+  Effect.gen(function* () {
+    const handlers = new Map<string, DesktopIpc.DesktopIpcHandleListener>();
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        yield* installNotificationBadge();
+        const handler = handlers.get("desktop:set-notification-badge")!;
+        const event = { sender: { id: 1 } };
+        yield* Effect.promise(() => Promise.resolve(handler(event, badge)));
+        expect(native.flashFrame).toHaveBeenCalledExactlyOnceWith(true);
+        yield* Effect.promise(() => Promise.resolve(handler(event, badge)));
+        yield* Effect.promise(() => Promise.resolve(handler(event, { ...badge, count: 1 })));
+        expect(native.flashFrame).toHaveBeenCalledTimes(1);
+        yield* Effect.promise(() => Promise.resolve(handler(event, { ...badge, count: 3 })));
+        expect(native.flashFrame).toHaveBeenLastCalledWith(true);
+        expect(native.flashFrame).toHaveBeenCalledTimes(2);
+        native.listeners.get("browser-window-focus")!();
+        expect(native.flashFrame).toHaveBeenLastCalledWith(false);
+        expect(native.setOverlayIcon).toHaveBeenLastCalledWith(null, "");
+      }),
+    ).pipe(
+      Effect.provideService(HostProcess.Platform, "win32"),
+      Effect.provide([
+        ElectronApp.layer,
+        DesktopIpc.layerTest({
+          handle: (channel, handler) => {
+            handlers.set(channel, handler);
+          },
+          removeHandler: (channel) => {
+            handlers.delete(channel);
+          },
+          on: vi.fn(),
+          removeAllListeners: vi.fn(),
+        }),
+      ]),
+    );
   }),
 );

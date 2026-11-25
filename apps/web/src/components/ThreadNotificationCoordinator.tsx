@@ -57,6 +57,27 @@ interface NotificationState extends ThreadNotificationObservation {
 
 type ToastId = ReturnType<typeof toastManager.add>;
 
+/** Windows shows an indeterminate taskbar bar while any thread's agent is working. */
+function startTaskbarProgress(registry: AtomRegistry.AtomRegistry): () => void {
+  const setTaskbarProgress = window.desktopBridge?.setTaskbarProgress;
+  if (setTaskbarProgress === undefined) return () => {};
+  let working = false;
+  const report = (next: boolean) => {
+    if (next === working) return;
+    working = next;
+    void setTaskbarProgress({ working }).catch(() => undefined);
+  };
+  const unsubscribe = registry.subscribe(
+    environmentThreadShells.threadShellsAtom,
+    (threads) => report(threads.some((thread) => threadRuntimeIsActive(thread.runtime))),
+    { immediate: true },
+  );
+  return () => {
+    unsubscribe();
+    report(false);
+  };
+}
+
 interface WatchedEnvironment {
   unsubscribe: () => void;
   previous: Map<ThreadId, NotificationState>;
@@ -497,6 +518,7 @@ export function startThreadNotifications(
     closeToasts((key) => changed.has(scopedThreadKey(parseThreadKey(key))));
   });
   onSettings();
+  const stopTaskbarProgress = startTaskbarProgress(registry);
   const stopTaskBoard = startTaskBoardNotifications(registry, router, () =>
     registry
       .get(environmentThreadShells.threadShellsAtom)
@@ -504,6 +526,7 @@ export function startThreadNotifications(
   );
 
   return () => {
+    stopTaskbarProgress();
     stopTaskBoard();
     unsubscribeSettings();
     unsubscribeEnvironmentIds();

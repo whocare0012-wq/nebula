@@ -32,7 +32,7 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { resolveThreadRouteTarget } from "../threadRoutes";
 import { useUiStateStore } from "../uiStateStore";
-import { type CommandHandler, registerCommands } from "./dispatcher";
+import { type CommandHandler, registerCommands, registerMenuAction } from "./dispatcher";
 
 const CHAT_ROUTE_ID = "/_chat";
 
@@ -121,6 +121,22 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
     });
   };
 
+  const startNewThread: CommandHandler = (event) => {
+    const groups = readProjectGroups();
+    if (
+      !shouldCreateNewThreadInCurrentProject(
+        false,
+        groups.filter((group) => !group.archived).length,
+        groups.length,
+      )
+    ) {
+      claim(event);
+      openCommandPalette({ open: "new-thread-in" });
+      return;
+    }
+    startNewLocal(event);
+  };
+
   const previewCommand =
     (action: PreviewAction): CommandHandler =>
     (event) => {
@@ -136,7 +152,11 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
       previewCommand(action)(event);
     };
 
-  return registerCommands(
+  // The Windows jump list's New thread task, which may arrive while Settings or Usage is open.
+  const stopNewThreadMenuAction = registerMenuAction("chat.new", () =>
+    startNewThread(new KeyboardEvent("keydown")),
+  );
+  const stopCommands = registerCommands(
     {
       "chat.newLocal": startNewLocal,
       "chat.newWithoutProject": (event) => {
@@ -148,21 +168,7 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
         claim(event);
         void scratch.startScratchThread(environmentId);
       },
-      "chat.new": (event) => {
-        const groups = readProjectGroups();
-        if (
-          !shouldCreateNewThreadInCurrentProject(
-            false,
-            groups.filter((group) => !group.archived).length,
-            groups.length,
-          )
-        ) {
-          claim(event);
-          openCommandPalette({ open: "new-thread-in" });
-          return;
-        }
-        startNewLocal(event);
-      },
+      "chat.new": startNewThread,
       "preview.toggle": (event) => {
         claim(event);
         const threadRef = readRouteThreadRef();
@@ -220,4 +226,8 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
       },
     },
   );
+  return () => {
+    stopNewThreadMenuAction();
+    stopCommands();
+  };
 }

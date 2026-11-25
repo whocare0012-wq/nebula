@@ -1143,6 +1143,8 @@ export interface DesktopBridge {
   restartAudioService?: () => Promise<boolean>;
   setNotificationBadge: (badge: { count: number; image: string | null }) => Promise<void>;
   onNotificationBadgeClear: (listener: () => void) => () => void;
+  /** Windows taskbar progress while any thread's agent is working. */
+  setTaskbarProgress?: (state: { working: boolean }) => Promise<void>;
   onTrackpadScrollBegin: (listener: () => void) => () => void;
   onTrackpadScrollEnd: (listener: () => void) => () => void;
   /**

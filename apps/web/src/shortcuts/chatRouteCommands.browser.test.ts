@@ -1,9 +1,18 @@
 import type { AnyRouter } from "@tanstack/react-router";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
+
+const { startNewThreadFromContext } = vi.hoisted(() => ({
+  startNewThreadFromContext: vi.fn(() => Promise.resolve(true)),
+}));
+vi.mock(import("../lib/chatThreadActions"), async (original) => ({
+  ...(await original()),
+  startNewThreadFromContext: startNewThreadFromContext as never,
+}));
 
 import { isMacPlatform } from "../lib/utils";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { installChatRouteCommands } from "./chatRouteCommands";
+import { dispatchMenuAction } from "./dispatcher";
 
 type Match = { readonly routeId: string; readonly pathname: string };
 
@@ -97,5 +106,18 @@ describe("chat route commands", () => {
     browser.setAttribute("data-preview-view", "");
     panel.append(browser);
     for (const key of ["=", "+", "-", "0"]) expect(pressMod(key).defaultPrevented).toBe(true);
+  });
+
+  it("starts a new thread for the desktop's New thread menu action until uninstalled", () => {
+    const { router } = routerAt([...CHAT, { routeId: "/_chat/settings", pathname: "/settings" }]);
+    startNewThreadFromContext.mockClear();
+    const uninstall = installChatRouteCommands(router);
+
+    dispatchMenuAction("chat.new");
+    expect(startNewThreadFromContext).toHaveBeenCalledTimes(1);
+
+    uninstall();
+    dispatchMenuAction("chat.new");
+    expect(startNewThreadFromContext).toHaveBeenCalledTimes(1);
   });
 });
