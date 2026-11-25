@@ -20,10 +20,11 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "../ui/tabs";
 import {
   filterStorageEntries,
   storageReleaseEstimate,
+  type StorageEntry,
   type StorageTab,
 } from "./storageInventoryModel";
 
-import { latestCleanupScan } from "./cleanupModel";
+import { latestCleanupScan, runCleanupBatch, type CleanupBatchItem } from "./cleanupModel";
 import { CleanupOverview } from "./CleanupOverview";
 import { hostCopy } from "./hostCopy";
 
@@ -96,6 +97,11 @@ export function StorageManagementPanel({
   const [plan, setPlan] = useState<StorageOperation | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [batch, setBatch] = useState<{
+    readonly items: ReadonlyArray<CleanupBatchItem>;
+    readonly stage: "confirm" | "running" | "done";
+  } | null>(null);
+  const stopBatch = useRef(false);
   const [filter, setFilter] = useState("");
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [scanRequest, setScanRequest] = useState<number | undefined>();
@@ -138,7 +144,8 @@ export function StorageManagementPanel({
     !unknownSubmission &&
     submittedId !== null &&
     !operations.some((op) => op.id === submittedId && op.phase !== "planned");
-  const running = submitted || operations.some((op) => activePhases.has(op.phase));
+  const running =
+    submitted || batch?.stage === "running" || operations.some((op) => activePhases.has(op.phase));
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- A submission has one bounded acknowledgement deadline, independent of status polls.
   useEffect(() => {
     if (!submitted || !submittedId) return;
@@ -221,6 +228,54 @@ export function StorageManagementPanel({
     }
     setPending(false);
   };
+  const runBatch = async (entries: ReadonlyArray<StorageEntry>) => {
+    if (pending) return;
+    stopBatch.current = false;
+    setPending(true);
+    setError("");
+    setBatch({ items: entries.map((entry) => ({ entry })), stage: "running" });
+    const step = async (input: StorageActionInput) => {
+      const result = await run({ environmentId, input });
+      return result._tag === "Success"
+        ? { id: result.value.id }
+        : { error: String(squashAtomCommandFailure(result)) };
+    };
+    const items = await runCleanupBatch(
+      entries,
+      {
+        plan: (objectId) => step({ action: "cleanup-plan", objectId }),
+        execute: (planId) => step({ action: "execute", planId }),
+        cancel: (planId) => step({ action: "cancel", planId }),
+      },
+      () => stopBatch.current,
+      (progress) => {
+        setBatch({ items: progress, stage: "running" });
+        refreshStatus();
+      },
+    );
+    setBatch({ items, stage: "done" });
+    setPending(false);
+    refreshStatus();
+  };
+  const batchStatus = (item: CleanupBatchItem) => {
+    if (item.error) return serverCopy(item.error);
+    const op = item.planId
+      ? operations.find((candidate) => candidate.id === item.planId)
+      : undefined;
+    if (op)
+      return [
+        uiText(hostCopy(phaseLabel[op.phase] ?? op.phase, windows)),
+        op.error && serverCopy(op.error),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    if (item.planId) return uiText("Queued");
+    if (batch?.stage === "confirm")
+      return item.entry.destination === "trash"
+        ? uiText(hostCopy("Move to Trash", windows))
+        : uiText("Delete");
+    return uiText(batch?.stage === "running" ? "Waiting" : "Cancelled");
+  };
   const copyPath = async (path: string) => {
     try {
       await navigator.clipboard.writeText(path);
@@ -260,7 +315,7 @@ export function StorageManagementPanel({
         previewPlan={plan}
         windows={windows}
         allowed={allowed}
-        busy={busy}
+        busy={busy || batch?.stage === "confirm"}
         scanning={result.waiting || scanning}
         volumeId={volumeId}
         onVolumeChange={setVolumeId}
@@ -274,6 +329,9 @@ export function StorageManagementPanel({
               ? { action: "cleanup-plan", objectId: entry.id }
               : { action: "plan", objectId: entry.id, volumeId, mode: "archive-and-release" },
           )
+        }
+        onPreviewBatch={(entries) =>
+          setBatch({ items: entries.map((entry) => ({ entry })), stage: "confirm" })
         }
         onSettings={(input) => void act(input)}
         onLogsPreview={() => void act({ action: "logs-plan" })}
@@ -448,6 +506,82 @@ export function StorageManagementPanel({
             </div>
           </div>
         )
+      ) : null}
+      {batch ? (
+        <div
+          className="space-y-3 rounded-lg border bg-muted/30 p-4"
+          role="region"
+          aria-label={uiText("Batch cleanup")}
+        >
+          <h4 className="text-sm font-medium">
+            {uiText(
+              batch.stage === "confirm"
+                ? "Confirm batch cleanup"
+                : batch.stage === "running"
+                  ? "Cleaning up…"
+                  : "Batch cleanup finished",
+            )}
+          </h4>
+          <ul className="max-h-64 divide-y overflow-auto text-xs">
+            {batch.items.map((item) => (
+              <li key={item.entry.id} className="flex items-center gap-3 py-1.5">
+                <span className="min-w-0 flex-1 truncate">{serverCopy(item.entry.name)}</span>
+                <span
+                  className={
+                    item.error ? "min-w-0 text-destructive" : "shrink-0 text-muted-foreground"
+                  }
+                >
+                  {batchStatus(item)}
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  {item.entry.bytes == null
+                    ? uiText("Not measured")
+                    : formatBytes(item.entry.bytes)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            {uiText("{count} items", { count: batch.items.length })} ·{" "}
+            {formatBytes(
+              batch.items.reduce((sum, item) => sum + Math.max(0, item.entry.bytes ?? 0), 0),
+            )}
+            {" · "}
+            {uiText(
+              "Each item is checked again for open files and changes right before it runs; anything in use is skipped and kept.",
+            )}
+          </p>
+          <div className="flex gap-2">
+            {batch.stage === "confirm" ? (
+              <>
+                <Button
+                  size="sm"
+                  disabled={!allowed || busy}
+                  onClick={() => void runBatch(batch.items.map((item) => item.entry))}
+                >
+                  {uiText("Clean up {count} items", { count: batch.items.length })}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setBatch(null)}>
+                  {uiText("Cancel")}
+                </Button>
+              </>
+            ) : batch.stage === "running" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  stopBatch.current = true;
+                }}
+              >
+                {uiText("Stop after current item")}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setBatch(null)}>
+                {uiText("Close")}
+              </Button>
+            )}
+          </div>
+        </div>
       ) : null}
       <details data-usage-card>
         <summary className="cursor-pointer text-sm text-foreground">

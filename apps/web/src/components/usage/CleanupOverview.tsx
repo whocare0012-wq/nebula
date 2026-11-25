@@ -5,16 +5,18 @@ import { cleanupRisk } from "./cleanupModel";
 import { useTheme } from "../../hooks/useTheme";
 import { CleanupDashboard, CleanupHistory } from "./CleanupDashboard";
 import { UsageCount } from "./UsageMotion";
-import { HardDriveIcon, LockKeyholeIcon, FolderArchiveIcon, ArrowRightIcon } from "lucide-react";
+import { HardDriveIcon, LockKeyholeIcon, ArrowRightIcon } from "lucide-react";
+import { cleanupCategoryLabel } from "./cleanupText";
 import type { StorageActionInput, StorageInspection, StorageOperation } from "@t3tools/contracts";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { formatBytes } from "../../lib/formatBytes";
 import {
   cleanupSuggestionGroups,
-  selectedSafeBytes,
+  selectedReleaseBytes,
   GIB,
-  selectedCleanupEntry,
+  selectedCleanupEntries,
   volumeGauge,
 } from "./cleanupModel";
 import { type StorageEntry } from "./storageInventoryModel";
@@ -23,11 +25,7 @@ import { CleanupRecords } from "./CleanupRecords";
 import { hostCopy } from "./hostCopy";
 import styles from "./cleanupOverview.module.css";
 
-const groups = [
-  { id: "safe", label: "Verified generated files" },
-  { id: "review", label: "Needs your confirmation" },
-  { id: "locked", label: "Protected / Unverified" },
-] as const;
+const VISIBLE_ROWS = 8;
 
 function VolumeGauge({ volume }: { volume: StorageInspection["volumes"][number] }) {
   const gauge = volumeGauge(volume);
@@ -79,6 +77,7 @@ export function CleanupOverview({
   onVolumeChange,
   onScan,
   onPreview,
+  onPreviewBatch,
   completed,
   previewPlan,
   onSettings,
@@ -94,157 +93,185 @@ export function CleanupOverview({
   onVolumeChange: (id: string) => void;
   onScan: () => void;
   onPreview: (entry: StorageEntry) => void;
+  onPreviewBatch: (entries: ReadonlyArray<StorageEntry>) => void;
   onLogsPreview: () => void;
   completed: StorageOperation | undefined;
   previewPlan: StorageOperation | null;
 }) {
   const { theme } = useTheme();
   const apple = theme === "apple";
-  const selectionName = useId();
   const [diskPath, setDiskPath] = useState("/");
   const [detailEntry, setDetailEntry] = useState<StorageEntry | null>(null);
   const awaitingConfirmation = previewPlan?.phase === "planned";
   const controlsDisabled = busy || awaitingConfirmation;
-  const [selection, setSelection] = useState<string | null | undefined>(undefined);
-  const selected = selectedCleanupEntry(data.entries, selection);
+  const [selection, setSelection] = useState<ReadonlySet<string> | undefined>(undefined);
+  const picked = selectedCleanupEntries(data.entries, selection);
+  const pickedIds = new Set(picked.map((entry) => entry.id));
+  const selected = picked.length === 1 ? picked[0] : undefined;
+  const batch = picked.length > 1;
+  // Archives need a destination volume and their own preview, so they never join a batch.
+  const batchBlocked = batch && picked.some((entry) => !entry.destination);
+  const pickedBytes = picked.reduce((sum, entry) => sum + Math.max(0, entry.bytes ?? 0), 0);
+  const choose = (ids: ReadonlyArray<string>, on: boolean) => {
+    const next = new Set(pickedIds);
+    for (const id of ids)
+      if (on) next.add(id);
+      else next.delete(id);
+    setSelection(next);
+  };
   const suggestionsRef = useRef<HTMLElement>(null);
   const [reviewRequest, setReviewRequest] = useState(0);
   const suggestions = cleanupSuggestionGroups(data.entries);
-  const releaseBytes = selectedSafeBytes(selected);
-  const reviewBytes = suggestions
-    .filter((g) => g.risk === "review")
-    .reduce((sum, g) => sum + g.bytes, 0);
-  const hasReview = suggestions.some((g) => g.risk === "review");
-  const small = suggestions.filter((g) => g.small);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const releaseBytes = selectedReleaseBytes(picked);
+  const reviewEntries = data.entries.filter((e) => cleanupRisk(e) === "review" && e.bytes !== 0);
+  const reviewBytes = reviewEntries.reduce((sum, e) => sum + Math.max(0, e.bytes ?? 0), 0);
+  const hasReview = reviewEntries.length > 0;
   const showSuggestions = () => {
     setReviewRequest((request) => request + 1);
     suggestionsRef.current?.scrollIntoView({ block: "start" });
   };
-  const titleFor = (g: (typeof suggestions)[number]) =>
-    g.entries.length === 1
-      ? g.entries[0]!.name
-      : `${g.category === "rollback-apps" ? uiText("Old T3 rollback apps") : g.category === "old-builds" ? uiText("Build staging") : uiText("Cold backups")} ×${g.entries.length}`;
-  const renderSuggestion = (g: (typeof suggestions)[number]) =>
+  type Group = (typeof suggestions)[number];
+  const bytesText = (bytes: number | null | undefined) =>
+    bytes == null ? uiText("Not measured") : formatBytes(bytes);
+  const titleFor = (g: Group) =>
+    g.risk === "locked"
+      ? uiText("Protected · list only")
+      : g.entries.length === 1
+        ? serverCopy(g.entries[0]!.name)
+        : g.category === "installers"
+          ? uiText(g.destination === "trash" ? "Downloaded installers" : "App update installers")
+          : g.category === "rollback-apps"
+            ? uiText("Old T3 rollback apps")
+            : g.category === "old-builds"
+              ? uiText("Build staging")
+              : g.category === "cold-backups"
+                ? uiText("Cold backups")
+                : cleanupCategoryLabel(g.category);
+  const noteFor = (g: Group) =>
+    g.risk === "locked"
+      ? uiText("Keep in place")
+      : g.destination === "trash"
+        ? uiText(hostCopy("Move to Trash · no immediate space released", windows))
+        : g.destination === "delete-rebuildable"
+          ? uiText("Delete · rebuildable")
+          : uiText("Free after verifying archive");
+  const renderRow = (g: Group, entry: StorageEntry) =>
     apple ? (
-      <div key={g.id}>
-        {g.entries.map((entry) => (
-          <div key={entry.id} className="usage-clean-row">
-            <input
-              type="checkbox"
-              aria-label={uiText("Select {name}", { name: serverCopy(entry.name) })}
-              checked={selected?.id === entry.id}
-              disabled={g.risk === "locked" || controlsDisabled || !allowed}
-              onChange={(event) => setSelection(event.target.checked ? entry.id : null)}
-            />
-            <button type="button" onClick={() => setDetailEntry(entry)}>
-              <strong>{serverCopy(entry.name)}</strong>
-              <small>
-                {entry.destination === "trash"
-                  ? uiText(hostCopy("Move to Trash · Space stays occupied", windows))
-                  : entry.destination === "delete-rebuildable"
-                    ? uiText("Delete rebuildable files")
-                    : g.risk === "locked"
-                      ? uiText("Keep in place")
-                      : uiText("Free after verifying archive")}
-              </small>
-            </button>
-            <span>{entry.bytes == null ? uiText("Not measured") : formatBytes(entry.bytes)}</span>
-            <span className="usage-tag">
-              {g.risk === "safe"
-                ? uiText("Safe")
-                : g.risk === "review"
-                  ? uiText("Confirmation needed")
-                  : uiText("Protected")}
-            </span>
-          </div>
-        ))}
+      <div key={entry.id} className="usage-clean-row">
+        <input
+          type="checkbox"
+          aria-label={uiText("Select {name}", { name: serverCopy(entry.name) })}
+          checked={pickedIds.has(entry.id)}
+          disabled={g.risk === "locked" || controlsDisabled || !allowed}
+          onChange={(event) => choose([entry.id], event.target.checked)}
+        />
+        <button type="button" onClick={() => setDetailEntry(entry)}>
+          <strong>{serverCopy(entry.name)}</strong>
+          <small>{noteFor(g)}</small>
+        </button>
+        <span>{bytesText(entry.bytes)}</span>
+        <span className="usage-tag">
+          {g.risk === "locked"
+            ? uiText("Protected")
+            : cleanupRisk(entry) === "safe"
+              ? uiText("Safe")
+              : uiText("Confirmation needed")}
+        </span>
       </div>
     ) : (
-      <div key={g.id} className={styles.entry} data-risk={g.risk}>
-        <div className={styles.entryChoice}>
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted">
-            {g.risk === "locked" ? (
-              <LockKeyholeIcon className="size-4" />
-            ) : (
-              <FolderArchiveIcon className="size-4" />
-            )}
-          </span>
-          <strong className={styles.entryName}>{titleFor(g)}</strong>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-3xs">
-            {g.risk === "safe"
-              ? uiText("Safe")
-              : g.risk === "review"
-                ? uiText("Review.")
-                : uiText("Protected")}
-          </span>
-          <span className={styles.entryBytes}>
-            {g.incomplete ? (g.bytes ? "≥ " : "") : ""}
-            {g.bytes || !g.incomplete ? formatBytes(g.bytes) : uiText("Not measured.")}
-          </span>
-        </div>
-        <p>
-          {g.risk === "locked" ? uiText("Locked · ") : ""}
-          {serverCopy(g.entries[0]!.reason)}
-        </p>
-        <p>
-          {g.entries[0]!.destination === "trash"
-            ? uiText(hostCopy("Move to Trash · no immediate space released", windows))
-            : g.entries[0]!.destination === "delete-rebuildable"
-              ? uiText("Delete · rebuildable")
-              : ""}
-        </p>
-        <details
-          className={styles.path}
-          open={(g.entries.length > 1 && g.entries.some((e) => e.id === selected?.id)) || undefined}
-        >
-          <summary>{uiText("Paths and dates · review one item at a time")}</summary>
-          {g.entries.map((entry) => (
-            <div key={entry.id}>
-              <label className={styles.entryChoice}>
-                {g.entries.length > 1 ? (
-                  <input
-                    type="radio"
-                    name={selectionName}
-                    checked={selected?.id === entry.id}
-                    disabled={g.risk === "locked" || controlsDisabled || !allowed}
-                    onChange={() => setSelection(entry.id)}
-                  />
-                ) : null}
-                <span className={styles.entryName}>{entry.path}</span>
-                <span>
-                  {entry.bytes == null ? uiText("Not measured.") : formatBytes(entry.bytes)}
-                </span>
-              </label>
-              {entry.childPaths?.map((path) => (
-                <span key={path}>{path}</span>
-              ))}
-              {entry.modifiedAt ? <span>{new Date(entry.modifiedAt).toLocaleString()}</span> : null}
-            </div>
-          ))}
-        </details>
-        {g.entries.length === 1 && g.risk !== "locked" ? (
-          <label className={styles.entryChoice}>
-            <input
-              type="radio"
-              name={selectionName}
-              aria-label={`${uiText("Select")} ${g.entries[0]!.name}`}
-              checked={selected?.id === g.entries[0]!.id}
-              disabled={controlsDisabled || !allowed}
-              onChange={() => setSelection(g.entries[0]!.id)}
-            />
-            <span>{uiText("Select for preview")}</span>
-          </label>
+      <label key={entry.id} className={styles.row}>
+        {g.risk === "locked" ? (
+          <LockKeyholeIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <input
+            type="checkbox"
+            aria-label={`${uiText("Select")} ${serverCopy(entry.name)}`}
+            checked={pickedIds.has(entry.id)}
+            disabled={controlsDisabled || !allowed}
+            onChange={(event) => choose([entry.id], event.target.checked)}
+          />
+        )}
+        <Tooltip>
+          <TooltipTrigger render={<span className={styles.entryName} />}>
+            {serverCopy(entry.name)}
+          </TooltipTrigger>
+          <TooltipPopup>
+            <div className="max-w-md break-all">{entry.path}</div>
+            {entry.reason ? (
+              <div className="max-w-md text-muted-foreground">{serverCopy(entry.reason)}</div>
+            ) : null}
+          </TooltipPopup>
+        </Tooltip>
+        {cleanupRisk(entry) === "review" && g.entries.some((e) => cleanupRisk(e) === "safe") ? (
+          <span className={styles.tag}>{uiText("Confirmation needed")}</span>
         ) : null}
-      </div>
+        <span className={styles.entryBytes}>{bytesText(entry.bytes)}</span>
+      </label>
     );
+  const renderGroup = (g: Group) => {
+    const all = expanded.has(g.id) || g.entries.length <= VISIBLE_ROWS + 1;
+    const ids = g.entries.map((entry) => entry.id);
+    const count = ids.filter((id) => pickedIds.has(id)).length;
+    return (
+      <details
+        key={`${g.id}:${reviewRequest}`}
+        className={styles.group}
+        data-risk={g.risk}
+        open={
+          (count > 0 && count < ids.length) ||
+          (reviewRequest > 0 && g.risk === "review") ||
+          undefined
+        }
+      >
+        <summary>
+          {g.risk === "locked" ? null : (
+            <input
+              type="checkbox"
+              className={styles.groupCheck}
+              aria-label={uiText("Select all in {name}", { name: titleFor(g) })}
+              checked={count === ids.length}
+              ref={(input) => {
+                if (input) input.indeterminate = count > 0 && count < ids.length;
+              }}
+              disabled={controlsDisabled || !allowed}
+              onChange={(event) => choose(ids, event.target.checked)}
+            />
+          )}
+          <span className={styles.groupTitle}>
+            {titleFor(g)}
+            {g.entries.length > 1 ? <small> · {g.entries.length}</small> : null}
+          </span>
+          <span className={styles.note}>{noteFor(g)}</span>
+          <span className={styles.entryBytes}>
+            {g.incomplete && g.bytes ? "≥ " : ""}
+            {g.bytes || !g.incomplete ? formatBytes(g.bytes) : uiText("Not measured")}
+          </span>
+        </summary>
+        <div className={styles.rows}>
+          {(all ? g.entries : g.entries.slice(0, VISIBLE_ROWS)).map((entry) => renderRow(g, entry))}
+          {all ? null : (
+            <button
+              type="button"
+              className={styles.clear}
+              onClick={() => setExpanded(new Set(expanded).add(g.id))}
+            >
+              {uiText("Show {count} more", { count: g.entries.length - VISIBLE_ROWS })}
+            </button>
+          )}
+        </div>
+      </details>
+    );
+  };
   const targets = data.volumes.filter((volume) => volume.internal === false);
   const target = targets.find((volume) => volume.id === volumeId);
   const action = apple ? (
     <div className="usage-clean-action">
       <span>
-        {uiText("Selected")}{" "}
-        <strong>{selected?.bytes == null ? "0" : (selected.bytes / GIB).toFixed(1)} GiB</strong>
-        {selected && cleanupRisk(selected) === "review" ? uiText(" · Review required") : ""}
+        {uiText("Selected")} <strong>{(pickedBytes / GIB).toFixed(1)} GiB</strong>
+        {picked.some((entry) => cleanupRisk(entry) === "review")
+          ? uiText(" · Review required")
+          : ""}
       </span>
       <button
         type="button"
@@ -252,18 +279,19 @@ export function CleanupOverview({
           !allowed ||
           controlsDisabled ||
           scanning ||
-          !selected ||
-          (!selected.destination && !target)
+          !picked.length ||
+          batchBlocked ||
+          (selected !== undefined && !selected.destination && !target)
         }
-        onClick={() => {
-          if (selected) onPreview(selected);
-        }}
+        onClick={() => (batch ? onPreviewBatch(picked) : selected && onPreview(selected))}
       >
         {busy
           ? uiText("Working…")
           : awaitingConfirmation
             ? uiText("Confirm the plan")
-            : uiText("Preview cleanup")}
+            : batch
+              ? uiText("Preview cleanup ({count} items)", { count: picked.length })
+              : uiText("Preview cleanup")}
       </button>
       {selected && !selected.destination ? (
         <label>
@@ -285,7 +313,7 @@ export function CleanupOverview({
     </div>
   ) : (
     <div data-usage-card className={styles.action} data-clean-action={apple || undefined}>
-      <span className={styles.eyebrow}>{uiText("Selected safe space")}</span>
+      <span className={styles.eyebrow}>{uiText("Freed by selection")}</span>
       {releaseBytes > 0 ? (
         <div className={styles.amount}>
           <strong key={releaseBytes} className={styles.number}>
@@ -301,7 +329,10 @@ export function CleanupOverview({
       <p>
         {releaseBytes > 0
           ? uiText(
-              "Only the selected safe object is counted; actual free space is measured after completion.",
+              hostCopy(
+                "Trash moves are not counted; actual free space is measured after completion.",
+                windows,
+              ),
             )
           : hasReview
             ? `${uiText("Another")} ${(reviewBytes / GIB).toFixed(1)} GiB ${uiText("needs your review")}`
@@ -313,19 +344,28 @@ export function CleanupOverview({
           !allowed ||
           controlsDisabled ||
           scanning ||
+          batchBlocked ||
           (selected !== undefined && !selected.destination && !target)
         }
         onClick={() =>
-          selected ? onPreview(selected) : suggestions.length ? showSuggestions() : onScan()
+          batch
+            ? onPreviewBatch(picked)
+            : selected
+              ? onPreview(selected)
+              : suggestions.length
+                ? showSuggestions()
+                : onScan()
         }
       >
         {awaitingConfirmation ? (
           uiText("Confirm the plan below")
         ) : busy ? (
           uiText("Processing…")
-        ) : selected ? (
+        ) : picked.length ? (
           <>
-            {uiText("Preview cleanup")}
+            {batch
+              ? uiText("Preview cleanup ({count} items)", { count: picked.length })
+              : uiText("Preview cleanup")}
             <ArrowRightIcon className="size-4" />
           </>
         ) : hasReview ? (
@@ -336,11 +376,17 @@ export function CleanupOverview({
           uiText("Scan")
         )}
       </Button>
-      <span className={styles.hint}>
-        {selected
-          ? `${uiText("Selected")} ${selected.name} · ${selected.bytes == null ? uiText("Not measured.") : formatBytes(selected.bytes)}`
-          : uiText("Logs older than 30 days; confirm the exact list before cleanup.")}
-      </span>
+      {picked.length ? (
+        <span className={styles.hint}>
+          {batch
+            ? uiText("{count} selected · {size}", {
+                count: picked.length,
+                size: formatBytes(pickedBytes),
+              })
+            : `${uiText("Selected")} ${serverCopy(selected!.name)} · ${bytesText(selected!.bytes)}`}
+          {batchBlocked ? ` · ${uiText("Archive items must be previewed one at a time.")}` : ""}
+        </span>
+      ) : null}
       {selected && !selected.destination ? (
         <label className={styles.destination}>
           {uiText("Archive destination")}
@@ -363,10 +409,7 @@ export function CleanupOverview({
   return (
     <div className={styles.root} data-clean-dashboard={apple || undefined}>
       <header className={styles.heading}>
-        <div>
-          <h3>{uiText("Cleanup & organization")}</h3>
-          <p>{uiText("Preview paths and destinations before confirming.")}</p>
-        </div>
+        <h3>{uiText("Cleanup & organization")}</h3>
         <Button
           variant="outline"
           size="sm"
@@ -428,7 +471,7 @@ export function CleanupOverview({
           data={data}
           disabled={controlsDisabled || !allowed}
           onSettings={onSettings}
-          onSelect={(id) => setSelection(id)}
+          onSelect={(id) => setSelection(new Set([id]))}
           windows={windows}
         />
       ) : null}
@@ -437,59 +480,28 @@ export function CleanupOverview({
         className={styles.suggestions}
         aria-label={uiText("Cleanup suggestions")}
       >
-        <div className={styles.listHeading}>
-          <h4>{uiText("Cleanup suggestions")}</h4>
-          <span>{uiText("Largest safe object ≥200 MB preselected; review each path.")}</span>
-        </div>
+        <h4 className={styles.listTitle}>{uiText("Cleanup suggestions")}</h4>
         {[
           ...new Set([...data.volumes.map((v) => v.path), ...suggestions.map((g) => g.volumePath)]),
-        ].map((path) => {
-          const items = suggestions.filter((g) => g.volumePath === path && !g.small);
+        ].map((path, _index, paths) => {
+          const items = suggestions.filter((g) => g.volumePath === path);
           if (!items.length) return null;
           return (
             <div key={path} className={styles.volumeGroup}>
-              <h4>{data.volumes.find((v) => v.path === path)?.name ?? path}</h4>
-              {groups.map((group) => {
-                const objects = items.filter((g) => g.risk === group.id);
-                if (!objects.length) return null;
-                return (
-                  <details
-                    key={`${group.id}:${reviewRequest}`}
-                    className={styles.group}
-                    open={group.id !== "locked" || undefined}
-                  >
-                    <summary>
-                      <span>{uiText(group.label)}</span>
-                      <span>
-                        {objects.length}{" "}
-                        {uiText(objects.length === 1 ? "cleanup item" : "cleanup items")}
-                      </span>
-                    </summary>
-                    <div className={styles.entries}>{objects.map(renderSuggestion)}</div>
-                  </details>
-                );
-              })}
+              {paths.length > 1 ? (
+                <h4>{serverCopy(data.volumes.find((v) => v.path === path)?.name ?? path)}</h4>
+              ) : null}
+              {items.map(renderGroup)}
             </div>
           );
         })}
-        {small.length ? (
-          <details className={styles.group}>
-            <summary>
-              <span>
-                {uiText("And")} {small.length}{" "}
-                {uiText(small.length === 1 ? "small item (<50 MB)" : "small items (<50 MB)")}
-              </span>
-            </summary>
-            <div className={styles.entries}>{small.map(renderSuggestion)}</div>
-          </details>
-        ) : null}
         {!suggestions.length ? <p>{uiText("No nonempty objects in this scan.")}</p> : null}
-        {selected ? (
+        {picked.length ? (
           <button
             className={styles.clear}
             type="button"
             disabled={controlsDisabled}
-            onClick={() => setSelection(null)}
+            onClick={() => setSelection(new Set())}
           >
             {uiText("Clear selection")}
           </button>
@@ -538,7 +550,7 @@ export function CleanupOverview({
           data={data}
           disabled={controlsDisabled || !allowed}
           onSettings={onSettings}
-          onSelect={(id) => setSelection(id)}
+          onSelect={(id) => setSelection(new Set([id]))}
           windows={windows}
         />
       ) : null}

@@ -209,15 +209,57 @@
 .group > summary > span:last-child {
   color: var(--muted-foreground);
 }
-.entries {
-  display: grid;
-  gap: 8px;
-  padding-bottom: 12px;
+.groupTitle {
+  font-weight: 500;
 }
-.entry {
-  padding: 12px 14px;
-  border-radius: 8px;
+.groupTitle small,
+.note {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 400;
+}
+.group > summary > .entryBytes {
+  color: var(--foreground);
+}
+.rows {
+  display: grid;
+  padding: 0 0 10px 18px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 0 8px;
+  cursor: default;
+}
+.row:hover {
   background: var(--muted);
+}
+.row input {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.row .entryName {
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  padding: 1px 8px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.listTitle {
+  font-size: 13px;
+  font-weight: 600;
 }
 .entryChoice {
   display: flex;
@@ -240,22 +282,6 @@
 .entryBytes {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
-}
-.entry p,
-.path {
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--muted-foreground);
-  margin-top: 6px;
-  padding-left: 24px;
-}
-.path summary {
-  cursor: pointer;
-}
-.path span {
-  display: block;
-  overflow-wrap: anywhere;
-  user-select: text;
 }
 .clear {
   font-size: 11px;
@@ -441,7 +467,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
-:global([data-theme-id="apple"]) .listHeading {
+:global([data-theme-id="apple"]) .listHeading,
+:global([data-theme-id="apple"]) .listTitle {
   grid-column: 1/-1;
 }
 :global([data-theme-id="apple"]) .volumeGroup,
@@ -451,18 +478,11 @@
   box-shadow: var(--apple-card-shadow);
   padding: 12px;
 }
-:global([data-theme-id="apple"]) .entry {
-  border-radius: 0;
-  background: none;
-  border: 0;
-  border-top: 0.5px solid var(--border);
-  padding: 10px 0;
-}
-.entry input {
+.row input {
   accent-color: var(--primary);
   transition: transform 0.15s cubic-bezier(0.3, 0.7, 0.2, 1);
 }
-.entry input:active {
+.row input:active {
   transform: scale(0.88);
 }
 @media (max-width: 760px) {
@@ -473,7 +493,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .entry input {
+  .row input {
     transition: none;
   }
 }
@@ -638,4 +658,10 @@
 }
 :global([data-theme-id="apple"]) .root[data-clean-dashboard] .heading {
   align-items: flex-end;
+}
+.groupCheck {
+  accent-color: var(--primary);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }

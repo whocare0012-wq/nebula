@@ -2,11 +2,12 @@ import { expect, it } from "vite-plus/test";
 import {
   cleanupRisk,
   cleanupSuggestionGroups,
-  selectedSafeBytes,
+  selectedReleaseBytes,
   selectedCleanupEntry,
   volumeGauge,
   GIB,
   latestCleanupScan,
+  runCleanupBatch,
 } from "./cleanupModel";
 import type { StorageEntry } from "./storageInventoryModel";
 
@@ -105,7 +106,7 @@ it("does not let a previous completed status hide the next scan", () => {
   expect(latestCleanupScan(undefined, next)).toBe(next);
 });
 
-it("hides zero bytes, folds small objects and chooses only the largest safe object above 200 MB", () => {
+it("hides objects under 1 MB and chooses only the largest safe object above 200 MB", () => {
   const rows = [
     entry("zero", { bytes: 0 }),
     entry("tiny", { bytes: 4_000 }),
@@ -118,19 +119,24 @@ it("hides zero bytes, folds small objects and chooses only the largest safe obje
   expect(selectedCleanupEntry(rows, undefined)?.id).toBe("large");
   expect(selectedCleanupEntry(rows.slice(0, 4), undefined)).toBeUndefined();
   expect(selectedCleanupEntry(rows, "zero")).toBeUndefined();
-  expect(selectedSafeBytes(selectedCleanupEntry(rows, undefined))).toBe(2 * GIB);
-  expect(selectedSafeBytes(selectedCleanupEntry(rows, null))).toBe(0);
-  expect(selectedSafeBytes(entry("trash", { kind: "backups" }))).toBe(0);
-  const groups = cleanupSuggestionGroups(rows);
-  expect(groups.flatMap((g) => g.entries).some((e) => e.id === "zero")).toBe(false);
+  expect(selectedReleaseBytes([selectedCleanupEntry(rows, undefined)!])).toBe(2 * GIB);
   expect(
-    groups
-      .filter((g) => g.small)
-      .flatMap((g) => g.entries)
-      .map((e) => e.id),
-  ).toEqual(["small", "tiny"]);
+    selectedReleaseBytes([
+      entry("cache", { destination: "delete-rebuildable" }),
+      entry("installer", { destination: "trash" }),
+      entry("archive"),
+    ]),
+  ).toBe(2 * GIB);
+  const groups = cleanupSuggestionGroups(rows);
+  expect(groups.flatMap((g) => g.entries.map((e) => e.id))).toEqual([
+    "large",
+    "threshold",
+    "medium",
+    "small",
+    "unknown",
+  ]);
 });
-it("aggregates rollback and staging by volume and lock state without inventing batch authorization", () => {
+it("groups by kind, destination, volume and lock state without inventing batch authorization", () => {
   const rows = [
     entry("old1", {
       category: "rollback-apps",
@@ -156,8 +162,16 @@ it("aggregates rollback and staging by volume and lock state without inventing b
       volumePath: "/Volumes/external",
     }),
   ];
-  const groups = cleanupSuggestionGroups(rows);
-  expect(groups).toHaveLength(3);
+  const groups = cleanupSuggestionGroups([
+    ...rows,
+    entry("rebuild", {
+      category: "rollback-apps",
+      destination: "delete-rebuildable",
+      volumePath: "/",
+    }),
+  ]);
+  expect(groups).toHaveLength(4);
+  expect(groups.at(-1)?.risk).toBe("locked");
   expect(groups.find((g) => g.entries.length === 2)).toMatchObject({
     bytes: 2 * GIB,
     risk: "review",
@@ -165,4 +179,54 @@ it("aggregates rollback and staging by volume and lock state without inventing b
   });
   expect(groups.find((g) => g.risk === "locked")?.entries[0]?.id).toBe("latest");
   expect(selectedCleanupEntry(rows, undefined)).toBeUndefined();
+});
+
+it("plans and runs batch items one at a time, keeps going past failures and honors stop", async () => {
+  const calls: string[] = [];
+  const steps = {
+    plan: async (id: string) => {
+      calls.push(`plan ${id}`);
+      return id === "busy" ? { error: "in use" } : { id: `plan-${id}` };
+    },
+    execute: async (planId: string) => {
+      calls.push(`execute ${planId}`);
+      return planId === "plan-expired" ? { error: "expired" } : { id: planId };
+    },
+    cancel: async (planId: string) => {
+      calls.push(`cancel ${planId}`);
+    },
+  };
+  const items = await runCleanupBatch(
+    ["a", "busy", "expired", "b"].map((id) => entry(id)),
+    steps,
+    () => false,
+    () => {},
+  );
+  expect(calls).toEqual([
+    "plan a",
+    "execute plan-a",
+    "plan busy",
+    "plan expired",
+    "execute plan-expired",
+    "cancel plan-expired",
+    "plan b",
+    "execute plan-b",
+  ]);
+  expect(items.map((item) => item.planId ?? item.error)).toEqual([
+    "plan-a",
+    "in use",
+    "expired",
+    "plan-b",
+  ]);
+
+  let stop = false;
+  const stopped = await runCleanupBatch(
+    ["a", "b"].map((id) => entry(id)),
+    steps,
+    () => stop,
+    () => {
+      stop = true;
+    },
+  );
+  expect(stopped.map((item) => item.planId ?? "not run")).toEqual(["plan-a", "not run"]);
 });

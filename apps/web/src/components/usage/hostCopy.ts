@@ -1,6 +1,9 @@
 // The cleanup center's copy names macOS places; a Windows host recycles instead of trashing.
 const WINDOWS_COPY: Readonly<Record<string, string>> = {
   "Moved to Trash": "Moved to Recycle Bin",
+  "Move to Trash": "Move to Recycle Bin",
+  "Trash moves are not counted; actual free space is measured after completion.":
+    "Recycle Bin moves are not counted; actual free space is measured after completion.",
   "Move to Trash · Space stays occupied": "Move to Recycle Bin · Space stays occupied",
   "Move to Trash · no immediate space released":
     "Move to Recycle Bin · no immediate space released",
