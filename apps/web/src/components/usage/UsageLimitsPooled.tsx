@@ -27,6 +27,7 @@ import {
   resetExpiry,
 } from "./usageResetCreditPresentation";
 import { t3LimitWindows } from "./usageQuotaPresentation";
+import { HttpQuotaSources } from "./HttpQuotaSources";
 import { RelayWallets } from "./RelayWallets";
 import { uiText as copy } from "~/i18n";
 import { UsageResetTimeline } from "./UsageResetTimeline";
@@ -57,6 +58,7 @@ import { UsageCount } from "./UsageMotion";
 import { readUiLocale } from "~/i18n";
 import {
   CHATGPT_USAGE_URL,
+  collectHttpQuotaSources,
   collectLimitAccounts,
   collectExternalUsageLinks,
   collectLimitPools,
@@ -1468,6 +1470,7 @@ export function UsageLimitsPooled({
     .find((a) => quotaReadingStale(a.limits, now));
   const notices = collectLimitNotices(presentations);
   const externalLinks = collectExternalUsageLinks(presentations);
+  const hasHttpQuota = collectHttpQuotaSources(presentations).length > 0;
   const headline = limitsHeadline(pools, titles, now);
   const healthSummary = summarizeHealth(health);
   const sentence = healthSentence(uiText, healthSummary);
@@ -1593,7 +1596,7 @@ export function UsageLimitsPooled({
           </div>
         </div>
 
-        {pools.length === 0 && externalLinks.length === 0 ? (
+        {pools.length === 0 && externalLinks.length === 0 && !hasHttpQuota ? (
           <div
             data-usage-limits-empty
             className="flex min-h-56 flex-col items-center justify-center gap-2 text-center"
@@ -1677,6 +1680,7 @@ export function UsageLimitsPooled({
               ) : null
             }
           </Popover>
+          <HttpQuotaSources presentations={presentations} now={now} />
           {externalLinks.map((link) => (
             <section
               key={link.url}
@@ -1820,7 +1824,7 @@ export function UsageLimitsPooled({
       )}
       <RelayWallets presentations={presentations} />
 
-      {pools.length === 0 && externalLinks.length === 0 ? (
+      {pools.length === 0 && externalLinks.length === 0 && !hasHttpQuota ? (
         <div
           data-usage-limits-empty
           className="flex min-h-56 flex-col items-center justify-center gap-2 text-center"
@@ -1865,6 +1869,7 @@ export function UsageLimitsPooled({
             ) : null
           }
         </Popover>
+        <HttpQuotaSources presentations={presentations} now={now} />
         {externalLinks.map((link) => (
           <section
             key={link.url}

@@ -24,6 +24,47 @@ const state = vi.hoisted(() => ({
   configLoaded: true,
 }));
 
+// The read of t3.json is a cache: a re-read is the only way to see what is on disk now.
+const t3File = vi.hoisted(() => ({
+  disk: "",
+  cached: "",
+  listeners: new Set<() => void>(),
+}));
+
+vi.mock(import("~/components/files/projectFilesQueryState"), async (importOriginal) => {
+  const actual = await importOriginal();
+  const { useSyncExternalStore } = await import("react");
+  return {
+    ...actual,
+    useProjectFileQuery: ((_environmentId: unknown, _cwd: string, relativePath: string | null) => {
+      const contents = useSyncExternalStore(
+        (listener) => {
+          t3File.listeners.add(listener);
+          return () => t3File.listeners.delete(listener);
+        },
+        () => t3File.cached,
+      );
+      const refresh = () => {
+        t3File.cached = t3File.disk;
+        for (const listener of t3File.listeners) listener();
+      };
+      const data =
+        relativePath === "t3.json" && contents !== ""
+          ? { relativePath, contents, byteLength: contents.length, truncated: false }
+          : null;
+      return {
+        data,
+        error: null,
+        isPending: false,
+        readError: null,
+        isNotFile: false,
+        isFile: data !== null,
+        refresh,
+      };
+    }) as never,
+  };
+});
+
 vi.mock(import("~/state/entities"), async (importOriginal) => ({
   ...(await importOriginal()),
   useProject: ((ref: unknown) =>
@@ -146,6 +187,7 @@ function Panel({
   onAttach,
   draftEnvMode,
   onMachines = false,
+  withScripts = false,
 }: {
   fixture: ReturnType<typeof setup>;
   threadId?: ThreadId;
@@ -153,6 +195,7 @@ function Panel({
   /** Renders an unsent draft in this mode instead of a started thread. */
   draftEnvMode?: "local" | "worktree";
   onMachines?: boolean;
+  withScripts?: boolean;
 }) {
   const noop = () => {};
   const scriptResult = async () => ({ ok: true }) as never;
@@ -181,7 +224,7 @@ function Panel({
         worktreePath={draftEnvMode === undefined ? state.folder : null}
         isServerThread={draftEnvMode === undefined}
         activeProjectName={state.workspaceRoot === SCRATCH_ROOT ? "No project" : "plain"}
-        activeProjectScripts={undefined}
+        activeProjectScripts={withScripts ? [] : undefined}
         preferredScriptId={null}
         keybindings={[]}
         availableEditors={[]}
@@ -282,4 +325,25 @@ it("keeps attachment handlers current in one thread and rejects a delayed attach
   );
   expect(() => pendingAttach(files)).toThrow("会话已切换");
   expect(latest).not.toHaveBeenCalled();
+});
+
+it("lists the t3.json actions on disk when the actions menu opens again after the file changed", async () => {
+  using fixture = setup({ workspaceRoot: "/work/plain", folder: "/work/plain" });
+  const t3Json = (name: string) =>
+    JSON.stringify({ scripts: [{ name, command: `npm run dev -- --port ${name.slice(-4)}` }] });
+  t3File.disk = t3Json("Dev 4100");
+  t3File.cached = t3File.disk;
+  await using _screen = await render(<Panel fixture={fixture} withScripts />);
+
+  const chooser = page.getByRole("button", { name: "Choose project action" });
+  await chooser.click();
+  await expect.element(page.getByRole("menuitem", { name: /Dev 4100/ })).toBeVisible();
+  await chooser.click();
+  await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+
+  // A setup hook rewrites this checkout's t3.json outside T3 Code.
+  t3File.disk = t3Json("Dev 4200");
+
+  await chooser.click();
+  await expect.element(page.getByRole("menuitem", { name: /Dev 4200/ })).toBeVisible();
 });

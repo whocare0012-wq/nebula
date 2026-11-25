@@ -51,7 +51,8 @@ export default defineRule({
         }
       },
       TemplateElement(node) {
-        check(node, node.parent.quasis.length === 1 ? "string" : "template", node.value.cooked);
+        const single = node.parent.type === "TemplateLiteral" && node.parent.quasis.length === 1;
+        check(node, single ? "string" : "template", node.value.cooked);
       },
       JSXText(node) {
         check(node, "jsx", node.value);

@@ -17,6 +17,9 @@ on:
     # diff, so the label can be cleared without installing Expo dependencies.
     types: [opened, synchronize, reopened, edited]
 
+permissions:
+  contents: read
+
 concurrency:
   group: mobile-fingerprint-check-${{ github.event.pull_request.number }}
   cancel-in-progress: true

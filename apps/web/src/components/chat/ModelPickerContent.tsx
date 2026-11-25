@@ -790,6 +790,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       );
       return rankModelPickerSearch(candidates, searchQuery, (model) => ({
         name: model.name,
+        slug: model.slug,
         ...(model.shortName ? { shortName: model.shortName } : {}),
         ...(model.subProvider ? { subProvider: model.subProvider } : {}),
         driverKind: model.driverKind,

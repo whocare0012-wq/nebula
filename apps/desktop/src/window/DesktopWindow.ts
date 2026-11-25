@@ -6,12 +6,17 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
+import * as Schedule from "effect/Schedule";
 import * as Semaphore from "effect/Semaphore";
 
 import * as Electron from "electron";
 import { msg } from "gt-i18n";
 
-import { type DesktopSnapShotEvent, DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts";
+import {
+  type DatabaseMigrationProgress,
+  type DesktopSnapShotEvent,
+  DEFAULT_CLIENT_SETTINGS,
+} from "@t3tools/contracts";
 
 import * as DesktopAssets from "../app/DesktopAssets.ts";
 import * as DesktopClerk from "../app/DesktopClerk.ts";
@@ -281,17 +286,19 @@ export function resolveInitialMainWindowBounds(
 function buildConnectingSplashDataUrl(
   shouldUseDarkColors: boolean,
   mode: "local" | "wsl" | "closing" = "wsl",
+  progress: DatabaseMigrationProgress | null = null,
 ): string {
   const background = getInitialWindowBackgroundColor(shouldUseDarkColors);
   const label = shouldUseDarkColors ? "#9ca3af" : "#6b7280";
   const accent = shouldUseDarkColors ? "#f8fafc" : "#1f2937";
   const track = shouldUseDarkColors ? "rgba(248,250,252,0.18)" : "rgba(31,41,55,0.18)";
-  const message =
-    mode === "closing"
-      ? "Closing T3 Code…"
+  const message = progress
+    ? `Upgrading database (${progress.current} of ${progress.total})`
+    : mode === "closing"
+      ? "Closing Nebula…"
       : mode === "wsl"
         ? "Connecting to WSL…"
-        : "Starting T3 Code…";
+        : "Starting Nebula…";
   const detail =
     mode === "closing"
       ? "Stopping local services. Running local tasks will be interrupted."
@@ -660,7 +667,7 @@ export const make = Effect.gen(function* () {
       webPreferences.sandbox = true;
       webPreferences.nodeIntegration = false;
       webPreferences.nodeIntegrationInSubFrames = false;
-      webPreferences.contextIsolation = false;
+      webPreferences.contextIsolation = true;
       webPreferences.disableHtmlFullscreenWindowResize = true;
       if (previewPasskeys.bridgeEnabled) {
         webPreferences.additionalArguments = [
@@ -800,12 +807,19 @@ export const make = Effect.gen(function* () {
       void runPromise(previewManager.prepareWebview(contents));
     });
 
+    // Popups from every frame in this window arrive here without a caller, so only web links
+    // pass. The app opens editors and other applications over IPC.
     window.webContents.setWindowOpenHandler(({ url }) => {
-      if (Option.isSome(ElectronShell.parseSafeExternalUrl(url))) {
+      if (Option.isSome(ElectronShell.parseWebExternalUrl(url))) {
         void runPromise(electronShell.openExternal(url));
       }
       return { action: "deny" };
     });
+    // Chromium asks this before handing a navigation to an OS protocol handler, and grants it
+    // when nothing answers. External links are opened through ElectronShell only.
+    window.webContents.session.setPermissionRequestHandler((_contents, permission, callback) =>
+      callback(permission !== "openExternal"),
+    );
     window.webContents.on("will-navigate", (event, url) => {
       if (
         isSameOriginRendererNavigation({
@@ -1173,21 +1187,37 @@ export const make = Effect.gen(function* () {
     }
     yield* rendererHistory.register(splash.webContents, { surface: "splash" });
     yield* Ref.set(splashWindowRef, Option.some(splash));
+    const settings = yield* desktopSettings.get;
+    const splashMode =
+      settings.wslOnly === true && settings.wslBackendEnabled === true ? "wsl" : "local";
+    let renderedUrl: string | undefined;
+    const progressFiber = runFork(
+      Effect.gen(function* () {
+        if (splash.isDestroyed() || (yield* Ref.get(desktopState.quitting))) return;
+        const progress = yield* Ref.get(desktopState.databaseMigrationProgress);
+        const url = buildConnectingSplashDataUrl(shouldUseDarkColors, splashMode, progress);
+        if (url === renderedUrl) return;
+        const loaded = yield* Effect.promise(() =>
+          splash.loadURL(url).then(
+            () => true,
+            () => false,
+          ),
+        );
+        if (loaded) renderedUrl = url;
+      }).pipe(Effect.repeat(Schedule.spaced("1 second"))),
+    );
     splash.once("closed", () => {
-      void runPromise(Ref.set(splashWindowRef, Option.none()));
+      runFork(
+        Fiber.interrupt(progressFiber).pipe(
+          Effect.andThen(Ref.set(splashWindowRef, Option.none())),
+        ),
+      );
     });
     splash.once("ready-to-show", () => {
       if (!splash.isDestroyed()) {
         splash.show();
       }
     });
-    const settings = yield* desktopSettings.get;
-    void splash.loadURL(
-      buildConnectingSplashDataUrl(
-        shouldUseDarkColors,
-        settings.wslOnly === true && settings.wslBackendEnabled === true ? "wsl" : "local",
-      ),
-    );
     yield* logWindowInfo("connecting splash shown");
   }).pipe(
     Effect.catch((error) =>

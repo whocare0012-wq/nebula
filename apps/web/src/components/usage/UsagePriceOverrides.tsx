@@ -228,7 +228,12 @@ export function UsagePriceOverrides({
   const editAlias = (row: UsagePriceDraft, value: string) => {
     const { alias: _alias, ...rest } = row;
     const original = usageAliasCell(selected, row.model);
-    updateOrDropDraft(matchesSaved(row, original, value) ? rest : { ...rest, alias: value });
+    updateOrDropDraft(
+      matchesSaved(row, original, value)
+        ? // A restored mapping hides the price inputs, so their typed values go too.
+          { ...rest, values: value === "" ? rest.values : {} }
+        : { ...rest, alias: value },
+    );
   };
   const save = async (retry = false) => {
     if (pending) return;
@@ -438,9 +443,7 @@ export function UsagePriceOverrides({
                                     }
                                   }}
                                   aria-label={uiText("New model ID")}
-                                  aria-invalid={
-                                    (row.model.trim() !== "" && error !== undefined) || undefined
-                                  }
+                                  aria-invalid={error !== undefined || undefined}
                                   list="usage-price-models"
                                   placeholder={uiText("Model ID")}
                                   autoComplete="off"
@@ -460,9 +463,7 @@ export function UsagePriceOverrides({
                                   {row.model}
                                 </span>
                               )}
-                              {error !== undefined &&
-                              (row.model.trim() !== "" ||
-                                Object.values(row.values).some((value) => value !== "")) ? (
+                              {error !== undefined ? (
                                 <p role="alert" className="mt-1 text-xs text-destructive">
                                   {priceErrorText(error, uiText)}
                                 </p>

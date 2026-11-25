@@ -8,6 +8,8 @@ import {
 import { CHATGPT_USAGE_URL } from "@t3tools/shared/usageLimits";
 import { describe, expect, it } from "vite-plus/test";
 
+import "~/index.css";
+
 import { render } from "../../../test/render";
 import { UsageLimitsPooled } from "./UsageLimitsPooled";
 
