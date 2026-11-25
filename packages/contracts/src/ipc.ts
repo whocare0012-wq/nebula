@@ -1145,6 +1145,8 @@ export interface DesktopBridge {
   onNotificationBadgeClear: (listener: () => void) => () => void;
   /** Windows taskbar progress while any thread's agent is working. */
   setTaskbarProgress?: (state: { working: boolean }) => Promise<void>;
+  /** Resolves true when the window now shows the requested Windows 11 backdrop. */
+  setWindowMaterial?: (material: "mica" | "none") => Promise<boolean>;
   onTrackpadScrollBegin: (listener: () => void) => () => void;
   onTrackpadScrollEnd: (listener: () => void) => () => void;
   /**

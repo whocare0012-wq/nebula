@@ -1,6 +1,7 @@
 import { SidebarCategorySettingsSection } from "./SidebarCategorySettings";
 import { thrownErrorMessage } from "@t3tools/client-runtime/errors";
 import { m as resolveMessage } from "~/i18n/messages";
+import { uiText } from "~/i18n";
 import { useAtomValue } from "@effect/atom-react";
 import { NotificationSettings } from "./NotificationSettings";
 import { CheckIcon } from "lucide-react";
@@ -509,6 +510,9 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.glassOpacity !== DEFAULT_UNIFIED_SETTINGS.glassOpacity
       ? [gt("Glass opacity")]
       : []),
+    ...(settings.windowsMica !== DEFAULT_UNIFIED_SETTINGS.windowsMica
+      ? [uiText("Mica background")]
+      : []),
     ...(settings.diffColorScheme !== DEFAULT_UNIFIED_SETTINGS.diffColorScheme
       ? [gt("Diff colors")]
       : []),
@@ -736,6 +740,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       screenReaderWindowTitle: DEFAULT_UNIFIED_SETTINGS.screenReaderWindowTitle,
       environmentIdentificationMode: DEFAULT_UNIFIED_SETTINGS.environmentIdentificationMode,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
+      windowsMica: DEFAULT_UNIFIED_SETTINGS.windowsMica,
       panelAnimationDurationMs: DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs,
       sidebarProjectGroupingMode: DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode,
       sidebarProjectSortOrder: DEFAULT_UNIFIED_SETTINGS.sidebarProjectSortOrder,

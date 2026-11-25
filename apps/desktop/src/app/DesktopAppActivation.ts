@@ -24,6 +24,8 @@ import * as Scope from "effect/Scope";
 
 import type * as Electron from "electron";
 
+import * as ElectronApp from "../electron/ElectronApp.ts";
+import * as ElectronDialog from "../electron/ElectronDialog.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import { DESKTOP_APP_ACTIVATION_REQUEST_CHANNEL } from "../ipc/channels.ts";
 import * as DesktopWindow from "../window/DesktopWindow.ts";
@@ -33,6 +35,19 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
+// A cold start from Explorer waits for the backend and the first renderer load.
+const OPEN_FOLDER_TIMEOUT_MS = 180_000;
+
+/** Explorer's "Open with Nebula" passes the folder as `--nebula-open-folder=<path>`. */
+export const OPEN_FOLDER_ARGUMENT = "--nebula-open-folder";
+
+export function readOpenFolderArgument(argv: readonly string[]): string | null {
+  const prefix = `${OPEN_FOLDER_ARGUMENT}=`;
+  const value = argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
+  // A drive root's trailing backslash escapes the closing quote, which then stays in the value.
+  const folder = value?.replace(/"$/, "").trim();
+  return folder ? folder : null;
+}
 const isDesktopAppActivationRequest = Schema.is(DesktopAppActivationRequest);
 
 export class DesktopAppActivationStartError extends Schema.TaggedError<DesktopAppActivationStartError>()(
@@ -298,9 +313,12 @@ const { logWarning } = makeComponentLogger("desktop-app-activation");
 export const make = Effect.gen(function* () {
   const desktopEnvironment = yield* DesktopEnvironment.DesktopEnvironment;
   const desktopWindow = yield* DesktopWindow.DesktopWindow;
+  const electronApp = yield* ElectronApp.ElectronApp;
   const electronWindow = yield* ElectronWindow.ElectronWindow;
+  const dialog = yield* Effect.serviceOption(ElectronDialog.ElectronDialog);
   const path = yield* Path.Path;
   const userId = yield* HostProcess.UserId;
+  const launchArguments = yield* HostProcess.Arguments;
   const runPromise = Effect.runPromiseWith(yield* Effect.context<never>());
   const address = resolveDesktopAppControlAddress({
     stateDir: path.resolve(desktopEnvironment.stateDir),
@@ -322,6 +340,50 @@ export const make = Effect.gen(function* () {
       );
     },
   });
+
+  const reportOpenFolderFailure = Effect.fn("DesktopAppActivation.reportOpenFolderFailure")(
+    function* (folder: string, message: string) {
+      yield* logWarning("could not open a folder from Explorer", { folder, message });
+      if (Option.isNone(dialog)) return;
+      const zh = (yield* electronApp.systemLocale).startsWith("zh");
+      yield* dialog.value.showMessageBox({
+        type: "error",
+        title: "Nebula",
+        message: zh ? `无法在星云中打开 ${folder}` : `Could not open ${folder} in Nebula`,
+        detail: message,
+      });
+    },
+    (effect) => effect.pipe(Effect.ignoreCause),
+  );
+  const openFolder = (folder: string) => {
+    void broker
+      .request(
+        {
+          version: DESKTOP_APP_ACTIVATION_PROTOCOL_VERSION,
+          requestId: NodeCrypto.randomUUID(),
+          type: "open-workspace",
+          workspaceRoot: folder,
+          platform: "win32",
+        },
+        OPEN_FOLDER_TIMEOUT_MS,
+      )
+      .then((response) => {
+        if (!response.ok) void runPromise(reportOpenFolderFailure(folder, response.message));
+      });
+  };
+  // Second launches can arrive while the app is still starting; they wait for `start`.
+  let started = false;
+  const pendingFolders: Array<string> = [];
+  if (desktopEnvironment.platform === "win32") {
+    yield* electronApp.on("second-instance", (_event: unknown, argv: readonly string[]) => {
+      const folder = readOpenFolderArgument(argv);
+      if (folder === null) return;
+      if (started) openFolder(folder);
+      else pendingFolders.push(folder);
+    });
+    const launchFolder = readOpenFolderArgument(launchArguments);
+    if (launchFolder !== null) pendingFolders.push(launchFolder);
+  }
 
   const clearRegisteredRenderer = () => {
     detachRendererListeners?.();
@@ -353,7 +415,15 @@ export const make = Effect.gen(function* () {
           ),
           Effect.ensuring(Effect.sync(() => broker.close())),
         ),
-    ).pipe(Effect.asVoid),
+    ).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          started = true;
+          for (const folder of pendingFolders.splice(0)) openFolder(folder);
+        }),
+      ),
+      Effect.asVoid,
+    ),
     setRendererReady: Effect.fn("DesktopAppActivation.setRendererReady")(function* (ready) {
       if (!ready) {
         clearRegisteredRenderer();

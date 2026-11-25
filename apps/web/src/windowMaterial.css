@@ -1,0 +1,11 @@
+/* Windows 11 Mica (desktop shell sets data-window-material once the window shows it): the
+   system backdrop shows through the window chrome and sidebar, while content stays opaque.
+   !important beats the inline chrome color useTheme writes on html and body. */
+html[data-window-material="mica"],
+html[data-window-material="mica"] body {
+  background-color: transparent !important;
+}
+html[data-window-material="mica"] [data-slot="sidebar-inner"] {
+  background-color: color-mix(in srgb, var(--sidebar) 35%, transparent);
+  background-image: none;
+}

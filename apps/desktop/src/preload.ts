@@ -135,6 +135,8 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     ipcRenderer.invoke(IpcChannels.SET_NOTIFICATION_BADGE_CHANNEL, badge),
   setTaskbarProgress: (state) =>
     ipcRenderer.invoke(IpcChannels.SET_TASKBAR_PROGRESS_CHANNEL, state),
+  setWindowMaterial: (material) =>
+    ipcRenderer.invoke(IpcChannels.SET_WINDOW_MATERIAL_CHANNEL, material),
   onNotificationBadgeClear: (listener) => {
     const handler = () => listener();
     ipcRenderer.on(IpcChannels.SET_NOTIFICATION_BADGE_CHANNEL, handler);

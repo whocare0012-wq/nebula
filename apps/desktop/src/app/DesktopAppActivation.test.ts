@@ -16,7 +16,11 @@ import { it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import { afterEach, describe, expect } from "vite-plus/test";
 
-import { startDesktopAppControlServer } from "./DesktopAppActivation.ts";
+import {
+  OPEN_FOLDER_ARGUMENT,
+  readOpenFolderArgument,
+  startDesktopAppControlServer,
+} from "./DesktopAppActivation.ts";
 
 const openServers: Array<{ close: () => Promise<void> }> = [];
 
@@ -79,6 +83,27 @@ function exchange(address: string, payload: DesktopAppActivationRequest) {
     });
   });
 }
+
+describe("readOpenFolderArgument", () => {
+  it("reads the folder Explorer passes", () => {
+    expect(
+      readOpenFolderArgument([
+        "C:\\Nebula\\Nebula.exe",
+        "--allow-file-access-from-files",
+        `${OPEN_FOLDER_ARGUMENT}=C:\\Users\\me\\My Project`,
+      ]),
+    ).toBe("C:\\Users\\me\\My Project");
+  });
+
+  it("drops the quote a drive root's trailing backslash leaves behind", () => {
+    expect(readOpenFolderArgument([`${OPEN_FOLDER_ARGUMENT}=D:\\"`])).toBe("D:\\");
+  });
+
+  it("ignores launches without a folder", () => {
+    expect(readOpenFolderArgument(["C:\\Nebula\\Nebula.exe"])).toBeNull();
+    expect(readOpenFolderArgument([`${OPEN_FOLDER_ARGUMENT}=`])).toBeNull();
+  });
+});
 
 describe("desktop app control server", () => {
   it.effect("cancels a queued request when the client disconnects", () =>

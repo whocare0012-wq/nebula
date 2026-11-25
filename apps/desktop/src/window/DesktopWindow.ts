@@ -38,6 +38,7 @@ import {
   TRACKPAD_SCROLL_END_CHANNEL,
   WINDOW_FULLSCREEN_STATE_CHANNEL,
 } from "../ipc/channels.ts";
+import { windowBackgroundColor } from "./windowMaterial.ts";
 import {
   PASSKEY_BRIDGE_ARGUMENT,
   PRIMARY_PASTE_DISABLED_ARGUMENT,
@@ -182,7 +183,7 @@ function getIconOption(
   });
 }
 
-function getInitialWindowBackgroundColor(shouldUseDarkColors: boolean): string {
+export function getInitialWindowBackgroundColor(shouldUseDarkColors: boolean): string {
   return shouldUseDarkColors ? "#000000" : "#ffffff";
 }
 
@@ -390,7 +391,9 @@ function syncWindowAppearance(
       return;
     }
 
-    window.setBackgroundColor(getInitialWindowBackgroundColor(shouldUseDarkColors));
+    window.setBackgroundColor(
+      windowBackgroundColor(window, getInitialWindowBackgroundColor(shouldUseDarkColors)),
+    );
     const { titleBarOverlay } = getWindowTitleBarOptions(shouldUseDarkColors, platform);
     if (hasTitleBarOverlay && typeof titleBarOverlay === "object") {
       window.setTitleBarOverlay(titleBarOverlay);

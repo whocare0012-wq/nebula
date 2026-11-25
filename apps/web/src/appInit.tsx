@@ -40,6 +40,7 @@ import {
 import { startDefaultThemeAdoption } from "./hooks/useDefaultTheme";
 import { startEnvironmentThemeRepaint } from "./hooks/useEnvironmentTheme";
 import { startThemeBackground } from "./themeBackground";
+import { syncWindowMaterial } from "./windowMaterial";
 import { readLocalStorageValue, subscribeLocalStorageKey } from "./hooks/useLocalStorage";
 import { startHostEnvironmentLookup } from "./state/primaryEnvironment";
 import {
@@ -104,6 +105,9 @@ function startClientAppearance(): void {
     }
     if (previous?.appearanceContrast !== settings.appearanceContrast) {
       applyAppearanceContrast(root, settings.appearanceContrast);
+    }
+    if (previous?.windowsMica !== settings.windowsMica) {
+      syncWindowMaterial(root, settings.windowsMica);
     }
     if (previous?.glassOpacity !== settings.glassOpacity) {
       root.style.setProperty("--glass-opacity", `${settings.glassOpacity}%`);

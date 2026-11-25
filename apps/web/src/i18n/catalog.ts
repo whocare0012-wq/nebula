@@ -8305,6 +8305,10 @@ export const zhCN: Readonly<Record<string, string>> = {
   "\n> [Truncated]": "\n> [已截断]",
   "Temporary conversation": "临时对话",
   "{remaining}% left": "剩 {remaining}%",
+  "Mica background": "云母背景",
+  "Let the Windows desktop tint the sidebar and window edges. Needs Windows 11 22H2 or later.":
+    "让 Windows 桌面的颜色透过侧边栏和窗口边缘。需要 Windows 11 22H2 或更新版本。",
+  "Reset Mica background to default": "将云母背景恢复默认",
   "Write.": "写入",
   "Search {count}": "搜索 {count}",
   File: "文件",

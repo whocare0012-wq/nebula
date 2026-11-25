@@ -3,6 +3,7 @@
 @import "tailwindcss";
 @import "./windowsProfile.css";
 @import "./liquidGlass.css";
+@import "./windowMaterial.css";
 @import "./skins.css";
 @import "./components/chat/taskPlanCapsule.css";
 @import "./components/chat/cosmicEffortSlider.css";

@@ -27,6 +27,7 @@ import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings"
 import { Slider } from "../ui/slider";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { isWindowsPlatform } from "../../lib/utils";
 import { ThemeLibrary } from "./ThemeSettings";
 import {
   SettingResetButton,
@@ -117,6 +118,8 @@ export function AppearanceSettingsPanel() {
   const [isImportThemeOpen, setIsImportThemeOpen] = useState(false);
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
+  const supportsWindowMaterial =
+    window.desktopBridge?.setWindowMaterial !== undefined && isWindowsPlatform(navigator.platform);
   const environmentStageLabel = useEnvironmentStageLabel();
   const environmentStageVariant = resolveSidebarStageBackdropVariant(environmentStageLabel);
   const environmentIdentificationOptionList =
@@ -252,6 +255,32 @@ export function AppearanceSettingsPanel() {
             </div>
           }
         />
+        {supportsWindowMaterial ? (
+          <SettingsRow
+            id="windows-mica"
+            title={uiText("Mica background")}
+            description={uiText(
+              "Let the Windows desktop tint the sidebar and window edges. Needs Windows 11 22H2 or later.",
+            )}
+            resetAction={
+              settings.windowsMica !== DEFAULT_UNIFIED_SETTINGS.windowsMica ? (
+                <SettingResetButton
+                  ariaLabel={uiText("Reset Mica background to default")}
+                  onClick={() =>
+                    updateSettings({ windowsMica: DEFAULT_UNIFIED_SETTINGS.windowsMica })
+                  }
+                />
+              ) : null
+            }
+            control={
+              <Switch
+                checked={settings.windowsMica}
+                onCheckedChange={(checked) => updateSettings({ windowsMica: Boolean(checked) })}
+                aria-label={uiText("Mica background")}
+              />
+            }
+          />
+        ) : null}
         <SettingsRow
           {...searchableSetting("chat-width")}
           description={gt("Set how wide messages and the composer can grow on large screens.")}

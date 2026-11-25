@@ -39,6 +39,39 @@
       WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
     ${EndIf}
   !endif
+  !insertmacro nebulaRegisterOpenFolder
+!macroend
+
+; Explorer's "Open with Nebula" on folders and folder backgrounds. Windows 11 lists it under
+; "Show more options". The app reads the folder from --nebula-open-folder (DesktopAppActivation).
+!define NEBULA_OPEN_FOLDER_KEY "Software\Classes\Directory\shell\Nebula"
+!define NEBULA_OPEN_BACKGROUND_KEY "Software\Classes\Directory\Background\shell\Nebula"
+!macro nebulaWriteOpenFolderKey KEY LABEL
+  WriteRegStr SHCTX "${KEY}" "" "${LABEL}"
+  WriteRegStr SHCTX "${KEY}" "Icon" '"$appExe",0'
+  WriteRegStr SHCTX "${KEY}\command" "" '"$appExe" "--nebula-open-folder=%V"'
+!macroend
+!macro nebulaRegisterOpenFolder
+  Push $0
+  System::Call 'kernel32::GetUserDefaultUILanguage() i .r0'
+  ; 0x04 is the primary language id of every Chinese locale.
+  IntOp $0 $0 & 0x3FF
+  ${If} $0 == 4
+    !insertmacro nebulaWriteOpenFolderKey "${NEBULA_OPEN_FOLDER_KEY}" "用星云打开"
+    !insertmacro nebulaWriteOpenFolderKey "${NEBULA_OPEN_BACKGROUND_KEY}" "用星云打开"
+  ${Else}
+    !insertmacro nebulaWriteOpenFolderKey "${NEBULA_OPEN_FOLDER_KEY}" "Open with Nebula"
+    !insertmacro nebulaWriteOpenFolderKey "${NEBULA_OPEN_BACKGROUND_KEY}" "Open with Nebula"
+  ${EndIf}
+  Pop $0
+!macroend
+
+!macro customUnInstall
+  ; An update reinstalls the entries right after, pointing at the same path.
+  ${IfNot} ${isUpdated}
+    DeleteRegKey SHCTX "${NEBULA_OPEN_FOLDER_KEY}"
+    DeleteRegKey SHCTX "${NEBULA_OPEN_BACKGROUND_KEY}"
+  ${EndIf}
 !macroend
 
 ; Nebula 1.0.8 and earlier installed under T3 Code's app id. Remove that registration (keeping
