@@ -454,6 +454,60 @@ const serverMessages = new Map([
   ],
   ["无法完整扫描", "Scan incomplete."],
   ["没有可信卷容量，拒绝执行", "Disk capacity is unavailable. The operation stopped."],
+  [
+    "应用自动更新下载的安装包；删除后需要时会重新下载",
+    "Installer saved by an app’s auto-updater. The app downloads it again when needed.",
+  ],
+  [
+    "共享依赖或运行依赖：仅展示，不自动移除",
+    "Shared or runtime dependency. Listed only, never removed automatically.",
+  ],
+  [
+    "仅浏览器缓存；浏览器运行时文件被占用会跳过，登录资料不纳入扫描",
+    "Browser cache only. Skipped while the browser has files open; sign-in data is never scanned.",
+  ],
+  ["程序崩溃转储；移入回收站，不直接删除", "Crash dumps. They move to the Recycle Bin."],
+  [
+    "临时文件请用 Windows 设置 › 系统 › 存储 清理",
+    "Clean temporary files in Windows Settings › System › Storage.",
+  ],
+  ["安装包需手动确认；仅移入回收站", "Review installers before moving them to the Recycle Bin."],
+  [
+    "移入回收站，不立即释放空间。星云不会清空回收站；需要找回时在回收站中右键“还原”。",
+    "Moves items to the Recycle Bin. Space stays occupied. Nebula never empties it; to recover an item, right-click it in the Recycle Bin and choose Restore.",
+  ],
+  [
+    "文件被占用（可能有程序正在使用），未清理",
+    "A file is in use by another program. Nothing was cleaned.",
+  ],
+  ["未能移入回收站，原件保留", "Couldn’t move it to the Recycle Bin. The original is retained."],
+  [
+    "已移入回收站；需要找回时请打开回收站，右键“还原”",
+    "Moved to the Recycle Bin. To recover it, right-click it in the Recycle Bin and choose Restore.",
+  ],
+  ["操作中断前未移动原件", "The operation stopped before the original was moved."],
+  [
+    "Windows 暂不支持归档到外置磁盘；可重建缓存和安装包可以直接清理",
+    "Archiving to an external disk isn’t available on Windows. Rebuildable caches and installers can be cleaned directly.",
+  ],
+  ["星云浏览器缓存；运行中的缓存保留", "Nebula browser cache. Kept while in use."],
+  ["崩溃转储", "Crash dumps"],
+  ["pnpm 共享存储", "pnpm shared store"],
+  ["NuGet 包", "NuGet packages"],
+  ["Gradle 缓存", "Gradle caches"],
+  ["Playwright 浏览器", "Playwright browsers"],
+  ["Hugging Face 模型", "Hugging Face models"],
+  ["Windows 临时文件", "Windows temporary files"],
+  ["Windows 更新缓存", "Windows Update cache"],
+  ["pnpm 元数据缓存", "pnpm metadata cache"],
+  ["uv 下载缓存", "uv download cache"],
+  ["NuGet HTTP 缓存", "NuGet HTTP cache"],
+  ["Go 构建缓存", "Go build cache"],
+  ["Electron 下载缓存", "Electron download cache"],
+  ["electron-builder 下载缓存", "electron-builder download cache"],
+  ["Cargo 下载缓存", "Cargo download cache"],
+  ["Bun 下载缓存", "Bun download cache"],
+  ["回收站", "Recycle Bin"],
   ["每页最多100条批注", "Up to 100 annotations per page"],
   [
     "批注存储已达到32MiB，请先整理",
@@ -491,6 +545,21 @@ export function serverCopy(message: string): string {
       },
     );
   }
+  const unfinished = "删除未完成；剩余内容保留在 ";
+  if (message.startsWith(unfinished))
+    return uiText("Deletion didn’t finish. The rest is kept at {path}", {
+      path: message.slice(unfinished.length),
+    });
+  const drive = /^本地磁盘 \((.+)\)$/u.exec(message);
+  if (drive) return uiText("Local Disk ({drive})", { drive: drive[1] });
+  const updater = /^(.+) 更新安装包$/u.exec(message);
+  if (updater) return uiText("{app} update installer", { app: updater[1] });
+  const browser = /^(\S+) 浏览器缓存（(.+?)( · 代码缓存)?）$/u.exec(message);
+  if (browser)
+    return uiText(browser[3] ? "{browser} code cache ({profile})" : "{browser} cache ({profile})", {
+      browser: browser[1],
+      profile: browser[2],
+    });
   const reserve = /^(.*) 执行后会低于保护线，拒绝执行$/u.exec(message);
   if (reserve)
     return uiText("{path} would fall below its free-space reserve. The operation stopped.", {

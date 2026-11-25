@@ -2,6 +2,7 @@
 import * as Clock from "effect/Clock";
 import * as DateTime from "effect/DateTime";
 import * as NodeFSP from "node:fs/promises";
+import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import * as ServerSettings from "./serverSettings.ts";
 import {
@@ -28,6 +29,8 @@ import * as Scope from "effect/Scope";
 import * as ServerConfig from "./config.ts";
 import * as StorageCleanup from "./storageCleanup.ts";
 import { STORAGE_ARCHIVE_PROGRAM } from "./storageArchiveProgram.ts";
+import { windowsCleanupRoots } from "./storageMoleWindows.ts";
+import { makeWindowsStorageWorker } from "./storageWindows.ts";
 
 export class StorageManagement extends Context.Service<
   StorageManagement,
@@ -47,6 +50,14 @@ const make = Effect.gen(function* () {
   const cleanup = yield* StorageCleanup.StorageCleanup;
   const scope = yield* Scope.Scope;
   const settings = yield* ServerSettings.ServerSettingsService;
+  const windowsRoots =
+    platform === "win32"
+      ? windowsCleanupRoots({ home: NodeOS.homedir(), temp: NodeOS.tmpdir(), env: process.env })
+      : undefined;
+  const windowsWorker = windowsRoots
+    ? makeWindowsStorageWorker({ roots: windowsRoots })
+    : undefined;
+  const roots = () => cleanupRoots(windowsRoots);
   let scanned: StorageInspection["entries"] = [];
   let progress: (ScanProgress & { requestId?: number }) | undefined;
   let scanRequest: number | undefined;
@@ -77,93 +88,94 @@ const make = Effect.gen(function* () {
     const currentSettings = yield* settings.getSettings.pipe(
       Effect.mapError(() => new StorageManagementError({ message: "无法读取保护设置" })),
     );
+    const request = {
+      ...input,
+      base: config.baseDir,
+      staging: cleanupStagingDir(),
+      reserveByVolume: currentSettings.storageCleanup.volumeReserveGiB ?? {},
+      inventoryPaths: {
+        logs: config.logsDir,
+        attachments: config.attachmentsDir,
+        database: config.dbPath,
+      },
+    };
     return yield* Effect.tryPromise({
       try: (signal) =>
-        new Promise<unknown>((resolve, reject) => {
-          if (platform !== "darwin") {
-            reject(new Error("当前归档操作需要 macOS 的 Python 3；不会执行清理"));
-            return;
-          }
-          if (signal.aborted) {
-            reject(new Error("归档操作已取消"));
-            return;
-          }
-          const child = NodeChildProcess.spawn(
-            "/usr/bin/python3",
-            ["-c", STORAGE_ARCHIVE_PROGRAM],
-            {
-              stdio: ["pipe", "pipe", "pipe"],
-            },
-          );
-          let settled = false;
-          let output = "";
-          let outputBytes = 0;
-          let stderr = "";
-          const finish = (fn: () => void) => {
-            if (settled) return;
-            settled = true;
-            signal.removeEventListener("abort", onAbort);
-            fn();
-          };
-          const killChild = () => {
-            try {
-              child.kill("SIGTERM");
-            } catch {
-              /* Child already exited. */
-            }
-          };
-          const onAbort = () => {
-            killChild();
-            finish(() => reject(new Error("归档操作已取消")));
-          };
-          signal.addEventListener("abort", onAbort, { once: true });
-          child.stdout.on("data", (data: Buffer | string) => {
-            const chunk = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
-            outputBytes += chunk.byteLength;
-            if (outputBytes > MAX_WORKER_STDOUT_BYTES) {
-              killChild();
-              finish(() => reject(new Error("归档进程输出超过上限，已中止")));
-              return;
-            }
-            output += chunk.toString("utf8");
-          });
-          child.stderr.on("data", (data) => {
-            stderr = (stderr + String(data)).slice(-2000);
-          });
-          child.on("error", (error) => finish(() => reject(error)));
-          child.on("close", (code) => {
-            finish(() => {
-              try {
-                const result: unknown = JSON.parse(output);
-                if (code !== 0)
-                  reject(
-                    new Error(
-                      typeof result === "object" && result !== null && "error" in result
-                        ? String(result.error)
-                        : "归档操作未完成",
-                    ),
-                  );
-                else resolve(result);
-              } catch {
-                reject(new Error(stderr || "归档进程未返回有效结果"));
+        windowsWorker
+          ? windowsWorker.call(request)
+          : new Promise<unknown>((resolve, reject) => {
+              if (platform !== "darwin") {
+                reject(new Error("当前归档操作需要 macOS 的 Python 3；不会执行清理"));
+                return;
               }
-            });
-          });
-          child.stdin.on("error", () => undefined);
-          child.stdin.end(
-            JSON.stringify({
-              ...input,
-              base: config.baseDir,
-              staging: cleanupStagingDir(),
-              reserveByVolume: currentSettings.storageCleanup.volumeReserveGiB ?? {},
-              inventoryPaths: {
-                logs: config.logsDir,
-                attachments: config.attachmentsDir,
-                database: config.dbPath,
-              },
+              if (signal.aborted) {
+                reject(new Error("归档操作已取消"));
+                return;
+              }
+              const child = NodeChildProcess.spawn(
+                "/usr/bin/python3",
+                ["-c", STORAGE_ARCHIVE_PROGRAM],
+                {
+                  stdio: ["pipe", "pipe", "pipe"],
+                },
+              );
+              let settled = false;
+              let output = "";
+              let outputBytes = 0;
+              let stderr = "";
+              const finish = (fn: () => void) => {
+                if (settled) return;
+                settled = true;
+                signal.removeEventListener("abort", onAbort);
+                fn();
+              };
+              const killChild = () => {
+                try {
+                  child.kill("SIGTERM");
+                } catch {
+                  /* Child already exited. */
+                }
+              };
+              const onAbort = () => {
+                killChild();
+                finish(() => reject(new Error("归档操作已取消")));
+              };
+              signal.addEventListener("abort", onAbort, { once: true });
+              child.stdout.on("data", (data: Buffer | string) => {
+                const chunk = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
+                outputBytes += chunk.byteLength;
+                if (outputBytes > MAX_WORKER_STDOUT_BYTES) {
+                  killChild();
+                  finish(() => reject(new Error("归档进程输出超过上限，已中止")));
+                  return;
+                }
+                output += chunk.toString("utf8");
+              });
+              child.stderr.on("data", (data) => {
+                stderr = (stderr + String(data)).slice(-2000);
+              });
+              child.on("error", (error) => finish(() => reject(error)));
+              child.on("close", (code) => {
+                finish(() => {
+                  try {
+                    const result: unknown = JSON.parse(output);
+                    if (code !== 0)
+                      reject(
+                        new Error(
+                          typeof result === "object" && result !== null && "error" in result
+                            ? String(result.error)
+                            : "归档操作未完成",
+                        ),
+                      );
+                    else resolve(result);
+                  } catch {
+                    reject(new Error(stderr || "归档进程未返回有效结果"));
+                  }
+                });
+              });
+              child.stdin.on("error", () => undefined);
+              child.stdin.end(JSON.stringify(request));
             }),
-          );
-        }),
       catch: (error) =>
         new StorageManagementError({
           message: error instanceof Error ? error.message : String(error),
@@ -209,7 +221,7 @@ const make = Effect.gen(function* () {
     };
     const result = yield* Effect.tryPromise({
       try: () =>
-        scanCleanup(cleanupRoots(), volumes, (p) => {
+        scanCleanup(roots(), volumes, (p) => {
           progress = { ...p, requestId };
         }),
       catch: () => new StorageManagementError({ message: "白名单扫描失败" }),
@@ -286,7 +298,7 @@ const make = Effect.gen(function* () {
   ) {
     const result = yield* readInspection({});
     const inventory = yield* Effect.tryPromise({
-      try: () => scanCleanup(cleanupRoots(), result.volumes),
+      try: () => scanCleanup(roots(), result.volumes, undefined, undefined, id),
       catch: () => new StorageManagementError({ message: "清理白名单复核失败" }),
     });
     const candidate = inventory.entries.find(

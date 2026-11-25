@@ -8681,6 +8681,17 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Review paths, destinations, and recovery before confirming.":
     "核对路径、去向和恢复方式后，才能确认执行。",
   "Move to Trash (no immediate space released)": "移入废纸篓（不立即释放空间）",
+  "Moved to Trash": "已移入废纸篓",
+  "Moved to Recycle Bin": "已移入回收站",
+  "Move to Recycle Bin · Space stays occupied": "移入回收站 · 不立即释放",
+  "Move to Recycle Bin · no immediate space released": "移入回收站 · 不立即释放空间",
+  "Move to Recycle Bin (no immediate space released)": "移入回收站（不立即释放空间）",
+  "No background timer or automatic deletion. The Recycle Bin keeps items until you restore or empty it.":
+    "没有常驻扫描或自动删除。回收站里的内容由你还原或清空；星云不会自动清空回收站。",
+  "Bounded allowlist scan; protected data is never selected. The Recycle Bin does not free disk space.":
+    "仅限白名单范围；受保护数据不会选中。移入回收站不会立即释放磁盘空间。",
+  "Sizes are allocated space. Shared or linked files can be counted more than once, so totals can exceed what deleting would free.":
+    "大小按实际占用计算。共享或链接的文件可能被重复计入，所以总数可能比删除后真正释放的空间大。",
   "Permanently delete rebuildable files": "永久删除可重建文件",
   "Review destination and recovery before confirming.": "请核对去向与恢复方式后确认。",
   "Verified log archive, then remove only the listed logs.":

@@ -20,6 +20,7 @@ import {
 import { type StorageEntry } from "./storageInventoryModel";
 import { CleanupDetails } from "./CleanupDetails";
 import { CleanupRecords } from "./CleanupRecords";
+import { hostCopy } from "./hostCopy";
 import styles from "./cleanupOverview.module.css";
 
 const groups = [
@@ -81,7 +82,9 @@ export function CleanupOverview({
   completed,
   previewPlan,
   onSettings,
+  windows = false,
 }: {
+  windows?: boolean;
   onSettings?: (input: Extract<StorageActionInput, { action: "cleanup-settings" }>) => void;
   data: StorageInspection;
   allowed: boolean;
@@ -137,7 +140,7 @@ export function CleanupOverview({
               <strong>{serverCopy(entry.name)}</strong>
               <small>
                 {entry.destination === "trash"
-                  ? uiText("Move to Trash · Space stays occupied")
+                  ? uiText(hostCopy("Move to Trash · Space stays occupied", windows))
                   : entry.destination === "delete-rebuildable"
                     ? uiText("Delete rebuildable files")
                     : g.risk === "locked"
@@ -185,7 +188,7 @@ export function CleanupOverview({
         </p>
         <p>
           {g.entries[0]!.destination === "trash"
-            ? uiText("Move to Trash · no immediate space released")
+            ? uiText(hostCopy("Move to Trash · no immediate space released", windows))
             : g.entries[0]!.destination === "delete-rebuildable"
               ? uiText("Delete · rebuildable")
               : ""}
@@ -426,6 +429,7 @@ export function CleanupOverview({
           disabled={controlsDisabled || !allowed}
           onSettings={onSettings}
           onSelect={(id) => setSelection(id)}
+          windows={windows}
         />
       ) : null}
       <section
@@ -535,11 +539,15 @@ export function CleanupOverview({
           disabled={controlsDisabled || !allowed}
           onSettings={onSettings}
           onSelect={(id) => setSelection(id)}
+          windows={windows}
         />
       ) : null}
       <p className={styles.scope}>
         {uiText(
-          "Bounded allowlist scan; protected data is never selected. Trash does not free disk space.",
+          hostCopy(
+            "Bounded allowlist scan; protected data is never selected. Trash does not free disk space.",
+            windows,
+          ),
         )}
       </p>
       {!allowed ? (

@@ -194,9 +194,10 @@ export function UsagePage() {
   const [preferences, setPreferences] = useState(readUsagePagePreferences);
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const hour12 = usePrimarySettings((settings) => resolveHour12(settings.timestampFormat));
-  // Storage cleanup only exists on macOS servers; elsewhere this tab is just disk usage.
+  // Storage cleanup exists on macOS and Windows servers; elsewhere this tab is just disk usage.
   const cleanupAvailable = [...useServerConfigs().values()].some(
-    (config) => config?.environment.platform.os === "darwin",
+    (config) =>
+      config?.environment.platform.os === "darwin" || config?.environment.platform.os === "windows",
   );
   const optionLabel = (
     option: (typeof METRIC_OPTIONS)[number] | (typeof WINDOW_OPTIONS)[number],

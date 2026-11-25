@@ -91,7 +91,8 @@
 
 - **免管理员权限与开发者模式**：Windows 下的任务目录与 Codex 独立主目录改用目录联接（Junction）与文件硬链接实现，无需开启「开发者模式」或管理员权限；删除目录时不会误删共享文件，且会保留 Codex 新改写的共享配置（如 `config.toml`）。
 - **开箱即用的本地 CLI 发现与启动**：自动识别 Codex 桌面版自带 CLI；支持直接按命令名启动通过 `npm install -g` 安装的本地 ACP 智能体（直接解析 `.cmd` 包装脚本而不经过 shell）；识别 DeepSeek Harness 桌面版 CLI，且状态检测不会在历史记录中残留空会话。
-- **贴合 Windows 的界面细节**：自动隐藏仅适用于 macOS 服务端的功能入口（如 macOS 磁盘清理中心与 Cursor 钥匙串开关），同时保留磁盘占用统计视图；新建会话目录选择提示正确显示 `Alt` 而非 `⌥`。
+- **Windows 清理中心**：**用量 → 清理与整理** 只扫描白名单内的 Windows 位置：npm / pnpm / Yarn / pip / uv / NuGet / Cargo / Bun / Go / Electron 下载缓存，Chrome / Edge / Brave / Firefox 浏览器缓存，各应用自动更新残留的安装包，「下载」文件夹里的安装包，以及崩溃转储。可重建的缓存直接删除；安装包和崩溃转储移入**回收站**。正被程序占用的内容会跳过。pnpm store、Playwright 浏览器等共享依赖，以及 `%TEMP%` 和系统缓存只展示、不清理。归档到外置磁盘仍只支持 macOS。
+- **贴合 Windows 的界面细节**：隐藏其余仅适用于 macOS 服务端的功能入口（如 Cursor 钥匙串开关）；右侧面板和终端的标签像其他 Windows 应用一样，在标签右端关闭；新建会话目录选择提示正确显示 `Alt` 而非 `⌥`。
 
 <a id="download"></a>
 

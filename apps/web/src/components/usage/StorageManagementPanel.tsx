@@ -25,6 +25,7 @@ import {
 
 import { latestCleanupScan } from "./cleanupModel";
 import { CleanupOverview } from "./CleanupOverview";
+import { hostCopy } from "./hostCopy";
 
 const phaseLabel: Record<string, string> = {
   trashed: "Moved to Trash",
@@ -78,7 +79,9 @@ export function StorageManagementPanel({
   refreshTick = 0,
   environmentId,
   onOperationFinished,
+  windows = false,
 }: {
+  windows?: boolean;
   diskReport?: DiskSpaceReport | null;
   refreshTick?: number;
   environmentId: EnvironmentId;
@@ -255,6 +258,7 @@ export function StorageManagementPanel({
           theme === "apple" ? diskReport : undefined,
         )}
         previewPlan={plan}
+        windows={windows}
         allowed={allowed}
         busy={busy}
         scanning={result.waiting || scanning}
@@ -297,7 +301,7 @@ export function StorageManagementPanel({
               {plan.cleanupDestination ? (
                 <p className="break-all text-xs">
                   {plan.cleanupDestination === "trash"
-                    ? uiText("Move to Trash (no immediate space released)")
+                    ? uiText(hostCopy("Move to Trash (no immediate space released)", windows))
                     : uiText("Permanently delete rebuildable files")}{" "}
                   · {serverCopy(plan.destination ?? "")}
                 </p>
@@ -376,7 +380,7 @@ export function StorageManagementPanel({
             {plan.cleanupDestination ? (
               <p className="break-all text-xs">
                 {plan.cleanupDestination === "trash"
-                  ? uiText("Move to Trash (no immediate space released)")
+                  ? uiText(hostCopy("Move to Trash (no immediate space released)", windows))
                   : uiText("Permanently delete rebuildable files")}{" "}
                 · {serverCopy(plan.destination ?? "")}
               </p>
@@ -687,7 +691,7 @@ export function StorageManagementPanel({
                   {operations.map((op) => (
                     <div key={op.id} className="space-y-2 border-b py-3 text-xs">
                       <p>
-                        {uiText(phaseLabel[op.phase] ?? op.phase)} ·{" "}
+                        {uiText(hostCopy(phaseLabel[op.phase] ?? op.phase, windows))} ·{" "}
                         {new Date(op.createdAt).toLocaleString()}
                       </p>
                       <p className="break-all">{op.source ?? op.destination ?? op.archive}</p>
@@ -701,7 +705,7 @@ export function StorageManagementPanel({
                           {uiText("Includes other disk activity")}
                         </p>
                       ) : null}
-                      {(op.phase === "locked" || op.phase === "trashed") &&
+                      {(op.phase === "locked" || (op.phase === "trashed" && !windows)) &&
                       op.type !== "log-cleanup" ? (
                         <Button
                           size="xs"
@@ -751,21 +755,23 @@ export function StorageManagementPanel({
               </span>
             </div>
           ) : null}
-          <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {uiText("Archive / restore destination")}
-            <select
-              value={volumeId}
-              onChange={(event) => setVolumeId(event.target.value)}
-              className="max-w-full rounded-md border bg-background px-2 py-1.5 text-foreground"
-            >
-              <option value="">{uiText("Choose an external APFS / HFS+ volume")}</option>
-              {targets.map((volume) => (
-                <option key={volume.id} value={volume.id}>
-                  {serverCopy(volume.name)} · {formatBytes(volume.freeBytes)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {data.entries.some((entry) => entry.canArchive) || data.archives.length ? (
+            <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {uiText("Archive / restore destination")}
+              <select
+                value={volumeId}
+                onChange={(event) => setVolumeId(event.target.value)}
+                className="max-w-full rounded-md border bg-background px-2 py-1.5 text-foreground"
+              >
+                <option value="">{uiText("Choose an external APFS / HFS+ volume")}</option>
+                {targets.map((volume) => (
+                  <option key={volume.id} value={volume.id}>
+                    {serverCopy(volume.name)} · {formatBytes(volume.freeBytes)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {!allowed ? (
             <p className="text-xs text-muted-foreground">
               {uiText("This connection has view-only storage access.")}

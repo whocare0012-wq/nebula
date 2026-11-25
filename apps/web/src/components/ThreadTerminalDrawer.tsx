@@ -1452,6 +1452,7 @@ function TerminalSidebarGroup({
           return (
             <div
               key={terminalId}
+              data-active-tab={isActive}
               className={cn(
                 "group/tab flex h-6 w-full items-center gap-0.5 rounded-md pr-2 pl-1.5 text-xs",
                 isActive

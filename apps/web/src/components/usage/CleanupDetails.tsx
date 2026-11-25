@@ -9,6 +9,7 @@ import { cleanupRisk, GIB } from "./cleanupModel";
 import { formatBytes } from "../../lib/formatBytes";
 import { cleanupCategoryLabel } from "./cleanupText";
 import styles from "./cleanupOverview.module.css";
+import { hostCopy } from "./hostCopy";
 
 function splitTiles(
   rows: ReadonlyArray<{ id: string; bytes: number }>,
@@ -44,7 +45,9 @@ export function CleanupDetails({
   onSettings,
   onSelect,
   selectedVolumePath,
+  windows = false,
 }: {
+  windows?: boolean;
   selectedVolumePath?: string;
   data: StorageInspection;
   disabled: boolean;
@@ -245,7 +248,10 @@ export function CleanupDetails({
         </label>
         <p className={styles.scope}>
           {uiText(
-            "No background timer or automatic deletion. Trash is retained until manually restored or emptied.",
+            hostCopy(
+              "No background timer or automatic deletion. Trash is retained until manually restored or emptied.",
+              windows,
+            ),
           )}
         </p>
       </div>

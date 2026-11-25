@@ -10,6 +10,7 @@ import { useServerConfigs } from "../../state/entities";
 import { serverEnvironment } from "../../state/server";
 import { DISK_SPACE_KINDS, categoryFor, summarizeGrowth } from "./diskSpaceModel";
 import { StorageManagementPanel } from "./StorageManagementPanel";
+import { hostCopy } from "./hostCopy";
 
 export function DiskSpaceSection({
   environments,
@@ -49,9 +50,9 @@ function DiskSpaceEnvironment({
   readonly onSettled: (id: EnvironmentId) => void;
 }) {
   const uiText = useUiText();
-  // The cleanup center scans and cleans macOS locations only; its worker refuses elsewhere.
-  const cleanupAvailable =
-    useServerConfigs().get(environmentId)?.environment.platform.os === "darwin";
+  // The cleanup center has macOS and Windows workers; other hosts refuse its actions.
+  const hostOs = useServerConfigs().get(environmentId)?.environment.platform.os;
+  const cleanupAvailable = hostOs === "darwin" || hostOs === "windows";
   const atom = serverEnvironment.diskSpace({
     environmentId,
     input: { awaitMeasurement: true, ...(refreshTick > 0 ? { refresh: true } : {}) },
@@ -89,6 +90,7 @@ function DiskSpaceEnvironment({
           environmentId={environmentId}
           diskReport={report}
           onOperationFinished={refresh}
+          windows={hostOs === "windows"}
         />
       ) : null}
       <details open={!cleanupAvailable}>
@@ -97,7 +99,7 @@ function DiskSpaceEnvironment({
         </summary>
         {report ? (
           <div className="mt-4">
-            <DiskSpaceReportView report={report} />
+            <DiskSpaceReportView report={report} windows={hostOs === "windows"} />
           </div>
         ) : (
           <p role="status" className="text-xs text-muted-foreground">
@@ -112,7 +114,13 @@ function DiskSpaceEnvironment({
     </section>
   );
 }
-function DiskSpaceReportView({ report }: { readonly report: DiskSpaceReport }) {
+function DiskSpaceReportView({
+  report,
+  windows,
+}: {
+  readonly report: DiskSpaceReport;
+  readonly windows: boolean;
+}) {
   const uiText = useUiText();
   const growth = summarizeGrowth(report.history);
   const total = report.volume?.totalBytes ?? 0;
@@ -183,7 +191,10 @@ function DiskSpaceReportView({ report }: { readonly report: DiskSpaceReport }) {
           })}
           <p className="text-xs text-muted-foreground">
             {uiText(
-              "Sizes are allocated space. Cloned files on APFS are counted in full, so totals can exceed what deleting would free.",
+              hostCopy(
+                "Sizes are allocated space. Cloned files on APFS are counted in full, so totals can exceed what deleting would free.",
+                windows,
+              ),
             )}
           </p>
           <p className="text-xs text-muted-foreground">

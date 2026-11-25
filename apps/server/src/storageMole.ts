@@ -6,6 +6,7 @@ import * as NodePath from "node:path";
 import * as NodeOS from "node:os";
 import * as NodeCrypto from "node:crypto";
 import type { StorageInspection } from "@t3tools/contracts";
+import { windowsCleanupTargets, type WindowsCleanupRoots } from "./storageMoleWindows.ts";
 
 type Entry = StorageInspection["entries"][number];
 export type CleanupRoots = {
@@ -14,6 +15,8 @@ export type CleanupRoots = {
   staging: string;
   activeSource: string;
   systemCaches: string;
+  // Present on Windows hosts, where it replaces every macOS location above.
+  windows?: WindowsCleanupRoots;
 };
 // Optional directory of old build generations and cold backups to inventory. Unset (the default
 // for everyone but the maintainer's build machine) means no staging area: that part of the
@@ -22,14 +25,18 @@ export const cleanupStagingDir = (env: NodeJS.ProcessEnv = process.env): string 
   const configured = env.T3_CLEANUP_STAGING_DIR?.trim();
   return configured && NodePath.isAbsolute(configured) ? NodePath.resolve(configured) : "";
 };
-export const cleanupRoots = (): CleanupRoots => ({
+export const cleanupRoots = (windows?: WindowsCleanupRoots): CleanupRoots => ({
   home: NodeOS.homedir(),
   applications: "/Applications",
-  staging: cleanupStagingDir(),
+  staging: windows ? "" : cleanupStagingDir(),
   activeSource: NodePath.resolve(import.meta.dirname, "../../.."),
   systemCaches: "/Library/Caches",
+  ...(windows ? { windows } : {}),
 });
-const cleanupId = (p: string) =>
+// Windows paths compare case-insensitively, and realpath may report a different casing.
+export const samePath = (a: string, b: string) =>
+  a === b || (NodePath.sep === "\\" && a.toLowerCase() === b.toLowerCase());
+export const cleanupId = (p: string) =>
   "cleanup-" + NodeCrypto.createHash("sha256").update(p).digest("hex");
 const DAY = 86400_000;
 const GIB = 1024 ** 3;
@@ -47,7 +54,7 @@ export type ScanProgress = {
   current: string;
   truncated: boolean;
 };
-type Target = {
+export type CleanupTarget = {
   path: string;
   category: string;
   rebuildable: boolean;
@@ -73,7 +80,7 @@ export async function inspectCleanupTree(
   allowLinks = false,
 ) {
   const root = await NodeFSP.lstat(target);
-  if ((await NodeFSP.realpath(target)) !== target || root.isSymbolicLink())
+  if (!samePath(await NodeFSP.realpath(target), target) || root.isSymbolicLink())
     throw new Error("路径含链接");
   let bytes = 0,
     latest = root.mtimeMs,
@@ -176,17 +183,17 @@ async function installationReceipts(roots: CleanupRoots, deadline: number) {
   return receipts;
 }
 
-async function targetsFor(roots: CleanupRoots, deadline: number): Promise<Target[]> {
-  const targets: Target[] = [];
+async function targetsFor(roots: CleanupRoots, deadline: number): Promise<CleanupTarget[]> {
+  const targets: CleanupTarget[] = [];
   const add = (
     p: string,
     category: string,
     rebuildable: boolean,
     locked = false,
     reason = "可重建缓存；执行前检查占用和内容变化",
-    risk: Target["risk"] = rebuildable ? "safe" : "caution",
+    risk: CleanupTarget["risk"] = rebuildable ? "safe" : "caution",
   ) => {
-    const target: Target = { path: p, category, rebuildable, locked, reason, risk };
+    const target: CleanupTarget = { path: p, category, rebuildable, locked, reason, risk };
     targets.push(target);
     return target;
   };
@@ -445,7 +452,7 @@ async function targetsFor(roots: CleanupRoots, deadline: number): Promise<Target
       );
   }
   // Useful objects first; locked generic caches must not consume the bounded scan budget.
-  const priority = (target: Target) =>
+  const priority = (target: CleanupTarget) =>
     [
       "developer-cache",
       "rollback-apps",
@@ -463,10 +470,15 @@ export async function scanCleanup(
   roots: CleanupRoots,
   volumeRows: StorageInspection["volumes"],
   onProgress: (p: ScanProgress) => void = () => {},
-  budgetMs = 15_000,
+  budgetMs = roots.windows ? 45_000 : 15_000,
+  onlyId?: string,
 ) {
   const deadline = DateTime.toEpochMillis(DateTime.nowUnsafe()) + budgetMs;
-  const targets = await targetsFor(roots, deadline);
+  // Windows stats are slower and its caches hold more files; each target gets a larger budget.
+  const [targetMs, targetNodes] = roots.windows ? [6000, 150_000] : [2000, 40_000];
+  const targets = (
+    roots.windows ? await windowsCleanupTargets(roots.windows) : await targetsFor(roots, deadline)
+  ).filter((target) => onlyId === undefined || cleanupId(target.path) === onlyId);
   const entries: Entry[] = [];
   let truncated = targets.length >= 240,
     checked = 0;
@@ -491,7 +503,7 @@ export async function scanCleanup(
     }
     if (
       st.isSymbolicLink() ||
-      (await NodeFSP.realpath(target.path).catch(() => "")) !== target.path
+      !samePath(await NodeFSP.realpath(target.path).catch(() => ""), target.path)
     )
       continue;
     let locked = target.locked,
@@ -506,8 +518,8 @@ export async function scanCleanup(
       try {
         const measured = await inspectCleanupTree(
           target.path,
-          Math.min(deadline, DateTime.toEpochMillis(DateTime.nowUnsafe()) + 2000),
-          40_000,
+          Math.min(deadline, DateTime.toEpochMillis(DateTime.nowUnsafe()) + targetMs),
+          targetNodes,
           !target.rebuildable,
         );
         bytes = measured.bytes;
