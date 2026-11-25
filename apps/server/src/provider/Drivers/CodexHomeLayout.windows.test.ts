@@ -75,5 +75,41 @@ it.layer(NodeServices.layer)("CodexHomeLayout on Windows", (it) => {
           );
         }).pipe(Effect.scoped),
     );
+
+    it.effect.runIf(windows)("leaves databases out and drops links an older setup made", () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-codex-win-" });
+        const shared = path.join(root, "shared");
+        const shadow = path.join(root, "shadow");
+        yield* fileSystem.makeDirectory(shadow, { recursive: true });
+        yield* fileSystem.makeDirectory(shared, { recursive: true });
+        for (const name of ["state_5.sqlite", "state_5.sqlite-wal", "logs_2.sqlite"])
+          yield* fileSystem.writeFileString(path.join(shared, name), name);
+        yield* fileSystem.link(
+          path.join(shared, "state_5.sqlite"),
+          path.join(shadow, "state_5.sqlite"),
+        );
+        // A journal that already came apart from the shared one may hold the only recent writes.
+        yield* fileSystem.writeFileString(path.join(shadow, "state_5.sqlite-wal"), "local writes");
+
+        yield* materializeCodexShadowHome({
+          mode: "authOverlay",
+          sharedHomePath: shared,
+          effectiveHomePath: shadow,
+          continuationKey: `codex:home:${shared}`,
+        });
+
+        expect(yield* fileSystem.exists(path.join(shadow, "state_5.sqlite"))).toBe(false);
+        expect(yield* fileSystem.exists(path.join(shadow, "logs_2.sqlite"))).toBe(false);
+        expect(yield* fileSystem.readFileString(path.join(shadow, "state_5.sqlite-wal"))).toBe(
+          "local writes",
+        );
+        expect(yield* fileSystem.readFileString(path.join(shared, "state_5.sqlite"))).toBe(
+          "state_5.sqlite",
+        );
+      }).pipe(Effect.scoped),
+    );
   });
 });

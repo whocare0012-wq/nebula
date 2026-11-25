@@ -42,6 +42,9 @@ const REPLACEABLE_SHARED_RUNTIME_ENTRIES = new Set([
   "thread-writer-locks",
   ".sqlite-maintenance.lock",
 ]);
+// SQLite finds a database's -wal and -shm next to the path it opened, so a database reached
+// through a hard link gets a second journal and corrupts. Shadow homes open the shared ones.
+const SQLITE_ENTRY = /\.sqlite(?:-wal|-shm|-journal)?$/;
 
 function resolveHomePath(path: Path.Path, home: string, value: string | undefined): string {
   const expanded =
@@ -85,7 +88,8 @@ export function codexHomeLaunchArgs(path: Path.Path, layout: CodexHomeLayout, la
   if (layout.mode !== "authOverlay" || homePath === undefined) return launchArgs;
   const source = path.join(homePath, ".tmp", "bundled-marketplaces", BUNDLED_MARKETPLACE);
   const setting = `marketplaces.${BUNDLED_MARKETPLACE}.source=${JSON.stringify(source)}`;
-  const override = `-c ${quoteCliArg(setting)}`;
+  const sqliteHome = `sqlite_home=${JSON.stringify(layout.sharedHomePath)}`;
+  const override = `-c ${quoteCliArg(setting)} -c ${quoteCliArg(sqliteHome)}`;
   // User launch args come last so an explicit source still wins.
   return launchArgs.length > 0 ? `${override} ${launchArgs}` : override;
 }
@@ -400,6 +404,45 @@ const ensureSymlink = Effect.fn("CodexHomeLayout.ensureSymlink")(function* (inpu
   }
 });
 
+/**
+ * Drops database links older shadow homes made. A file that is no longer linked may hold the
+ * only copy of recent writes, so it stays. A file still open by a running Codex is retried later.
+ */
+const unlinkSharedDatabases = Effect.fn("CodexHomeLayout.unlinkSharedDatabases")(function* (input: {
+  readonly fileSystem: FileSystem.FileSystem;
+  readonly sharedHomePath: string;
+  readonly effectiveHomePath: string;
+}): Effect.fn.Return<void, never, Path.Path> {
+  const path = yield* Path.Path;
+  const names = yield* input.fileSystem
+    .readDirectory(input.effectiveHomePath)
+    .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []));
+  const fileId = (file: string) =>
+    input.fileSystem.stat(file).pipe(
+      Effect.map((info) =>
+        info.type === "File" && Option.isSome(info.ino) ? `${info.dev}:${info.ino.value}` : null,
+      ),
+      Effect.orElseSucceed(() => null),
+    );
+  yield* Effect.forEach(
+    names.filter((name) => SQLITE_ENTRY.test(name)),
+    (name) =>
+      Effect.gen(function* () {
+        const local = path.join(input.effectiveHomePath, name);
+        const isSymlink = yield* input.fileSystem.readLink(local).pipe(
+          Effect.as(true),
+          Effect.orElseSucceed(() => false),
+        );
+        const localId = isSymlink ? null : yield* fileId(local);
+        const linked =
+          isSymlink ||
+          (localId !== null && localId === (yield* fileId(path.join(input.sharedHomePath, name))));
+        if (linked) yield* input.fileSystem.remove(local).pipe(Effect.ignore);
+      }),
+    { discard: true },
+  );
+});
+
 const ensureShadowAuthIsPrivate = Effect.fn("CodexHomeLayout.ensureShadowAuthIsPrivate")(
   function* (input: {
     readonly fileSystem: FileSystem.FileSystem;
@@ -480,10 +523,19 @@ export const materializeCodexShadowHome = Effect.fn("materializeCodexShadowHome"
   );
   const entries = new Set<string>(KNOWN_SHARED_DIRECTORIES);
   for (const entryName of sharedEntryNames) {
-    if (!PRIVATE_ENTRY_NAMES.has(entryName) && !SHADOW_LOCAL_ENTRY_NAMES.has(entryName)) {
+    if (
+      !PRIVATE_ENTRY_NAMES.has(entryName) &&
+      !SHADOW_LOCAL_ENTRY_NAMES.has(entryName) &&
+      !SQLITE_ENTRY.test(entryName)
+    ) {
       entries.add(entryName);
     }
   }
+  yield* unlinkSharedDatabases({
+    fileSystem,
+    sharedHomePath: layout.sharedHomePath,
+    effectiveHomePath,
+  });
 
   yield* Effect.forEach(
     PRIVATE_ENTRY_NAMES,
