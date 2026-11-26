@@ -21,6 +21,11 @@ export const legacyOwnerStartTimeCommand = (
   };
 };
 
+// Windows PowerShell alone takes about two seconds to start, so a two-second limit there would
+// always run out and leave every reused PID looking like its old owner.
+export const legacyOwnerStartTimeTimeoutMs = (platform: NodeJS.Platform) =>
+  platform === "win32" ? 15_000 : 2_000;
+
 // ps reports whole seconds. Unknown identity (no output) stays conservative.
 export const legacyOwnerStartedBeforeRecord = (
   output: string | undefined,

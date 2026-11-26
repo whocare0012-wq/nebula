@@ -5,6 +5,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 
+import { linkEntry } from "../../fileLinks.ts";
 import { discoverClaudeSkills as discoverSkills } from "./ClaudeSkills.ts";
 import { planClaudeSkillDispatch } from "./ClaudeSkillDispatch.ts";
 
@@ -159,7 +160,7 @@ it.layer(NodeServices.layer)("discoverClaudeSkills", (it) => {
       const managedInstall = path.join(configDir, "plugins", "managed");
       yield* fs.makeDirectory(path.join(workspace, ".git"), { recursive: true });
       yield* fs.makeDirectory(nestedWorkspace, { recursive: true });
-      yield* fs.symlink(workspace, aliasedWorkspace);
+      yield* linkEntry(fs, workspace, aliasedWorkspace);
       for (const install of [userInstall, projectInstall, localInstall, managedInstall]) {
         yield* writeSkill(path.join(install, "skills"), "review", "# Review");
       }
@@ -269,7 +270,7 @@ it.layer(NodeServices.layer)("discoverClaudeSkills", (it) => {
         localSettings,
       );
       const linkedWorktree = path.join(tempDir, "linked-worktree");
-      yield* fs.symlink(worktree, linkedWorktree);
+      yield* linkEntry(fs, worktree, linkedWorktree);
       assert.deepEqual(
         yield* discoverClaudeSkills({ homePath: configDir }, linkedWorktree),
         localSettings,
@@ -407,7 +408,7 @@ it.layer(NodeServices.layer)("discoverClaudeSkills", (it) => {
       yield* writeSkill(path.join(plugin, "skills"), "plain", "# Plain");
       yield* writeSkill(plugin, "custom", "---\nname: custom.review\n---\n");
       yield* writeSkill(outside, "escaped", "# Outside");
-      yield* fs.symlink(outside, path.join(plugin, "escape"));
+      yield* linkEntry(fs, outside, path.join(plugin, "escape"));
       yield* fs.makeDirectory(path.join(plugin, ".claude-plugin"));
       yield* fs.writeFileString(
         path.join(plugin, ".claude-plugin", "plugin.json"),

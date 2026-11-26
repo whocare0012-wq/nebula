@@ -10,6 +10,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, expect, it } from "@effect/vitest";
 import { SERVER_EXIT_CODE_STATE_DIR_OWNED } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -45,6 +46,7 @@ import {
   SERVICE_RESTART_PENDING_FILE,
   SERVICE_STOP_MARKER_FILE,
 } from "./cloud/serviceProtocol.ts";
+import { linkEntry } from "./fileLinks.ts";
 
 const spawnedChildren = vi.hoisted((): Array<NodeChildProcess.ChildProcess> => []);
 const spawnHook = vi.hoisted(() => ({
@@ -75,8 +77,39 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeChildProcess>();
+  const { readFileSync } = await import("node:fs");
+  // Windows cannot exec a fake runtime's shebang, so the script beside t3.exe runs under this Node.
+  const spawnFakeRuntime = (
+    command: string,
+    args: ReadonlyArray<string>,
+    options: NodeChildProcess.SpawnOptions,
+  ) => {
+    const script = command.slice(0, -".exe".length);
+    const child = actual.spawn(process.execPath, [script, ...args], options);
+    // Windows stops the server over IPC. A fake that models only POSIX signals ends there, as
+    // SIGTERM would end it; a fake that handles the stop message itself receives it.
+    if (!readFileSync(script, "utf8").includes('"stop"')) {
+      const send = child.send.bind(child) as (...input: Array<unknown>) => boolean;
+      child.send = ((message: unknown, ...rest: Array<unknown>) => {
+        const sent = send(message, ...rest);
+        if ((message as { readonly type?: unknown } | null)?.type === "stop") child.kill();
+        return sent;
+      }) as typeof child.send;
+    }
+    return child;
+  };
   const spawn = (...args: Parameters<typeof actual.spawn>) => {
-    const child = actual.spawn(...args);
+    const [command, commandArgs, options] = args as unknown as [
+      string,
+      ReadonlyArray<string>,
+      NodeChildProcess.SpawnOptions,
+    ];
+    const child =
+      // oxlint-disable-next-line t3code/no-global-process-runtime -- vi.mock factories run before imports.
+      process.platform === "win32" &&
+      /[\\/]runtime[\\/]versions[\\/][^\\/]+[\\/]t3\.exe$/.test(command)
+        ? spawnFakeRuntime(command, commandArgs, options)
+        : actual.spawn(...args);
     spawnedChildren.push(child);
     spawnHook.current?.(child);
     return child;
@@ -153,6 +186,15 @@ it("rejects contradictory service state", () => {
   );
 });
 
+// Windows paths have backslashes, which systemd units refuse, so there the task stands in.
+const renderHostServiceUnit = (plan: Parameters<typeof renderBootServiceUnit>[0]) =>
+  HostProcess.Platform.defaultValue() === "win32"
+    ? renderBootServiceTask(
+        { ...plan, program: [`${plan.program[0]}.exe`, ...plan.program.slice(1)] },
+        { userId: "PC\\theo", homeDir: "C:\\Users\\theo", conhostPath: "conhost.exe" },
+      )
+    : renderBootServiceUnit(plan);
+
 const unitPlan = (root: string, version: string) => ({
   program: [`${root}/runtime/versions/${version}/t3`, "__service-launcher"],
   baseDir: root,
@@ -171,6 +213,10 @@ const writeFakeRuntime = (
     yield* fs.makeDirectory(versionDir, { recursive: true });
     yield* fs.writeFileString(entryPath, `#!${process.execPath}\n${childSource}`);
     yield* fs.chmod(entryPath, 0o755);
+    // The launcher runs t3.exe on Windows; the spawn mock runs this script in its place.
+    if (HostProcess.Platform.defaultValue() === "win32") {
+      yield* fs.writeFileString(path.join(versionDir, "t3.exe"), "");
+    }
     yield* fs.writeFileString(
       path.join(versionDir, ".install-complete"),
       `${path.basename(versionDir)}\n`,
@@ -192,7 +238,7 @@ const fakeServiceUnit = (
   path: Path.Path,
   root: string,
   version: string,
-  render = renderBootServiceUnit,
+  render = renderHostServiceUnit,
 ) =>
   Effect.gen(function* () {
     const plan = unitPlan(root, version);
@@ -539,7 +585,8 @@ setInterval(() => {}, 1_000);
     }),
   );
 
-  it.effect(
+  // systemd runs only on Linux, and the fake busctl and systemctl are /bin/sh scripts.
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
     "repoints the systemd unit the manager loads when environment.d moves XDG_CONFIG_HOME",
     () =>
       Effect.gen(function* () {
@@ -840,7 +887,7 @@ process.exit(0);
           }),
         );
         const unit = yield* fakeServiceUnit(fs, path, root, unitVersion);
-        const expected = renderBootServiceUnit(
+        const expected = renderHostServiceUnit(
           unitPlan(root, unitVersion === "1.0.0" ? "1.1.0" : unitVersion),
         );
         const createLauncher = Effect.gen(function* () {
@@ -892,7 +939,7 @@ process.exit(0);
             activeVersion: "1.0.0",
           }),
         );
-        const selectedUnit = renderBootServiceUnit({
+        const selectedUnit = renderHostServiceUnit({
           ...unitPlan(selectedRoot, "1.0.0"),
           unitPath: unit.path,
         });
@@ -915,7 +962,7 @@ process.exit(0);
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-alias-" });
       const alias = path.join(root, "alias");
-      yield* fs.symlink(root, alias);
+      yield* linkEntry(fs, root, alias);
       const statePath = path.join(root, "runtime", "service-state.json");
       yield* writeFakeRuntime(
         fs,
@@ -949,7 +996,7 @@ process.exit(0);
 
       assert.equal(
         yield* fs.readFileString(unit.path),
-        renderBootServiceUnit(unitPlan(alias, "1.1.0")),
+        renderHostServiceUnit(unitPlan(alias, "1.1.0")),
       );
     }),
   );
@@ -1304,14 +1351,20 @@ setInterval(() => {}, 1_000);
   );
 
   const commitUpdate = (
-    render = renderBootServiceUnit,
+    render = renderHostServiceUnit,
     missingUnit = false,
     legacyInstall = false,
   ) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service 100% & <test>-" });
+      // Windows file names cannot hold < or >.
+      const root = yield* fs.makeTempDirectoryScoped({
+        prefix:
+          HostProcess.Platform.defaultValue() === "win32"
+            ? "t3-service 100% & test-"
+            : "t3-service 100% & <test>-",
+      });
       const statePath = path.join(root, "runtime", "service-state.json");
       const databasePath = path.join(root, "userdata", "state.sqlite");
       const activatedPath = path.join(root, "activated");
@@ -1427,8 +1480,11 @@ if (context.update?.status === "pending") {
     },
   ])(
     "commits and repoints $name only after the trial reports prepared",
-    ({ render, legacyInstall }) =>
+    ({ name, render, legacyInstall }, ctx) =>
       Effect.gen(function* () {
+        // systemd units refuse the backslashes in Windows paths, and systemd runs only on Linux.
+        if (name.startsWith("systemd") && HostProcess.Platform.defaultValue() === "win32")
+          return ctx.skip();
         const { fs, root, unit } = yield* commitUpdate(render, false, legacyInstall);
         const expected = render(unitPlan(root, "1.1.0"));
         assert.equal(yield* fs.readFileString(unit.path), expected);
@@ -1441,10 +1497,10 @@ if (context.update?.status === "pending") {
     "keeps a durable commit through unit failure and retries a failed reload on restart",
     () =>
       Effect.gen(function* () {
-        const { fs, root, unit, recover } = yield* commitUpdate(renderBootServiceUnit, true);
+        const { fs, root, unit, recover } = yield* commitUpdate(renderHostServiceUnit, true);
         assert.equal(unit.reloads, 0);
-        const original = renderBootServiceUnit(unitPlan(root, "1.0.0"));
-        const expected = renderBootServiceUnit(unitPlan(root, "1.1.0"));
+        const original = renderHostServiceUnit(unitPlan(root, "1.0.0"));
+        const expected = renderHostServiceUnit(unitPlan(root, "1.1.0"));
         assert.equal(unit.loadedContents, original);
         yield* fs.writeFileString(unit.path, original);
         unit.failReload = true;
@@ -1530,7 +1586,7 @@ if (context.update?.status === "pending") {
       assert.equal(state.update?.status, "rolled-back");
       assert.equal(
         yield* fs.readFileString(unit.path),
-        renderBootServiceUnit(unitPlan(root, "1.0.0")),
+        renderHostServiceUnit(unitPlan(root, "1.0.0")),
       );
       assert.equal(unit.reloads, 1);
       assert.equal(
@@ -1553,8 +1609,10 @@ if (context.update?.status === "pending") {
 
   it.effect.each(["file", "symlink", "dangling symlink"] as const)(
     "restores the database when a migrating trial exits, with the database a %s",
-    (kind) =>
+    (kind, ctx) =>
       Effect.gen(function* () {
+        // Windows makes symlinks only with Developer Mode or elevation.
+        if (kind !== "file" && !symlinksSupported) return ctx.skip();
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-db-" });
@@ -1632,8 +1690,11 @@ if (context.update?.status === "pending") {
 
   it.effect.each(["wal", "delete"] as const)(
     "backs up a %s-mode database (online when WAL) and restores its final state",
-    (journalMode) =>
+    (journalMode, ctx) =>
       Effect.gen(function* () {
+        // The database is a file symlink, and the fake server records its last write in a SIGTERM
+        // handler, which Windows never runs.
+        if (HostProcess.Platform.defaultValue() === "win32") return ctx.skip();
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-online-" });

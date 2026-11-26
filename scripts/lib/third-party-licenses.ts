@@ -741,7 +741,8 @@ async function readPackageNoticeText(packageRoot: string): Promise<string | null
     });
     await Promise.all(
       directoryEntries.map(async (entry) => {
-        const relativePath = NodePath.join(directory, entry.name);
+        // POSIX separators keep the generated notices identical across build hosts.
+        const relativePath = NodePath.posix.join(directory, entry.name);
         if (entry.isFile() && isNoticeTextFile(entry.name)) {
           noticeFiles.push(relativePath);
           return;

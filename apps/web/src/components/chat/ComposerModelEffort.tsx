@@ -442,7 +442,8 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
                   }
                   disabled={locked}
                   data-effort-row
-                  data-effort-level
+                  // A typed letter finds a level by this label, as in the list layout.
+                  data-effort-level={translatedLabel}
                   tabIndex={(shown ? selected : index === 0) ? 0 : -1}
                   onClick={() => traits.changeSelect(control.descriptor, option.id)}
                   onKeyDown={(event) => {

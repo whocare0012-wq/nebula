@@ -17,6 +17,7 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import packageJson from "../../package.json" with { type: "json" };
 import * as ServerConfig from "../config.ts";
 import * as DesktopAppUpdate from "../desktopUpdate/DesktopAppUpdate.ts";
+import { linkEntry } from "../fileLinks.ts";
 import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as ServiceLauncherClient from "./serviceLauncherClient.ts";
@@ -470,7 +471,7 @@ it.layer(NodeServices.layer)("pruning runtimes on start", (it) => {
       yield* fs.writeFileString(sentinel, `${version}\n`);
       yield* fs.utimes(sentinel, 0, 0);
     }
-    if (input.symlinkedHome) yield* fs.symlink(realHome, baseDir);
+    if (input.symlinkedHome) yield* linkEntry(fs, realHome, baseDir);
     const userHome = path.join(tempDir, "user");
     if (input.servicePlistStarts !== undefined) {
       const agentsDir = path.join(userHome, "Library", "LaunchAgents");
@@ -478,7 +479,7 @@ it.layer(NodeServices.layer)("pruning runtimes on start", (it) => {
       const programHome = input.servicePlistThroughLink
         ? path.join(tempDir, "alias-home")
         : baseDir;
-      if (input.servicePlistThroughLink) yield* fs.symlink(realHome, programHome);
+      if (input.servicePlistThroughLink) yield* linkEntry(fs, realHome, programHome);
       const program = path.join(programHome, "runtime", "versions", input.servicePlistStarts, "t3");
       yield* fs.writeFileString(
         path.join(agentsDir, "com.t3tools.t3code.service.plist"),

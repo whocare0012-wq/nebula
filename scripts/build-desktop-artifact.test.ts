@@ -106,8 +106,10 @@ const makeLinuxCliArchiveFixture = Effect.fn("test.makeLinuxCliArchiveFixture")(
     yield* fs.writeFileString(memberPath, member);
   }
   const archivePath = path.join(input.root, `${input.stem}.tar.gz`);
+  // Relative paths: GNU tar (first on PATH under Git for Windows) reads `C:\...` as a remote host.
   const tar = yield* spawner.spawn(
-    ChildProcess.make("tar", ["-czf", archivePath, "-C", contentRoot, "."], {
+    ChildProcess.make("tar", ["-czf", `${input.stem}.tar.gz`, "-C", "content", "."], {
+      cwd: input.root,
       stdin: "ignore",
       stdout: "ignore",
       stderr: "pipe",

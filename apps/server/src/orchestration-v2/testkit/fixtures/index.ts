@@ -1,4 +1,5 @@
 import { ProviderDriverKind } from "@t3tools/contracts";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 
 import { claudeBackgroundSubagentAfterRootInput } from "./claude_background_subagent_after_root/input.ts";
 import { assertClaudeBackgroundSubagentAfterRootOutput } from "./claude_background_subagent_after_root/output.ts";
@@ -1945,15 +1946,20 @@ export const ORCHESTRATOR_REPLAY_FIXTURES: ReadonlyArray<OrchestratorReplayFixtu
         runtimePolicyOverride: WORKSPACE_NEVER_POLICY,
         assertOutput: assertCommandOutputStreamingOutput,
       },
-      {
-        driver: ProviderDriverKind.make("claudeAgent"),
-        transcriptFile: new URL(
-          "./command_output_streaming/claude_transcript.ndjson",
-          import.meta.url,
-        ),
-        modelSelection: CLAUDE_MODEL_SELECTION,
-        assertOutput: assertCommandOutputStreamingOutput,
-      },
+      // Claude Code keeps no per-user task output folder on Windows, so its output is not tailed live.
+      ...(HostProcess.Platform.defaultValue() === "win32"
+        ? []
+        : [
+            {
+              driver: ProviderDriverKind.make("claudeAgent"),
+              transcriptFile: new URL(
+                "./command_output_streaming/claude_transcript.ndjson",
+                import.meta.url,
+              ),
+              modelSelection: CLAUDE_MODEL_SELECTION,
+              assertOutput: assertCommandOutputStreamingOutput,
+            },
+          ]),
     ],
   },
   {

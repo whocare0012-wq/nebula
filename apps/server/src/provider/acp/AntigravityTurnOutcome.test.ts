@@ -2,6 +2,7 @@ import * as NodeSqlite from "node:sqlite";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -357,19 +358,22 @@ describe("watchAntigravityPromptOutcome", () => {
         }
       };
 
-      // own.db links to a peer session; the peer's new error step is not this turn's.
-      append(peer, USER_INPUT, Buffer.from("peer"));
-      yield* fs.symlink(
-        path.join(conversations, `${peer}.db`),
-        path.join(conversations, `${own}.db`),
-      );
-      const linked = yield* watchAntigravityPromptOutcome(profileDirectory, own);
-      append(peer, ERROR_MESSAGE, QUOTA_ERROR);
-      assert.isUndefined(yield* linked({ stopReason: "end_turn" }));
-      assert.equal((yield* linked({ stopReason: "refusal" }))?.failure.class, "usage_limit");
+      // own.db links to a peer session; the peer's new error step is not this turn's. A file
+      // symlink needs Developer Mode or elevation on Windows.
+      if (symlinksSupported) {
+        append(peer, USER_INPUT, Buffer.from("peer"));
+        yield* fs.symlink(
+          path.join(conversations, `${peer}.db`),
+          path.join(conversations, `${own}.db`),
+        );
+        const linked = yield* watchAntigravityPromptOutcome(profileDirectory, own);
+        append(peer, ERROR_MESSAGE, QUOTA_ERROR);
+        assert.isUndefined(yield* linked({ stopReason: "end_turn" }));
+        assert.equal((yield* linked({ stopReason: "refusal" }))?.failure.class, "usage_limit");
+        yield* fs.remove(path.join(conversations, `${own}.db`));
+      }
 
       // An unreadable log gives no evidence, but the agent's typed refusal still fails the turn.
-      yield* fs.remove(path.join(conversations, `${own}.db`));
       yield* fs.writeFileString(path.join(conversations, `${own}.db`), "not a database");
       const corrupt = yield* watchAntigravityPromptOutcome(profileDirectory, own);
       assert.isUndefined(yield* corrupt({ stopReason: "end_turn" }));

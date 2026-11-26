@@ -3,6 +3,8 @@ import * as NodeFSP from "node:fs/promises";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 const execute = vi.hoisted(() => vi.fn());
 const startEffects = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", () => ({ execFile: execute }));
@@ -67,14 +69,18 @@ beforeEach(async () => {
 afterEach(async () => {
   await NodeFSP.rm(directory, { recursive: true, force: true });
 });
-it("installs offline at a stable executable path and probes only capabilities", async () => {
-  await setup.perform("install-hyprland-helper");
-  expect((await NodeFSP.stat(hyprlandCaptureExecutable(paths))).mode & 0o777).toBe(0o755);
-  expect(await setup.state()).toMatchObject({ status: "ready", feedbackAvailable: true });
-  expect(execute.mock.calls.map(([file, args]) => [file, args])).toEqual([
-    [hyprlandCaptureExecutable(paths), ["check"]],
-  ]);
-});
+// Execute bits are POSIX-only; the Hyprland helper only installs on Linux.
+it.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+  "installs offline at a stable executable path and probes only capabilities",
+  async () => {
+    await setup.perform("install-hyprland-helper");
+    expect((await NodeFSP.stat(hyprlandCaptureExecutable(paths))).mode & 0o777).toBe(0o755);
+    expect(await setup.state()).toMatchObject({ status: "ready", feedbackAvailable: true });
+    expect(execute.mock.calls.map(([file, args]) => [file, args])).toEqual([
+      [hyprlandCaptureExecutable(paths), ["check"]],
+    ]);
+  },
+);
 it("updates explicitly and removes only its helper", async () => {
   await setup.perform("install-hyprland-helper");
   const unrelated = NodePath.join(paths.dataHome, "keep.txt");
@@ -101,7 +107,7 @@ it("leaves first-time installation to explicit setup", async () => {
     code: "ENOENT",
   });
 });
-it("does not overwrite a linked executable", async () => {
+it.skipIf(!symlinksSupported)("does not overwrite a linked executable", async () => {
   const executable = hyprlandCaptureExecutable(paths);
   await NodeFSP.mkdir(NodePath.dirname(executable), { recursive: true });
   await NodeFSP.symlink(paths.bundle, executable);

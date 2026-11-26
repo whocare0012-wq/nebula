@@ -34,6 +34,7 @@ import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Path from "effect/Path";
 import * as Queue from "effect/Queue";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
@@ -5972,6 +5973,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
   ])("$name", ({ external }) =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
+      const { join: joinPath } = yield* Path.Path;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
         prefix: "t3 oc2 #images-",
       });
@@ -6055,9 +6057,9 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           text: [
             index === 0 ? "What is in this image?" : "And this one?",
             `[Attached image "${attachment.name}" is saved at: ${path}]`,
-            `[Attached image "missing.png" is saved at: ${attachmentsDir}/${missing.id}.png]`,
-            `[Attached image "diagram.svg" is saved at: ${attachmentsDir}/${unsupported.id}.svg]`,
-            `[Attached file "requirements.pdf" is saved at: ${attachmentsDir}/${document.id}.pdf]`,
+            `[Attached image "missing.png" is saved at: ${joinPath(attachmentsDir, `${missing.id}.png`)}]`,
+            `[Attached image "diagram.svg" is saved at: ${joinPath(attachmentsDir, `${unsupported.id}.svg`)}]`,
+            `[Attached file "requirements.pdf" is saved at: ${joinPath(attachmentsDir, `${document.id}.pdf`)}]`,
           ].join("\n\n"),
         });
         if (external) {

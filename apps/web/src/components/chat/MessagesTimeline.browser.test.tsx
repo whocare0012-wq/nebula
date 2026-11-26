@@ -469,7 +469,9 @@ describe("MessagesTimeline work rows", () => {
         expect(screen.text()).toContain("Final implementation report");
         expect(screen.text()).toContain("Follow-up explanation");
         expect(screen.text()).not.toContain("Old interrupted progress");
-        await click(screen.buttons("Open Simplify delivery")[0]!);
+        const openLabel =
+          variant === "delegated-zh" ? "打开 Simplify delivery" : "Open Simplify delivery";
+        await click(screen.buttons(openLabel)[0]!);
         // A subagent's card says how it was clicked, so it opens beside the thread or in its place.
         expect(onOpenThread).toHaveBeenCalledWith(childThreadId, undefined, "primary");
       } else if (source === "legacy") {

@@ -4384,12 +4384,13 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
   });
 
   const readEmptyTreeHash = Effect.fn("readEmptyTreeHash")(function* (cwd: string) {
-    const stdout = yield* runGitStdout("GitVcsDriver.review.emptyTree", cwd, [
-      "hash-object",
-      "-t",
-      "tree",
-      (yield* HostProcess.Platform) === "win32" ? "NUL" : "/dev/null",
-    ]);
+    // Windows Git resolves a NUL path argument against the cwd's prefix, so hash empty stdin.
+    const { stdout } = yield* executeGit(
+      "GitVcsDriver.review.emptyTree",
+      cwd,
+      ["hash-object", "-t", "tree", "--stdin"],
+      { stdin: "" },
+    );
     return stdout.trim();
   });
 

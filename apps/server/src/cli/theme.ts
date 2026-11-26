@@ -368,6 +368,11 @@ const publishThemeFile = Effect.fn(function* (input: {
       try {
         NodeFS.closeSync(fd);
         NodeFS.renameSync(destinationPath, rollbackPath);
+        // Windows lets a directory replace a file, so put back one that appeared after lstat.
+        if (NodeFS.lstatSync(rollbackPath).isDirectory()) {
+          NodeFS.renameSync(rollbackPath, destinationPath);
+          throw new ThemeDestinationDirectoryError({ themeId, destinationPath });
+        }
         saved = true;
         return rollbackPath;
       } catch (error) {

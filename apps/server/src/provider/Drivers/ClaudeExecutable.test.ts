@@ -137,17 +137,20 @@ describe("claudeProgramReader", () => {
     };
   });
 
-  it.effect("follows a bare command name through PATH", () =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const { bin, update } = yield* makeInstall;
-        const readProgram = yield* claudeProgramReader("claude", { PATH: bin });
-        const startedFrom = yield* readProgram;
-        expect(startedFrom).toBeDefined();
-        expect(claudeProgramWasReplaced(startedFrom, yield* readProgram)).toBe(false);
-        update();
-        expect(claudeProgramWasReplaced(startedFrom, yield* readProgram)).toBe(true);
-      }),
-    ).pipe(Effect.provide(NodeServices.layer)),
+  // The Unix installer's versioned-file symlink; on Windows it places a real claude.exe.
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "follows a bare command name through PATH",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { bin, update } = yield* makeInstall;
+          const readProgram = yield* claudeProgramReader("claude", { PATH: bin });
+          const startedFrom = yield* readProgram;
+          expect(startedFrom).toBeDefined();
+          expect(claudeProgramWasReplaced(startedFrom, yield* readProgram)).toBe(false);
+          update();
+          expect(claudeProgramWasReplaced(startedFrom, yield* readProgram)).toBe(true);
+        }),
+      ).pipe(Effect.provide(NodeServices.layer)),
   );
 });

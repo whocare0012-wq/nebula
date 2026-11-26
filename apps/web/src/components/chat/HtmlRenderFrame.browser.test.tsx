@@ -8,11 +8,15 @@ import { render, type Screen } from "../../../test/render";
 const assetUrl = vi.hoisted(() => ({ current: "about:blank" }));
 
 vi.mock(import("~/assets/longLivedAssetUrls"), () => ({
-  useLongLivedAssetUrl: () => ({
-    _tag: "Success",
-    url: assetUrl.current,
-    expiresAt: Date.now() + 60 * 60_000,
-  }),
+  // The "missing" attachment stands in for one the server can no longer serve.
+  useLongLivedAssetUrl: (_environmentId, resource) =>
+    resource._tag === "attachment" && resource.attachmentId === "missing"
+      ? { _tag: "Failure" }
+      : {
+          _tag: "Success",
+          url: assetUrl.current,
+          expiresAt: Date.now() + 60 * 60_000,
+        },
 }));
 vi.mock(import("~/assets/assetUrls"), async (importOriginal) => ({
   ...(await importOriginal()),

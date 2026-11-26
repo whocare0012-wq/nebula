@@ -31,6 +31,7 @@ import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 
 import * as ServerConfig from "../config.ts";
+import { linkEntry } from "../fileLinks.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import * as ProviderSessionRuntime from "../persistence/ProviderSessionRuntime.ts";
@@ -490,7 +491,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const workspace = yield* makeTempDir("t3code-workspace-");
         const linkParent = yield* makeTempDir("t3code-scanner-links-");
         const workspaceAlias = path.join(linkParent, "workspace-alias");
-        yield* fileSystem.symlink(workspace, workspaceAlias);
+        yield* linkEntry(fileSystem, workspace, workspaceAlias);
 
         yield* writeTranscript({
           filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
@@ -1098,7 +1099,11 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const links = yield* makeTempDir("t3code-workspace-links-");
         const unknown = yield* makeTempDir("t3code-workspace-unknown-");
         yield* fileSystem.makeDirectory(path.join(configBaseDir, "state-repo"));
-        yield* fileSystem.symlink(path.join(configBaseDir, "state-repo"), path.join(links, "repo"));
+        yield* linkEntry(
+          fileSystem,
+          path.join(configBaseDir, "state-repo"),
+          path.join(links, "repo"),
+        );
         const hiddenCheckouts: Array<string> = [];
         for (const [main, config] of [
           [unknown, null],
@@ -1332,7 +1337,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const worktreeCwd = path.join(configBaseDir, "worktrees", "t3code", "wt-3");
         yield* fileSystem.makeDirectory(worktreeCwd, { recursive: true });
         const symlinkCwd = path.join(linkParent, "innocent-project");
-        yield* fileSystem.symlink(worktreeCwd, symlinkCwd);
+        yield* linkEntry(fileSystem, worktreeCwd, symlinkCwd);
         yield* writeTranscript({
           filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
           contents: claudeSessionLine(symlinkCwd),
@@ -1354,7 +1359,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const realBaseDir = yield* fileSystem.realPath(yield* makeTempDir("t3code-scanner-base-"));
         const linkParent = yield* makeTempDir("t3code-scanner-links-");
         const configBaseDir = path.join(linkParent, "t3-home");
-        yield* fileSystem.symlink(realBaseDir, configBaseDir);
+        yield* linkEntry(fileSystem, realBaseDir, configBaseDir);
 
         const worktreeCwd = path.join(realBaseDir, "worktrees", "t3code", "wt-4");
         yield* fileSystem.makeDirectory(worktreeCwd, { recursive: true });
@@ -1382,9 +1387,9 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const realBaseDir = yield* fileSystem.realPath(yield* makeTempDir("t3code-scanner-base-"));
         const linkParent = yield* makeTempDir("t3code-scanner-links-");
         const configBaseDir = path.join(linkParent, "t3-home");
-        yield* fileSystem.symlink(realBaseDir, configBaseDir);
+        yield* linkEntry(fileSystem, realBaseDir, configBaseDir);
         const projectLink = path.join(realBaseDir, "project-link");
-        yield* fileSystem.symlink(projectDir, projectLink);
+        yield* linkEntry(fileSystem, projectDir, projectLink);
         yield* writeTranscript({
           filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
           contents: claudeSessionLine(projectLink),
@@ -2115,7 +2120,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             realBaseDir = path.join(homeDir, "Downloads", "t3-data");
             yield* fileSystem.makeDirectory(realBaseDir, { recursive: true });
             configBaseDir = path.join(homeDir, "t3-link");
-            yield* fileSystem.symlink(realBaseDir, configBaseDir);
+            yield* linkEntry(fileSystem, realBaseDir, configBaseDir);
           }
           const projectDir = path.join(homeDir, "code", "my-project");
           const sandboxDir = path.join(realBaseDir, "worktrees", "my-project", "wt-1");

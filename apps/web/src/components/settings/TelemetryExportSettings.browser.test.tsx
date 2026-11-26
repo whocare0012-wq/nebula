@@ -153,7 +153,7 @@ describe("TelemetryExportSettings", () => {
       .mockReturnValueOnce(latest.promise);
     await using screen = await render(<TelemetryExportSettings />);
 
-    const traces = screen.getByLabelText("Traces endpoint");
+    const traces = screen.getByLabelText("Traces", { exact: true });
     const testTraces = screen.getByRole("button", { name: "Test" }).first();
     await userEvent.fill(traces, "http://first/v1/traces");
     await userEvent.click(testTraces);

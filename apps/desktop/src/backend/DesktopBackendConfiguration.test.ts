@@ -15,6 +15,7 @@ import * as Layer from "effect/Layer";
 import * as ManagedRuntime from "effect/ManagedRuntime";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as PlatformError from "effect/PlatformError";
 import * as Stream from "effect/Stream";
 import { ChildProcessSpawner } from "effect/process";
 
@@ -1036,6 +1037,9 @@ describe("DesktopBackendConfiguration", () => {
   );
 
   it("resolvePrimaryLabel is runSync-safe against the real WSL availability probe", async () => {
+    // On a real Windows host the layer's one-time probe queries the WSL service with reg.exe; after
+    // that, availability is cached and resolving the label must never spawn.
+    let probing = true;
     // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- This test intentionally replicates the sync IPC handler's runSync path to catch a regression to async-only resolution; it.effect would mask it.
     const runtime = ManagedRuntime.make(
       layerBackendConfiguration().pipe(
@@ -1048,7 +1052,16 @@ describe("DesktopBackendConfiguration", () => {
           Layer.succeed(
             ChildProcessSpawner.ChildProcessSpawner,
             ChildProcessSpawner.make(() =>
-              Effect.die("spawner should not be used while probing WSL availability"),
+              probing
+                ? Effect.fail(
+                    PlatformError.systemError({
+                      module: "ChildProcess",
+                      method: "spawn",
+                      _tag: "NotFound",
+                      pathOrDescriptor: "reg.exe",
+                    }),
+                  )
+                : Effect.die("spawner should not be used after probing WSL availability"),
             ),
           ),
         ),
@@ -1060,6 +1073,7 @@ describe("DesktopBackendConfiguration", () => {
       const configuration = await runtime.runPromise(
         DesktopBackendConfiguration.DesktopBackendConfiguration,
       );
+      probing = false;
       // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- Same reason: this is the synchronous resolution the IPC handler performs.
       const label = Effect.runSync(configuration.resolvePrimaryLabel);
       assert.equal(typeof label, "string");

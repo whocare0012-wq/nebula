@@ -160,10 +160,10 @@ describe("BrowserSession", () => {
         clearCache: vi.fn(() => Promise.resolve()),
         clearStorageData: vi.fn(() => Promise.resolve()),
         closeAllConnections: vi.fn(() => Promise.resolve()),
-        // Like Electron, only a `persist:` partition has storage on disk.
+        // Like Electron, only a `persist:` partition has storage on disk, named without the prefix.
         storagePath:
           storage.root !== "" && partition.startsWith("persist:")
-            ? `${storage.root}/Partitions/${partition}`
+            ? `${storage.root}/Partitions/${partition.slice("persist:".length)}`
             : null,
         getUserAgent: vi.fn(() => "Mozilla/5.0 Electron/41.5.0 t3code/0.0.27"),
         setPermissionRequestHandler: vi.fn(),

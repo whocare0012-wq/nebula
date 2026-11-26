@@ -4,6 +4,7 @@ import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { type CliShimTarget, renderCliShim } from "./DesktopCliShim.ts";
@@ -78,6 +79,8 @@ const SLOW_SERVER = [
 
 // The launcher mounts only under setsid, which stock macOS and Windows lack; there it extracts instead.
 const hasSetsid = NodeChildProcess.spawnSync("setsid", ["true"]).status === 0;
+// The AppImage and direct launchers are POSIX sh scripts; Windows installs the t3.cmd launcher.
+const posixLauncher = HostProcess.Platform.defaultValue() !== "win32";
 
 const lines = (stream: NodeJS.ReadableStream) => {
   const seen: Array<string> = [];
@@ -149,7 +152,7 @@ describe("renderCliShim", () => {
     },
   );
 
-  it("extracts the AppImage where it cannot be mounted", () => {
+  it.skipIf(!posixLauncher)("extracts the AppImage where it cannot be mounted", () => {
     const { shim } = fakeAppImage(false);
     const result = run(shim, ["--version"], { APPIMAGE_EXTRACT_AND_RUN: "1" });
     expect(result.status).toBe(3);
@@ -159,7 +162,7 @@ describe("renderCliShim", () => {
   });
 
   // The server skips its compile cache only under APPIMAGE; each mount path is new.
-  it("tells the CLI it runs from the mounted AppImage", () => {
+  it.skipIf(!posixLauncher)("tells the CLI it runs from the mounted AppImage", () => {
     const { appImage, shim } = fakeAppImage();
     const result = run(shim, ["--version"]);
     expect(result.status).toBe(3);
@@ -168,7 +171,7 @@ describe("renderCliShim", () => {
     expect(closedStdin.status).toBe(3);
   });
 
-  it("keeps the install's T3 home under sudo, unless one is set", () => {
+  it.skipIf(!posixLauncher)("keeps the install's T3 home under sudo, unless one is set", () => {
     const root = tempRoot();
     writeExecutable(NodePath.join(root, "app"), REPORTER);
     const shim = writeShim(root, {
@@ -182,7 +185,7 @@ describe("renderCliShim", () => {
     expect(relative.stdout).toContain(`cli=${shim}`);
   });
 
-  it("runs an installed app's server directly", () => {
+  it.skipIf(!posixLauncher)("runs an installed app's server directly", () => {
     const root = tempRoot();
     const executable = NodePath.join(root, "opt", "T3 Code", "t3code");
     writeExecutable(executable, REPORTER);

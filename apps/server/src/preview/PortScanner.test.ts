@@ -724,7 +724,11 @@ effectIt.effect("ignores a partial Windows netstat snapshot when one query exits
       { port: 5173, pid: 1234, processName: "node", url: "http://localhost:5173" },
     ]);
     expect(requests).toEqual([]);
-  }).pipe(Effect.provide(layer));
+  }).pipe(
+    Effect.provide(layer),
+    // The tasklist path is read on the scanning fiber, so pin it instead of the host's SystemRoot.
+    Effect.provideService(HostProcess.Environment, {}),
+  );
 });
 
 effectIt.effect("rechecks the socket owner before stopping a Linux server without lsof", () => {

@@ -4,6 +4,7 @@ import {
   expandAssistantCitationsForProvider,
 } from "@t3tools/shared/assistantCitations";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as NodePathLayer from "@effect/platform-node/NodePath";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it, vi } from "vite-plus/test";
 import { it as effectIt } from "@effect/vitest";
@@ -105,7 +106,8 @@ const normalize = (target: string) => {
 };
 const layerWorktreeLocation = (worktreesDir = managedWorktreesDir, memory?: MemoryState) =>
   Layer.mergeAll(
-    Path.layer,
+    // The fixed fixture is POSIX; a real temp folder needs the host's path rules (Windows drives).
+    worktreesDir === managedWorktreesDir ? Path.layer : NodePathLayer.layer,
     Layer.mock(ServerConfig.ServerConfig)({ worktreesDir } as ServerConfig.ServerConfig["Service"]),
     ServerSettings.layerTest(memory === undefined ? {} : { memory }),
   );

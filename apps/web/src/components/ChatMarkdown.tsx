@@ -2113,21 +2113,17 @@ function ChatMarkdown({
       data-streaming={componentState.isStreaming ? "" : undefined}
       onCopy={handleCopy}
       onKeyDown={(event) => {
-        if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+        // Links that open their own keyboard menu already prevented the key; opening a
+        // second menu here would replace it with one that reads as mouse-opened.
+        if (event.defaultPrevented) return;
         const link = event.target instanceof Element ? event.target.closest("a") : null;
         if (!link || !event.currentTarget.contains(link)) return;
-        // macOS needs an explicit keyboard gesture; MouseEvent normalizes button -1 to 0.
-        event.preventDefault();
-        const bounds = link.getBoundingClientRect();
-        link.dispatchEvent(
-          new MouseEvent("contextmenu", {
-            bubbles: true,
-            cancelable: true,
-            button: -1,
-            clientX: bounds.left,
-            clientY: bounds.bottom,
-          }),
-        );
+        openContextMenuFromKeyboard({
+          key: event.key,
+          shiftKey: event.shiftKey,
+          preventDefault: () => event.preventDefault(),
+          currentTarget: link,
+        });
       }}
     >
       <ChatMarkdownRendererContext value={componentState}>

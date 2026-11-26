@@ -275,6 +275,8 @@ it.effect.each(["interrupt", "timeout", "success"] as const)(
         Effect.sync(() =>
           NodeNet.createServer((socket) => {
             sockets.add(socket);
+            // Windows resets the socket of a filter that Git kills on interrupt or timeout.
+            socket.on("error", () => undefined);
             connected.resolve(socket);
             // Git can run the filter again while refreshing the staged entry.
             if (released) socket.end();
@@ -331,12 +333,16 @@ it.effect.each(["interrupt", "timeout", "success"] as const)(
           ),
         ),
       );
-      const packs = (yield* fs.readDirectory(path.join(objectDirectory, "pack"))).filter(
-        (name) => name.startsWith("tmp_pack_") && name !== "tmp_pack_other_operation",
+      // Git for Windows batches fsync, so its bulk-checkin pack sits in a nested scratch store.
+      const packs = (yield* fs.readDirectory(objectDirectory, { recursive: true })).filter(
+        (entry) =>
+          path.basename(path.dirname(entry)) === "pack" &&
+          path.basename(entry).startsWith("tmp_pack_") &&
+          path.basename(entry) !== "tmp_pack_other_operation",
       );
       assert.strictEqual(packs.length, 1);
       assert.isAbove(
-        Number((yield* fs.stat(path.join(objectDirectory, "pack", packs[0]!))).size),
+        Number((yield* fs.stat(path.join(objectDirectory, packs[0]!))).size),
         1024 * 1024,
       );
       // An overlapping capture publishes the same large blob while the first
@@ -380,7 +386,7 @@ it.effect.each(["interrupt", "timeout", "success"] as const)(
         sharedPackBytes,
       );
       assert.strictEqual((yield* git(["rev-parse", concurrentRef])).stdout, concurrentOid);
-      assert.isFalse(yield* fs.exists(path.join(objectDirectory, "pack", packs[0]!)));
+      assert.isFalse(yield* fs.exists(path.join(objectDirectory, packs[0]!)));
       assert.isFalse(yield* fs.exists(objectDirectory));
       assert.strictEqual(yield* fs.readFileString(sharedPack), "owned by another Git operation");
       if (stop !== "success")

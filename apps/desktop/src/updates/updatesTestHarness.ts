@@ -245,6 +245,8 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
         } satisfies DesktopAppSettings.DesktopAppSettings["Service"])
       : DesktopAppSettings.layer;
 
+  // The service joins paths with the host separator; match the fixture paths on any OS.
+  const toPosixPath = (path: string) => path.replaceAll("\\", "/");
   const updateRestartMarkers = new Set<string>();
   const updateMarkerContents = new Map<string, string>();
   const installRecords = new Map<string, string>();
@@ -258,9 +260,13 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
         ? (installRecords.get(path) ?? previousInstallRecord)
         : undefined;
       if (installRecord !== undefined) return Effect.succeed(installRecord);
-      if (path === "/missing/resources/app-update.yml" && options.appUpdateYml !== undefined)
+      if (
+        toPosixPath(path) === "/missing/resources/app-update.yml" &&
+        options.appUpdateYml !== undefined
+      )
         return Effect.succeed(options.appUpdateYml);
-      return path === "/missing/resources/package-type" && options.packageType !== undefined
+      return toPosixPath(path) === "/missing/resources/package-type" &&
+        options.packageType !== undefined
         ? Effect.succeed(options.packageType)
         : Effect.fail(
             PlatformError.systemError({
@@ -271,13 +277,15 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
             }),
           );
     },
-    exists: (path) => Effect.succeed(!deletedFiles.has(path)),
+    // Nebula's packaged-build marker would turn every update flow off; tests model an updatable build.
+    exists: (path) =>
+      Effect.succeed(!deletedFiles.has(path) && !path.endsWith("stardust-build.json")),
     makeDirectory: () => Effect.void,
     writeFileString: (path, data) =>
       Effect.sync(() => {
         if (isInstallRecord(path)) installRecords.set(path, data);
         else {
-          if (path.endsWith("/desktop-update-restart")) updateRestartMarkers.add(path);
+          if (toPosixPath(path).endsWith("/desktop-update-restart")) updateRestartMarkers.add(path);
           updateMarkerContents.set(path, data);
         }
       }),
@@ -324,7 +332,9 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
     installSteps,
     updateRestartMarkers,
     updateInProgressMarker: () =>
-      [...updateMarkerContents].find(([path]) => path.endsWith("/desktop-update-in-progress"))?.[1],
+      [...updateMarkerContents].find(([path]) =>
+        toPosixPath(path).endsWith("/desktop-update-in-progress"),
+      )?.[1],
     installRecords,
     /** Paths removed behind the app's back, as by a cache cleaner. */
     deletedFiles,

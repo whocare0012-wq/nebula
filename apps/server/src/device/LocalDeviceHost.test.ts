@@ -270,54 +270,57 @@ describe("AgentDevice startup", () => {
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
-  it.effect("uses the SDK a later shell environment selects", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-sdk-" });
-      const standard = `${home}/Library/Android/sdk`;
-      const profile = `${home}/profile-sdk`;
-      for (const root of [standard, profile]) {
-        for (const tool of ["platform-tools/adb", "emulator/emulator"]) {
-          yield* fs.makeDirectory(`${root}/${tool.split("/")[0]}`, { recursive: true });
-          yield* fs.writeFileString(`${root}/${tool}`, "");
+  // Models a macOS host: an SDK under ~/Library and a ":"-separated PATH.
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "uses the SDK a later shell environment selects",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-sdk-" });
+        const standard = `${home}/Library/Android/sdk`;
+        const profile = `${home}/profile-sdk`;
+        for (const root of [standard, profile]) {
+          for (const tool of ["platform-tools/adb", "emulator/emulator"]) {
+            yield* fs.makeDirectory(`${root}/${tool.split("/")[0]}`, { recursive: true });
+            yield* fs.writeFileString(`${root}/${tool}`, "");
+          }
         }
-      }
-      const environment: NodeJS.ProcessEnv = { HOME: home, PATH: "" };
-      const { host, hub, runs } = yield* agentFixture(
-        (stateDir) =>
-          fs
-            .writeFileString(
-              `${stateDir}/daemon.json`,
-              JSON.stringify({ httpPort: 12345, token: "token" }),
-            )
-            .pipe(Effect.orDie, Effect.as(processOutput(0))),
-        processOutput(0),
-        undefined,
-        environment,
-      );
-      // The desktop shell snapshot updates the server's environment after the host exists.
-      environment.ANDROID_HOME = profile;
-      hub.running = false;
-      runs.length = 0;
-      const ready = yield* host.ensureAgentReady(() => Effect.void);
-      yield* ready.run("emulator", ["-list-avds"]);
+        const environment: NodeJS.ProcessEnv = { HOME: home, PATH: "" };
+        const { host, hub, runs } = yield* agentFixture(
+          (stateDir) =>
+            fs
+              .writeFileString(
+                `${stateDir}/daemon.json`,
+                JSON.stringify({ httpPort: 12345, token: "token" }),
+              )
+              .pipe(Effect.orDie, Effect.as(processOutput(0))),
+          processOutput(0),
+          undefined,
+          environment,
+        );
+        // The desktop shell snapshot updates the server's environment after the host exists.
+        environment.ANDROID_HOME = profile;
+        hub.running = false;
+        runs.length = 0;
+        const ready = yield* host.ensureAgentReady(() => Effect.void);
+        yield* ready.run("emulator", ["-list-avds"]);
 
-      const emulator = `${profile}/emulator/emulator`;
-      const sdkRuns = runs.filter(
-        (run) => run.command === emulator || run.args.includes("devices"),
-      );
-      // Two hub camera probes, the agent-device launch, and the emulator command.
-      expect(sdkRuns.map((run) => run.args[0])).toEqual([
-        "-help-camera-front",
-        "-help-camera-back",
-        expect.stringContaining("agent-device"),
-        "-list-avds",
-      ]);
-      for (const run of sdkRuns) {
-        expect(run.env?.ANDROID_HOME).toBe(profile);
-        expect(run.env?.PATH?.split(":")[0]).toBe(`${profile}/platform-tools`);
-      }
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+        const emulator = `${profile}/emulator/emulator`;
+        const sdkRuns = runs.filter(
+          (run) => run.command === emulator || run.args.includes("devices"),
+        );
+        // Two hub camera probes, the agent-device launch, and the emulator command.
+        expect(sdkRuns.map((run) => run.args[0])).toEqual([
+          "-help-camera-front",
+          "-help-camera-back",
+          expect.stringContaining("agent-device"),
+          "-list-avds",
+        ]);
+        for (const run of sdkRuns) {
+          expect(run.env?.ANDROID_HOME).toBe(profile);
+          expect(run.env?.PATH?.split(":")[0]).toBe(`${profile}/platform-tools`);
+        }
+      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
   it.effect(
@@ -845,60 +848,64 @@ it.effect.each([
             );
           },
         }),
-        Effect.provide(NodeServices.layer),
+        // The host modelled here is macOS, so its paths are POSIX ones.
+        Effect.provide(Layer.mergeAll(NodeServices.layer, Path.layer)),
       );
     expect(result.EXPO_DEVICE_HUB_EMULATOR_EXTRA_ARGS).toBe(expected);
   }),
 );
 
-it.effect("keeps local Android and iOS available without ffmpeg", () =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-ffmpeg-" });
-    yield* fs.makeDirectory(`${baseDir}/bin`);
-    yield* fs.writeFileString(`${baseDir}/bin/xcrun`, "#!/bin/sh\nexit 0\n");
-    yield* fs.chmod(`${baseDir}/bin/xcrun`, 0o755);
-    for (const [directory, tool] of [
-      ["platform-tools", "adb"],
-      ["emulator", "emulator"],
-      ["cmdline-tools/latest/bin", "avdmanager"],
-    ]) {
-      yield* fs.makeDirectory(`${baseDir}/sdk/${directory}`, { recursive: true });
-      yield* fs.writeFileString(`${baseDir}/sdk/${directory}/${tool}`, "");
-    }
-    const onTestHost = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-      effect.pipe(
-        Effect.provideService(HostProcess.Environment, {
-          HOME: baseDir,
-          PATH: `${baseDir}/bin`,
-          ANDROID_HOME: `${baseDir}/sdk`,
+// Models a macOS host on the real filesystem, where xcrun is found by its execute bit.
+it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+  "keeps local Android and iOS available without ffmpeg",
+  () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-ffmpeg-" });
+      yield* fs.makeDirectory(`${baseDir}/bin`);
+      yield* fs.writeFileString(`${baseDir}/bin/xcrun`, "#!/bin/sh\nexit 0\n");
+      yield* fs.chmod(`${baseDir}/bin/xcrun`, 0o755);
+      for (const [directory, tool] of [
+        ["platform-tools", "adb"],
+        ["emulator", "emulator"],
+        ["cmdline-tools/latest/bin", "avdmanager"],
+      ]) {
+        yield* fs.makeDirectory(`${baseDir}/sdk/${directory}`, { recursive: true });
+        yield* fs.writeFileString(`${baseDir}/sdk/${directory}/${tool}`, "");
+      }
+      const onTestHost = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        effect.pipe(
+          Effect.provideService(HostProcess.Environment, {
+            HOME: baseDir,
+            PATH: `${baseDir}/bin`,
+            ANDROID_HOME: `${baseDir}/sdk`,
+          }),
+          Effect.provideService(HostProcess.Platform, "darwin"),
+        );
+      const host = yield* LocalDeviceHost.make().pipe(
+        Effect.provide(Layer.mergeAll(ServerConfig.layerTest(baseDir, baseDir), NetService.layer)),
+        onTestHost,
+        Effect.provideService(
+          HttpClient.HttpClient,
+          HttpClient.make(() => Effect.die(new Error("Readiness must not make network requests"))),
+        ),
+        Effect.provideService(ProcessRunner.ProcessRunner, {
+          run: () => Effect.die("Platform availability must not probe emulator video"),
         }),
-        Effect.provideService(HostProcess.Platform, "darwin"),
       );
-    const host = yield* LocalDeviceHost.make().pipe(
-      Effect.provide(Layer.mergeAll(ServerConfig.layerTest(baseDir, baseDir), NetService.layer)),
-      onTestHost,
-      Effect.provideService(
-        HttpClient.HttpClient,
-        HttpClient.make(() => Effect.die(new Error("Readiness must not make network requests"))),
-      ),
-      Effect.provideService(ProcessRunner.ProcessRunner, {
-        run: () => Effect.die("Platform availability must not probe emulator video"),
-      }),
-    );
-    expect((yield* onTestHost(host.summary)).platforms).toEqual([
-      { platform: "ios", available: true },
-      { platform: "android", available: true },
-    ]);
-    expect(yield* onTestHost(host.platformAvailability("android"))).toEqual({
-      platform: "android",
-      available: true,
-    });
-    expect(yield* onTestHost(host.platformAvailability("ios"))).toEqual({
-      platform: "ios",
-      available: true,
-    });
-  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+      expect((yield* onTestHost(host.summary)).platforms).toEqual([
+        { platform: "ios", available: true },
+        { platform: "android", available: true },
+      ]);
+      expect(yield* onTestHost(host.platformAvailability("android"))).toEqual({
+        platform: "android",
+        available: true,
+      });
+      expect(yield* onTestHost(host.platformAvailability("ios"))).toEqual({
+        platform: "ios",
+        available: true,
+      });
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
 
 it.effect(

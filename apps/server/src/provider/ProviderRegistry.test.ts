@@ -2775,91 +2775,98 @@ it.layer(
         path: "/usr/bin",
         expectedPath: "/opt/late:/usr/bin",
       },
-    ])("rebuilds only instances missing their CLI when a refresh finds a new $name", (host) =>
-      withLateLoginShell((shell) => {
-        const env: NodeJS.ProcessEnv = { PATH: host.path, SHELL: shell };
-        return Effect.gen(function* () {
-          const driver = ProviderDriverKind.make("codex");
-          const makeInstance = (id: string, installed: boolean): ProviderInstance => {
-            const instanceId = ProviderInstanceId.make(id);
-            const provider = {
-              instanceId,
-              driver,
-              status: installed ? "ready" : "error",
-              enabled: true,
-              installed,
-              auth: { status: "unknown" },
-              checkedAt: "1970-01-01T00:00:00.000Z",
-              version: null,
-              models: [],
-              slashCommands: [],
-              skills: [],
-            } as const satisfies ServerProvider;
-            return {
-              instanceId,
-              driverKind: driver,
-              continuationIdentity: { driverKind: driver, continuationKey: `codex:${id}` },
-              displayName: undefined,
-              enabled: true,
-              snapshot: {
-                resolveMaintenance: () =>
-                  Effect.succeed(
-                    makeManualOnlyProviderMaintenanceCapabilities({
-                      provider: driver,
-                      packageName: null,
+    ])(
+      "rebuilds only instances missing their CLI when a refresh finds a new $name",
+      (host, ctx) => {
+        // The login-shell stand-in is a `/bin/sh` script, which Windows cannot run.
+        if (host.platform === "linux" && HostProcess.Platform.defaultValue() === "win32")
+          return ctx.skip();
+        return withLateLoginShell((shell) => {
+          const env: NodeJS.ProcessEnv = { PATH: host.path, SHELL: shell };
+          return Effect.gen(function* () {
+            const driver = ProviderDriverKind.make("codex");
+            const makeInstance = (id: string, installed: boolean): ProviderInstance => {
+              const instanceId = ProviderInstanceId.make(id);
+              const provider = {
+                instanceId,
+                driver,
+                status: installed ? "ready" : "error",
+                enabled: true,
+                installed,
+                auth: { status: "unknown" },
+                checkedAt: "1970-01-01T00:00:00.000Z",
+                version: null,
+                models: [],
+                slashCommands: [],
+                skills: [],
+              } as const satisfies ServerProvider;
+              return {
+                instanceId,
+                driverKind: driver,
+                continuationIdentity: { driverKind: driver, continuationKey: `codex:${id}` },
+                displayName: undefined,
+                enabled: true,
+                snapshot: {
+                  resolveMaintenance: () =>
+                    Effect.succeed(
+                      makeManualOnlyProviderMaintenanceCapabilities({
+                        provider: driver,
+                        packageName: null,
+                      }),
+                    ),
+                  getSnapshot: Effect.succeed(provider),
+                  refresh: Effect.succeed(provider),
+                  streamChanges: Stream.empty,
+                  applyUsageLimits: () => Effect.void,
+                },
+                orchestrationAdapter: {} as ProviderInstance["orchestrationAdapter"],
+                textGeneration: {} as ProviderInstance["textGeneration"],
+              };
+            };
+            const instances = [makeInstance("present", true), makeInstance("missing", false)];
+            const rebuilt: Array<ReadonlyArray<ProviderInstanceId>> = [];
+            const changes = yield* PubSub.unbounded<void>();
+            const registry = yield* ProviderRegistry.ProviderRegistry.pipe(
+              Effect.provide(
+                ProviderRegistry.layer.pipe(
+                  Layer.provide(
+                    Layer.mock(ProviderInstanceRegistryMutator.ProviderInstanceRegistryMutator)({
+                      rebuild: (ids) => Effect.sync(() => void rebuilt.push(ids)),
                     }),
                   ),
-                getSnapshot: Effect.succeed(provider),
-                refresh: Effect.succeed(provider),
-                streamChanges: Stream.empty,
-                applyUsageLimits: () => Effect.void,
-              },
-              orchestrationAdapter: {} as ProviderInstance["orchestrationAdapter"],
-              textGeneration: {} as ProviderInstance["textGeneration"],
-            };
-          };
-          const instances = [makeInstance("present", true), makeInstance("missing", false)];
-          const rebuilt: Array<ReadonlyArray<ProviderInstanceId>> = [];
-          const changes = yield* PubSub.unbounded<void>();
-          const registry = yield* ProviderRegistry.ProviderRegistry.pipe(
-            Effect.provide(
-              ProviderRegistry.layer.pipe(
-                Layer.provide(
-                  Layer.mock(ProviderInstanceRegistryMutator.ProviderInstanceRegistryMutator)({
-                    rebuild: (ids) => Effect.sync(() => void rebuilt.push(ids)),
-                  }),
+                  Layer.provideMerge(
+                    Layer.succeed(ProviderInstanceRegistry.ProviderInstanceRegistry, {
+                      getInstance: (id) =>
+                        Effect.succeed(instances.find((i) => i.instanceId === id)),
+                      listInstances: Effect.succeed(instances),
+                      listUnavailable: Effect.succeed([]),
+                      streamChanges: Stream.fromPubSub(changes),
+                      subscribeChanges: PubSub.subscribe(changes),
+                    }),
+                  ),
+                  Layer.provideMerge(
+                    ServerConfig.layerTest(process.cwd(), {
+                      prefix: "t3-provider-registry-path-",
+                    }),
+                  ),
+                  Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
                 ),
-                Layer.provideMerge(
-                  Layer.succeed(ProviderInstanceRegistry.ProviderInstanceRegistry, {
-                    getInstance: (id) => Effect.succeed(instances.find((i) => i.instanceId === id)),
-                    listInstances: Effect.succeed(instances),
-                    listUnavailable: Effect.succeed([]),
-                    streamChanges: Stream.fromPubSub(changes),
-                    subscribeChanges: PubSub.subscribe(changes),
-                  }),
-                ),
-                Layer.provideMerge(
-                  ServerConfig.layerTest(process.cwd(), {
-                    prefix: "t3-provider-registry-path-",
-                  }),
-                ),
-                Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
               ),
+            );
+
+            yield* registry.refresh();
+
+            assert.strictEqual(env.PATH, host.expectedPath);
+            assert.deepStrictEqual(rebuilt, [[ProviderInstanceId.make("missing")]]);
+          }).pipe(
+            Effect.provideService(HostProcess.Platform, host.platform),
+            Effect.provideService(HostProcess.Environment, env),
+            Effect.provideService(WindowsShellEnvironment, () =>
+              Effect.succeed({ PATH: "C:\\Windows;C:\\Tools" }),
             ),
           );
-
-          yield* registry.refresh();
-
-          assert.strictEqual(env.PATH, host.expectedPath);
-          assert.deepStrictEqual(rebuilt, [[ProviderInstanceId.make("missing")]]);
-        }).pipe(
-          Effect.provideService(HostProcess.Platform, host.platform),
-          Effect.provideService(HostProcess.Environment, env),
-          Effect.provideService(WindowsShellEnvironment, () =>
-            Effect.succeed({ PATH: "C:\\Windows;C:\\Tools" }),
-          ),
-        );
-      }),
+        });
+      },
     );
 
     it.effect("publishes a new label for an instance the registry kept live", () =>

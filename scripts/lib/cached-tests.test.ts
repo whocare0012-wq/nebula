@@ -137,7 +137,8 @@ describe("cachedTestTasks", () => {
       await NodeFSP.symlink(
         NodePath.join(root, "node_modules/vite-plus"),
         NodePath.join(directory, "node_modules/vite-plus"),
-        "dir",
+        // A junction needs no Windows symlink privilege; other platforms ignore the type.
+        "junction",
       );
       await NodeFSP.writeFile(NodePath.join(directory, "package.json"), '{"type":"module"}');
       await NodeFSP.writeFile(

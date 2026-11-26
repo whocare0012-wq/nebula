@@ -2370,57 +2370,63 @@ it.layer(
     }),
   );
 
-  it.effect("starts an existing $SHELL whose path contains spaces before a dash", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const { join } = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-shell-path-" });
-      const bin = join(root, "Jane -Doe Smith", ".local", "bin");
-      yield* fs.makeDirectory(bin, { recursive: true });
-      yield* fs.writeFileString(join(bin, "fish"), "");
-      // Temp dirs are not POSIX-absolute on Windows, so stat maps a fixed POSIX prefix onto them.
-      const fixtureFs = FileSystem.FileSystem.of({
-        ...fs,
-        stat: (filePath) =>
-          fs.stat(
-            filePath.startsWith("/shell-fixture/")
-              ? join(root, filePath.slice("/shell-fixture/".length))
-              : filePath,
-          ),
-      });
-      const { manager, ptyAdapter } = yield* createManager(5, {
-        env: { SHELL: "/shell-fixture/Jane -Doe Smith/.local/bin/fish -l" },
-      }).pipe(
-        Effect.provide(layerWithHostPlatform("darwin")),
-        Effect.provideService(FileSystem.FileSystem, fixtureFs),
-      );
-
-      yield* manager.open(openInput());
-
-      expect(ptyAdapter.spawnInputs.map((input) => input.shell)).toEqual([
-        "/shell-fixture/Jane -Doe Smith/.local/bin/fish",
-      ]);
-    }),
-  );
-
-  it.effect("keeps missing or quoted $SHELL paths that contain spaces", () =>
-    Effect.gen(function* () {
-      for (const [shell, expected] of [
-        ["/Users/Jane Doe/.local/bin/fish", "/Users/Jane Doe/.local/bin/fish"],
-        ['"/opt/my -shell/fish" -l', "/opt/my -shell/fish"],
-      ]) {
+  // POSIX shell paths resolve with the host's path module, so a Windows host cannot simulate them.
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "starts an existing $SHELL whose path contains spaces before a dash",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const { join } = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-shell-path-" });
+        const bin = join(root, "Jane -Doe Smith", ".local", "bin");
+        yield* fs.makeDirectory(bin, { recursive: true });
+        yield* fs.writeFileString(join(bin, "fish"), "");
+        // Temp dirs are not POSIX-absolute on Windows, so stat maps a fixed POSIX prefix onto them.
+        const fixtureFs = FileSystem.FileSystem.of({
+          ...fs,
+          stat: (filePath) =>
+            fs.stat(
+              filePath.startsWith("/shell-fixture/")
+                ? join(root, filePath.slice("/shell-fixture/".length))
+                : filePath,
+            ),
+        });
         const { manager, ptyAdapter } = yield* createManager(5, {
-          env: { SHELL: shell },
-        }).pipe(Effect.provide(layerWithHostPlatform("darwin")));
+          env: { SHELL: "/shell-fixture/Jane -Doe Smith/.local/bin/fish -l" },
+        }).pipe(
+          Effect.provide(layerWithHostPlatform("darwin")),
+          Effect.provideService(FileSystem.FileSystem, fixtureFs),
+        );
 
         yield* manager.open(openInput());
 
-        expect(
-          ptyAdapter.spawnInputs.map((input) => input.shell),
-          shell,
-        ).toEqual([expected]);
-      }
-    }),
+        expect(ptyAdapter.spawnInputs.map((input) => input.shell)).toEqual([
+          "/shell-fixture/Jane -Doe Smith/.local/bin/fish",
+        ]);
+      }),
+  );
+
+  // POSIX shell paths resolve with the host's path module, so a Windows host cannot simulate them.
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "keeps missing or quoted $SHELL paths that contain spaces",
+    () =>
+      Effect.gen(function* () {
+        for (const [shell, expected] of [
+          ["/Users/Jane Doe/.local/bin/fish", "/Users/Jane Doe/.local/bin/fish"],
+          ['"/opt/my -shell/fish" -l', "/opt/my -shell/fish"],
+        ]) {
+          const { manager, ptyAdapter } = yield* createManager(5, {
+            env: { SHELL: shell },
+          }).pipe(Effect.provide(layerWithHostPlatform("darwin")));
+
+          yield* manager.open(openInput());
+
+          expect(
+            ptyAdapter.spawnInputs.map((input) => input.shell),
+            shell,
+          ).toEqual([expected]);
+        }
+      }),
   );
 
   it.effect(
@@ -2481,16 +2487,21 @@ it.layer(
   it.effect.each([
     { platform: "win32", shell: String.raw`C:\Program Files\Git\bin\bash.exe` },
     { platform: "linux", shell: "/opt/custom shell/bin/bash" },
-  ] as const)("prefers the configured terminal shell on $platform: $shell", ({ platform, shell }) =>
-    Effect.gen(function* () {
-      const { manager, ptyAdapter } = yield* createManager(5, {
-        env: { T3CODE_TERMINAL_SHELL: ` ${shell} `, SHELL: "/bin/zsh" },
-      }).pipe(Effect.provide(layerWithHostPlatform(platform)));
+  ] as const)(
+    "prefers the configured terminal shell on $platform: $shell",
+    ({ platform, shell }, ctx) =>
+      Effect.gen(function* () {
+        // POSIX shell paths resolve with the host's path module, so a Windows host cannot simulate them.
+        if (platform === "linux" && HostProcess.Platform.defaultValue() === "win32")
+          return ctx.skip();
+        const { manager, ptyAdapter } = yield* createManager(5, {
+          env: { T3CODE_TERMINAL_SHELL: ` ${shell} `, SHELL: "/bin/zsh" },
+        }).pipe(Effect.provide(layerWithHostPlatform(platform)));
 
-      yield* manager.open(openInput());
+        yield* manager.open(openInput());
 
-      expect(ptyAdapter.spawnInputs[0]?.shell).toBe(shell);
-    }),
+        expect(ptyAdapter.spawnInputs[0]?.shell).toBe(shell);
+      }),
   );
 
   it.effect("lets script terminals keep the default shell without changing other terminals", () =>

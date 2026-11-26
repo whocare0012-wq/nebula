@@ -3,10 +3,12 @@ import * as NodeURL from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 
+import { linkEntry } from "../../fileLinks.ts";
 import {
   ANTIGRAVITY_SUBAGENT_BATCH_TITLE,
   antigravitySubagentLaunches,
@@ -211,11 +213,14 @@ it.layer(NodeServices.layer)("readAntigravityChildWork", (it) => {
       expect(namedChild?.role).toBe(LAUNCH.role);
       expect(namedChild?.steps).toBeNull();
 
-      const linked = yield* makeProfile({ steps: autoApproved });
-      yield* fs.remove(linked.transcriptPath);
-      yield* fs.symlink(secret, linked.transcriptPath);
-      const [linkedChild] = yield* read(linked.profile, `${ROOT}:1`);
-      expect(linkedChild?.steps).toBeNull();
+      // A file symlink needs Developer Mode or elevation on Windows.
+      if (symlinksSupported) {
+        const linked = yield* makeProfile({ steps: autoApproved });
+        yield* fs.remove(linked.transcriptPath);
+        yield* fs.symlink(secret, linked.transcriptPath);
+        const [linkedChild] = yield* read(linked.profile, `${ROOT}:1`);
+        expect(linkedChild?.steps).toBeNull();
+      }
     }),
   );
 
@@ -273,12 +278,14 @@ it.layer(NodeServices.layer)("readAntigravityChildWork", (it) => {
       const linked = yield* makeProfile({ steps: autoApproved });
       const brain = path.join(linked.profile, "antigravity-acp", "brain");
       yield* fs.rename(path.join(brain, CHILD), path.join(brain, sibling));
-      yield* fs.symlink(path.join(brain, sibling), path.join(brain, CHILD));
+      yield* linkEntry(fs, path.join(brain, sibling), path.join(brain, CHILD));
       const [child] = yield* read(linked.profile, `${ROOT}:1`);
       expect(child?.role).toBe(LAUNCH.role);
       expect(child?.steps).toBeNull();
 
-      // This session's database links to another session's records.
+      // This session's database links to another session's records. A file symlink needs
+      // Developer Mode or elevation on Windows.
+      if (!symlinksSupported) return;
       const other = yield* makeProfile({ steps: autoApproved });
       const conversations = path.join(other.profile, "antigravity-acp", "conversations");
       const peer = path.join(conversations, "00000000-0000-4000-8000-000000000000.db");
@@ -766,7 +773,8 @@ it.layer(NodeServices.layer)("readAntigravityChildWork", (it) => {
         yield* write(["messages", "read.json"], "{not json");
         expect(yield* pending()).toBe(false);
 
-        // Symlinked transcript fails closed.
+        // Symlinked transcript fails closed. A file symlink needs Developer Mode or elevation on Windows.
+        if (!symlinksSupported) return;
         const outside = yield* fs.makeTempDirectoryScoped({ prefix: "t3-agy-pending-outside-" });
         const external = path.join(outside, "transcript.jsonl");
         yield* fs.writeFileString(

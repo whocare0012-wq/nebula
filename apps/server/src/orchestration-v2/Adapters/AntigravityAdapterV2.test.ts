@@ -13,6 +13,7 @@ import {
   ThreadId,
 } from "@t3tools/contracts";
 import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import {
   compactDynamicToolOutput,
   htmlRenderFromToolItem,
@@ -507,20 +508,23 @@ describe("AntigravityAdapterV2 client file system", () => {
         context("fs/read_text_file"),
       ).pipe(Effect.exit);
       assert.isTrue(Exit.isFailure(outsideRead));
-      const linkPath = path.join(workspace, "linked-secret.txt");
-      yield* fileSystem.symlink(outsideFile, linkPath);
-      const linkedRead = yield* readTextFile(
-        { sessionId: "mock-session-1", path: linkPath },
-        context("fs/read_text_file"),
-      ).pipe(Effect.exit);
-      assert.isTrue(Exit.isFailure(linkedRead), "a read through an escaping symlink is denied");
-      const insideLink = path.join(workspace, "inside-link.ts");
-      yield* fileSystem.symlink(insidePath, insideLink);
-      const viaInsideLink = yield* readTextFile(
-        { sessionId: "mock-session-1", path: insideLink },
-        context("fs/read_text_file"),
-      );
-      assert.equal(viaInsideLink.content, "inside");
+      // File symlinks need Developer Mode or elevation on Windows.
+      if (symlinksSupported) {
+        const linkPath = path.join(workspace, "linked-secret.txt");
+        yield* fileSystem.symlink(outsideFile, linkPath);
+        const linkedRead = yield* readTextFile(
+          { sessionId: "mock-session-1", path: linkPath },
+          context("fs/read_text_file"),
+        ).pipe(Effect.exit);
+        assert.isTrue(Exit.isFailure(linkedRead), "a read through an escaping symlink is denied");
+        const insideLink = path.join(workspace, "inside-link.ts");
+        yield* fileSystem.symlink(insidePath, insideLink);
+        const viaInsideLink = yield* readTextFile(
+          { sessionId: "mock-session-1", path: insideLink },
+          context("fs/read_text_file"),
+        );
+        assert.equal(viaInsideLink.content, "inside");
+      }
     }).pipe(Effect.provide(layerSession)),
   );
 });

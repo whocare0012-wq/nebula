@@ -3,6 +3,7 @@ import * as NodeFSP from "node:fs/promises";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 
 const execute = vi.hoisted(() => vi.fn());
 const startEffects = vi.hoisted(() => vi.fn());
@@ -126,17 +127,20 @@ it("does not report a successful install when the registry cannot be refreshed",
   await expect(setup.perform("install-kde-helper")).rejects.toThrow("KDE couldn't register");
 });
 
-it("refuses symlink destinations and unrelated desktop entries", async () => {
-  const { desktop, executable } = kdeCapturePaths(paths);
-  await NodeFSP.mkdir(NodePath.dirname(desktop), { recursive: true });
-  await NodeFSP.writeFile(desktop, "[Desktop Entry]\nName=Unrelated");
-  await expect(setup.perform("install-kde-helper")).rejects.toThrow("Another desktop entry");
-  await NodeFSP.unlink(desktop);
-  await NodeFSP.mkdir(NodePath.dirname(executable), { recursive: true });
-  await NodeFSP.symlink(paths.bundle, executable);
-  await expect(setup.perform("install-kde-helper")).rejects.toThrow("regular files");
-  expect(await NodeFSP.readFile(paths.bundle, "utf8")).toBe("bundled executable");
-});
+it.skipIf(!symlinksSupported)(
+  "refuses symlink destinations and unrelated desktop entries",
+  async () => {
+    const { desktop, executable } = kdeCapturePaths(paths);
+    await NodeFSP.mkdir(NodePath.dirname(desktop), { recursive: true });
+    await NodeFSP.writeFile(desktop, "[Desktop Entry]\nName=Unrelated");
+    await expect(setup.perform("install-kde-helper")).rejects.toThrow("Another desktop entry");
+    await NodeFSP.unlink(desktop);
+    await NodeFSP.mkdir(NodePath.dirname(executable), { recursive: true });
+    await NodeFSP.symlink(paths.bundle, executable);
+    await expect(setup.perform("install-kde-helper")).rejects.toThrow("regular files");
+    expect(await NodeFSP.readFile(paths.bundle, "utf8")).toBe("bundled executable");
+  },
+);
 
 it("captures with verified identity, cleans private files, and activates only the owning T3 PID/title", async () => {
   await setup.perform("install-kde-helper");

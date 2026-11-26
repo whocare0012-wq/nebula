@@ -30,6 +30,7 @@ import {
 import {
   legacyOwnerStartedBeforeRecord,
   legacyOwnerStartTimeCommand,
+  legacyOwnerStartTimeTimeoutMs,
 } from "./legacyServerOwner.ts";
 import * as ProcessRunner from "./processRunner.ts";
 import {
@@ -89,7 +90,7 @@ const legacyOwnerIsLive = Effect.fn("legacyOwnerIsLive")(function* (
   const result = yield* runner
     .run({
       ...legacyOwnerStartTimeCommand(state.pid, platform, yield* HostProcess.Environment),
-      timeout: Duration.seconds(2),
+      timeout: Duration.millis(legacyOwnerStartTimeTimeoutMs(platform)),
       maxOutputBytes: 16_384,
     })
     .pipe(Effect.option);

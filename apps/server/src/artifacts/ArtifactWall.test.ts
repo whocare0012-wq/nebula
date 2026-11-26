@@ -3,6 +3,7 @@ import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -61,7 +62,9 @@ const fixture = Effect.gen(function* () {
   );
   yield* Effect.promise(async () => {
     await NodeFSP.mkdir(NodePath.join(cwd, "folder"));
-    await NodeFSP.symlink(NodePath.join(cwd, "one.pdf"), NodePath.join(cwd, "folder/alias.pdf"));
+    // Without file symlinks (Windows by default) the alias is a missing file, which is left out too.
+    if (symlinksSupported)
+      await NodeFSP.symlink(NodePath.join(cwd, "one.pdf"), NodePath.join(cwd, "folder/alias.pdf"));
     await NodeFSP.mkdir(NodePath.join(cwd, "node_modules"));
     await NodeFSP.writeFile(NodePath.join(cwd, "node_modules/skip.png"), "skip");
   });
@@ -289,7 +292,11 @@ describe("ArtifactWall service", () => {
         expect(yield* Effect.scoped(wall.open(artifact.id))).toBeNull();
         yield* Effect.promise(async () => {
           await NodeFSP.unlink(artifact.path);
-          await NodeFSP.symlink(NodePath.join(cwd, "other.pdf"), artifact.path);
+          // Without file symlinks the swap is a hard link to the other file.
+          await (symlinksSupported ? NodeFSP.symlink : NodeFSP.link)(
+            NodePath.join(cwd, "other.pdf"),
+            artifact.path,
+          );
         });
         expect(yield* Effect.scoped(wall.open(artifact.id))).toBeNull();
       }).pipe(Effect.provide(layer)),

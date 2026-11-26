@@ -22,6 +22,7 @@ import { ChildProcessSpawner } from "effect/process";
 import * as Scope from "effect/Scope";
 
 import * as ServerConfig from "../config.ts";
+import { linkEntry } from "../fileLinks.ts";
 import * as GitManager from "../git/GitManager.ts";
 import * as GitWorkflow from "../git/GitWorkflowService.ts";
 import * as RuntimeLayer from "../orchestration-v2/runtimeLayer.ts";
@@ -370,7 +371,7 @@ it.effect("still knows No project when its folder is the target of a symlinked S
       const root = yield* requireRoot;
       const target = path.join(baseDir, "visible-chats");
       yield* fileSystem.makeDirectory(target);
-      yield* fileSystem.symlink(target, root);
+      yield* linkEntry(fileSystem, target, root);
       const { projectId } = yield* scratch.ensureScratchProject;
       yield* projects.update({
         commandId: CommandId.make("command:point-at-target"),

@@ -131,6 +131,7 @@ it("keeps the token readout above hovered bars without fading other bars", async
   expect(read.textContent).toContain("1.60K");
 });
 it("fits 720 and 560 analysis panels without horizontal scrolling and keeps model readouts above data", async () => {
+  using _locale = testUiLocale("zh-CN");
   using _theme = theme();
   const usage = mergeUsageEnvironments(analysisFixture());
   for (const width of [720, 560] as const) {

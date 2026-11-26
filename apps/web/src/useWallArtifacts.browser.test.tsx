@@ -73,11 +73,12 @@ it("does not render subscribers for unchanged polls, but publishes metadata edit
   await expect.element(screen.getByText("one.png")).toBeInTheDocument();
   const calls = rendered.mock.calls.length;
   const first = rendered.mock.calls.at(-1)![0];
-  await act(() => vi.advanceTimersByTimeAsync(15_000));
+  // A thread's collection polls every 30 seconds.
+  await act(() => vi.advanceTimersByTimeAsync(30_000));
   expect(load).toHaveBeenCalledTimes(2);
   expect(rendered).toHaveBeenCalledTimes(calls);
   load.mockResolvedValue([{ ...artifact, name: "renamed.png" }]);
-  await act(() => vi.advanceTimersByTimeAsync(15_000));
+  await act(() => vi.advanceTimersByTimeAsync(30_000));
   await expect.element(screen.getByText("renamed.png")).toBeInTheDocument();
   expect(rendered.mock.calls.at(-1)![0]).not.toBe(first);
 });

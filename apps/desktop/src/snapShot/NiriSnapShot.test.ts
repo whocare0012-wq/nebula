@@ -3,7 +3,11 @@ import * as NodeFSP from "node:fs/promises";
 import * as NodeNet from "node:net";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
-import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
+import * as HostProcess from "@t3tools/shared/HostProcess";
+import { afterEach, beforeEach, expect, it as baseIt, vi } from "vite-plus/test";
+
+// Niri is a Linux Wayland compositor reached over a Unix socket; Windows never takes this path.
+const it = baseIt.skipIf(HostProcess.Platform.defaultValue() === "win32");
 
 vi.mock("electron", () => ({
   nativeImage: {

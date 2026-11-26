@@ -5,6 +5,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 
+import { linkEntry } from "../fileLinks.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import { makeIsWorktreeContainer } from "./worktreeContainer.ts";
 
@@ -57,7 +58,7 @@ it.layer(ProcessRunner.layer.pipe(Layer.provideMerge(NodeServices.layer)))(
         assert.isFalse(yield* isWorktreeContainer(path.join(container, "develop")), "its worktree");
 
         const linked = path.join(fixture, "link");
-        yield* fileSystem.symlink(container, linked);
+        yield* linkEntry(fileSystem, container, linked);
         assert.isTrue(yield* isWorktreeContainer(linked), "container through a symlink");
 
         // The issue's steps leave core.bare set; Initialize Git would clear it later.

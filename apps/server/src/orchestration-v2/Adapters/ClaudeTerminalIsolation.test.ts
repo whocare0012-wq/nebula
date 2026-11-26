@@ -2,9 +2,16 @@
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { isolateClaudeTerminalOptions } from "./ClaudeTerminalIsolation.ts";
 import { makeTerminalArgs } from "./ClaudeTerminalMessages.ts";
+
+// Windows symlinks need elevation; a junction is the unprivileged folder link, and what pnpm makes there.
+function linkDirectory(target: string, link: string) {
+  if (HostProcess.Platform.defaultValue() !== "win32") return NodeFS.symlinkSync(target, link);
+  NodeFS.symlinkSync(NodePath.resolve(NodePath.dirname(link), target), link, "junction");
+}
 
 const roots: string[] = [];
 afterEach(() => {
@@ -87,18 +94,14 @@ describe("Claude terminal account isolation", () => {
       }),
     ).toThrow();
     const config = NodeFS.realpathSync(NodePath.join(root, "home/.claude"));
-    NodeFS.symlinkSync(config, NodePath.join(root, "alias"), "dir");
+    linkDirectory(config, NodePath.join(root, "alias"));
     expect(() =>
       isolateClaudeTerminalOptions(undefined, {
         ...options,
         env: { CLAUDE_CONFIG_DIR: NodePath.join(root, "alias") },
       }),
     ).toThrow("path alias");
-    NodeFS.symlinkSync(
-      NodePath.join(root, "workspace"),
-      NodePath.join(config, ".t3-terminal"),
-      "dir",
-    );
+    linkDirectory(NodePath.join(root, "workspace"), NodePath.join(config, ".t3-terminal"));
     expect(() =>
       isolateClaudeTerminalOptions(undefined, { ...options, env: { CLAUDE_CONFIG_DIR: config } }),
     ).toThrow("symlink");
@@ -143,7 +146,7 @@ describe("Claude terminal account isolation", () => {
     ).toThrow();
     const account = NodePath.join(root, "home/.claude");
     NodeFS.rmdirSync(account);
-    NodeFS.symlinkSync(NodeOS.homedir(), account, "dir");
+    linkDirectory(NodeOS.homedir(), account);
     expect(() => isolateClaudeTerminalOptions(root, options)).toThrow();
     NodeFS.unlinkSync(account);
     NodeFS.mkdirSync(account);
@@ -176,7 +179,7 @@ describe("Claude terminal account isolation", () => {
     const link = NodePath.join(cache, "store/v11/links/pnpm/node_modules/exe");
     NodeFS.mkdirSync(target, { recursive: true });
     NodeFS.mkdirSync(NodePath.dirname(link), { recursive: true });
-    NodeFS.symlinkSync(NodePath.relative(NodePath.dirname(link), target), link);
+    linkDirectory(NodePath.relative(NodePath.dirname(link), target), link);
     const configured = isolateClaudeTerminalOptions(undefined, {
       ...options,
       env: { ...options.env, CLAUDE_CONFIG_DIR: config },
@@ -193,18 +196,18 @@ describe("Claude terminal account isolation", () => {
       const home = NodePath.join(config, ".t3-terminal/home");
       const cache = NodePath.join(home, ".local/share/pnpm");
       NodeFS.mkdirSync(cache, { recursive: true });
-      if (kind === "escape") NodeFS.symlinkSync(root, NodePath.join(cache, "escape"));
+      if (kind === "escape") linkDirectory(root, NodePath.join(cache, "escape"));
       if (kind === "prefix-sibling") {
         NodeFS.mkdirSync(`${cache}-other`);
-        NodeFS.symlinkSync(`${cache}-other`, NodePath.join(cache, "escape"));
+        linkDirectory(`${cache}-other`, NodePath.join(cache, "escape"));
       }
-      if (kind === "dangling") NodeFS.symlinkSync("missing", NodePath.join(cache, "broken"));
-      if (kind === "cycle") NodeFS.symlinkSync(cache, NodePath.join(cache, "cycle"));
+      if (kind === "dangling") linkDirectory("missing", NodePath.join(cache, "broken"));
+      if (kind === "cycle") linkDirectory(cache, NodePath.join(cache, "cycle"));
       if (kind === "cache-alias") {
         NodeFS.renameSync(cache, `${cache}-actual`);
-        NodeFS.symlinkSync(`${cache}-actual`, cache);
+        linkDirectory(`${cache}-actual`, cache);
       }
-      if (kind === "other-link") NodeFS.symlinkSync(cache, NodePath.join(home, "other"));
+      if (kind === "other-link") linkDirectory(cache, NodePath.join(home, "other"));
       expect(() =>
         isolateClaudeTerminalOptions(undefined, {
           ...options,

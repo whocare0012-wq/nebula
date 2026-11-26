@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vite-plus/test";
-import { page, userEvent } from "vite-plus/test/browser";
+import { cdp, page, userEvent } from "vite-plus/test/browser";
 import { ProviderDriverKind } from "@t3tools/contracts";
 import { collectLimitPools, type LimitAccount } from "@t3tools/shared/usageLimits";
 import { render } from "../../../test/render";
@@ -36,7 +36,19 @@ function appleTheme() {
     },
   };
 }
+// The fixture's hours sit near UTC day boundaries, so a far-off host zone reshuffles the grid.
+async function pinUtcZone(): Promise<AsyncDisposable> {
+  const session = cdp();
+  await session.send("Emulation.setTimezoneOverride", { timezoneId: "UTC" });
+  return {
+    [Symbol.asyncDispose]: async () => {
+      await session.send("Emulation.setTimezoneOverride", { timezoneId: "" });
+    },
+  };
+}
+
 it("opens real activity details, switches between heatmap and distributions, and closes with Escape", async () => {
+  await using _zone = await pinUtcZone();
   using _locale = testUiLocale("zh-CN");
   using _theme = appleTheme();
   try {

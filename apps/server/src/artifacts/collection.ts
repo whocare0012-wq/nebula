@@ -58,7 +58,11 @@ export function artifactKind(extension: string): WallArtifact["kind"] {
         ? "page"
         : "document";
 }
-export function excludedArtifactPath(path: string, extraRoots: readonly string[] = []): boolean {
+export function excludedArtifactPath(rawPath: string, rawRoots: readonly string[] = []): boolean {
+  // Windows paths separate segments with backslashes; compare them in the forward-slash form.
+  const slashes = (value: string) => (NodePath.sep === "\\" ? value.replaceAll("\\", "/") : value);
+  const path = slashes(rawPath);
+  const extraRoots = rawRoots.map(slashes);
   return (
     /(?:^|\/)(?:node_modules|\.git|\.cache|caches?|browser-artifacts)(?:\/|$)/i.test(path) ||
     path === "/tmp" ||
@@ -75,7 +79,9 @@ export function resolveArtifactReference(value: string, cwd: string): string | n
   } catch {
     /* Plain filenames can contain percent. */
   }
-  if (/^[a-z][a-z0-9+.-]*:/i.test(decoded) || decoded.includes("\0")) return null;
+  // A Windows drive path such as C:\out.png also starts like a URI scheme.
+  const scheme = !NodePath.isAbsolute(decoded) && /^[a-z][a-z0-9+.-]*:/i.test(decoded);
+  if (scheme || decoded.includes("\0")) return null;
   if (!NodePath.isAbsolute(decoded) && !NodePath.isAbsolute(cwd)) return null;
   const path = NodePath.resolve(cwd, decoded);
   const extension = NodePath.extname(path).slice(1).toLowerCase();

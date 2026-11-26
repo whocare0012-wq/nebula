@@ -19,7 +19,10 @@ import * as Path from "effect/Path";
 import * as Queue from "effect/Queue";
 import type * as Scope from "effect/Scope";
 
+import * as HostProcess from "@t3tools/shared/HostProcess";
+
 import * as ServerConfig from "../config.ts";
+import { isLinkedEntry } from "../fileLinks.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as TaskFolders from "./TaskFolders.ts";
 import * as TaskFolderStore from "./TaskFolderStore.ts";
@@ -43,6 +46,27 @@ const layerFor = (state: TaskFoldersTestState, policy?: ManagedPolicyDocument) =
     ),
   );
 
+/**
+ * Where `link` leads. Windows links a file as a hard link, which has no target to read, so there
+ * the link leads to `expected` when both name the same file.
+ */
+const linkTarget = Effect.fnUntraced(function* (
+  fileSystem: FileSystem.FileSystem,
+  link: string,
+  expected: string,
+) {
+  const target = yield* fileSystem.readLink(link).pipe(Effect.option);
+  if (Option.isSome(target) || HostProcess.Platform.defaultValue() !== "win32") {
+    return Option.getOrElse(target, () => link);
+  }
+  const [linked, original] = [yield* fileSystem.stat(link), yield* fileSystem.stat(expected)];
+  return Option.isSome(linked.ino) &&
+    Option.getOrUndefined(linked.ino) === Option.getOrUndefined(original.ino) &&
+    linked.dev === original.dev
+    ? expected
+    : link;
+});
+
 const fixture = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -65,8 +89,7 @@ const fixture = Effect.gen(function* () {
     yield* run(folder, "commit", "-m", "initial");
     return folder;
   });
-  const isLink = (target: string) =>
-    fileSystem.readLink(target).pipe(Effect.option, Effect.map(Option.isSome));
+  const isLink = (target: string) => isLinkedEntry(fileSystem, target);
   const worktreeCount = (folder: string) =>
     run(folder, "worktree", "list", "--porcelain").pipe(
       Effect.map((listed) => listed.split("\n").filter((line) => line.startsWith("worktree "))),
@@ -153,7 +176,7 @@ it.live("lays a plain wrapper out as links around its repositories' worktrees", 
       );
       // Shared with the original, never copied.
       assert.equal(
-        yield* fileSystem.readLink(path.join(root, "AGENTS.md")),
+        yield* linkTarget(fileSystem, path.join(root, "AGENTS.md"), path.join(shop, "AGENTS.md")),
         path.join(shop, "AGENTS.md"),
       );
       assert.isTrue(yield* isLink(path.join(root, "notes")));
@@ -175,7 +198,7 @@ it.live("lays a plain wrapper out as links around its repositories' worktrees", 
       yield* fileSystem.writeFileString(path.join(root, "draft.md"), "mine\n");
       yield* taskFolders.remove({ root, force: false, forget: true, projectCommands: "permitted" });
       assert.equal(
-        yield* fileSystem.readLink(path.join(root, "AGENTS.md")),
+        yield* linkTarget(fileSystem, path.join(root, "AGENTS.md"), path.join(shop, "AGENTS.md")),
         path.join(shop, "AGENTS.md"),
       );
     }),
@@ -451,7 +474,11 @@ it.live("treats a project folder inside a larger repository as plain", () =>
       assert.equal(taskFolder.projectPath, taskFolder.root);
       assert.isFalse(yield* fileSystem.exists(path.join(taskFolder.root, ".git")));
       assert.equal(
-        yield* fileSystem.readLink(path.join(taskFolder.root, "notes.md")),
+        yield* linkTarget(
+          fileSystem,
+          path.join(taskFolder.root, "notes.md"),
+          path.join(pkg, "notes.md"),
+        ),
         path.join(pkg, "notes.md"),
       );
       // The parent repository is never checked out.
@@ -975,7 +1002,11 @@ it.live("adds a repository to an existing task folder on the thread's branch", (
       yield* taskFolders.addRepository({ threadId, repositoryPath: late });
       assert.isFalse(yield* isLink(path.join(root, "tools")));
       assert.equal(
-        yield* fileSystem.readLink(path.join(root, "tools", "run.sh")),
+        yield* linkTarget(
+          fileSystem,
+          path.join(root, "tools", "run.sh"),
+          path.join(shop, "tools", "run.sh"),
+        ),
         path.join(shop, "tools", "run.sh"),
       );
       assert.equal(
@@ -1004,7 +1035,7 @@ it.live("adds a repository to an existing task folder on the thread's branch", (
       const unborn = path.join(shop, "unborn");
       yield* run(unborn, "init", "-b", "main");
       yield* taskFolders.addRepository({ threadId, repositoryPath: unborn }).pipe(Effect.flip);
-      assert.equal(yield* fileSystem.readLink(path.join(root, "unborn")), unborn);
+      assert.equal(yield* linkTarget(fileSystem, path.join(root, "unborn"), unborn), unborn);
 
       // A copy of a checkout Git registered elsewhere is not the thread's worktree: it is not
       // restored over, nor resumed in.
@@ -1059,7 +1090,7 @@ it.live("keeps a repository git will not remove and removes the rest", () =>
       assert.equal(yield* worktreeCount(web), 1);
       // The folder stays, so the files it shares with the project stay reachable in it.
       assert.equal(
-        yield* fileSystem.readLink(path.join(root, "AGENTS.md")),
+        yield* linkTarget(fileSystem, path.join(root, "AGENTS.md"), path.join(shop, "AGENTS.md")),
         path.join(shop, "AGENTS.md"),
       );
       // The record now lists only what is still on disk.

@@ -16,8 +16,9 @@ import * as RepositoryIdentityResolver from "./RepositoryIdentityResolver.ts";
 const normalizePathSeparators = (value: string) => value.replaceAll("\\", "/");
 const normalizeResolvedPath = (value: string) => normalizePathSeparators(value);
 
-// Windows forbids CR and LF in file names.
+// Windows forbids CR and LF in file names, and drops a trailing space from a folder name.
 const lineBreakSuffixes = HostProcess.Platform.defaultValue() === "win32" ? [] : ["\r", "\n"];
+const trailingSpaceRoots = HostProcess.Platform.defaultValue() === "win32" ? [] : ["repo "];
 const bareLayouts = [
   "bare clone",
   "dot-bare",
@@ -263,7 +264,11 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
 
-  it.effect.each(["repo", "repo ", ...lineBreakSuffixes.map((suffix) => `repo${suffix}`)])(
+  it.effect.each([
+    "repo",
+    ...trailingSpaceRoots,
+    ...lineBreakSuffixes.map((suffix) => `repo${suffix}`),
+  ])(
     "returns the git top-level root path when resolving from a nested workspace in %j",
     (rootName) =>
       Effect.gen(function* () {

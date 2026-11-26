@@ -18,6 +18,7 @@ import { afterEach, vi } from "vite-plus/test";
 import packageJson from "../../package.json" with { type: "json" };
 import * as BootService from "../cloud/bootService.ts";
 import { upsertServiceEnv } from "./service.ts";
+import { hostShellWord } from "./invocation.ts";
 import { connectEnabled, planRoutes, statusCommand, upCommand } from "./up.ts";
 
 const none = Option.none<boolean>();
@@ -166,7 +167,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     readonly reportStatus?: boolean;
     /** Runs as if in a terminal, answering each question with this text. */
     readonly answer?: string;
-    /** Lines the run prints, with `<baseDir>` standing for the test's home. */
+    /** Lines the run prints; each `<word>` is one hint argument as the host shell quotes it, `<baseDir>` the test's home. */
     readonly prints?: ReadonlyArray<string>;
     readonly omits?: string;
     readonly json?: object;
@@ -187,7 +188,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     },
     {
       label: "the local network opens",
-      prints: ["Run `t3 pair --base-dir <baseDir>`."],
+      prints: ["Run `t3 pair <--base-dir> <baseDir>`."],
       installed: true,
       env: "T3CODE_LAN=false\n",
       args: ["--lan"],
@@ -206,7 +207,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     },
     {
       label: "a route turns off with no service to run",
-      prints: ["Run `t3 --base-dir <baseDir>` to use T3 Code here."],
+      prints: ["Run `t3 <--base-dir> <baseDir>` to use T3 Code here."],
       installed: false,
       env: "T3CODE_LAN=true\n",
       args: ["--no-lan"],
@@ -227,7 +228,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "a failed update keeps service.env matching the old service",
       // The old service still runs, so no foreground server is offered.
-      prints: ["Fix that, then run `t3 up --base-dir <baseDir>` again."],
+      prints: ["Fix that, then run `t3 up <--base-dir> <baseDir>` again."],
       installed: true,
       status: { current: false },
       installFails: true,
@@ -290,8 +291,8 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       installed: true,
       reportStatus: true,
       prints: [
-        "Turn it off: `t3 up --base-dir <baseDir> --no-lan`.",
-        "Change access: `t3 up --base-dir <baseDir>`.",
+        "Turn it off: `t3 up <--base-dir> <baseDir> <--no-lan>`.",
+        "Change access: `t3 up <--base-dir> <baseDir>`.",
       ],
       env: "",
       args: [],
@@ -403,7 +404,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
         ),
       );
       for (const line of input.prints ?? []) {
-        expect(lines.join("\n")).toContain(line.replace("<baseDir>", baseDir));
+        expect(lines.join("\n")).toContain(
+          line.replace(/<([^<>]+)>/g, (_, word: string) =>
+            hostShellWord(HostProcess.Platform.defaultValue(), word === "baseDir" ? baseDir : word),
+          ),
+        );
       }
       if (input.omits !== undefined) {
         expect(lines.join("\n")).not.toContain(input.omits);

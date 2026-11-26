@@ -7,6 +7,7 @@ import {
   type ServerProvider,
 } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import {
   enrichProviderSnapshotWithVersionAdvisory,
   invalidateLatestProviderVersion,
@@ -65,9 +66,12 @@ const fixture = Effect.fn("ClaudeMaintenance.test.fixture")(function* (
   yield* fs.makeDirectory(path.dirname(realBinaryPath), { recursive: true });
   yield* fs.writeFileString(realBinaryPath, "#!/bin/sh\n");
   yield* fs.chmod(realBinaryPath, 0o755);
+  // Without symlink rights (Windows), a launcher file stands in and `realPath` reports the link.
+  const fakeLink = realBinaryPath !== binaryPath && !symlinksSupported;
   if (realBinaryPath !== binaryPath) {
     yield* fs.makeDirectory(path.dirname(binaryPath), { recursive: true });
-    yield* fs.symlink(realBinaryPath, binaryPath);
+    if (fakeLink) yield* fs.writeFileString(binaryPath, "#!/bin/sh\n");
+    else yield* fs.symlink(realBinaryPath, binaryPath);
   }
   const configDirectory = path.join(directory, "config");
   yield* fs.makeDirectory(configDirectory);
@@ -91,7 +95,7 @@ const fixture = Effect.fn("ClaudeMaintenance.test.fixture")(function* (
     ...fs,
     realPath: (file) => {
       if (file === binaryPath) installationReads++;
-      return fs.realPath(file);
+      return fakeLink && file === binaryPath ? Effect.succeed(realBinaryPath) : fs.realPath(file);
     },
     readFileString: (file, ...args) =>
       file.replaceAll("\\", "/").startsWith(`${managedDirectory}/`)
@@ -239,8 +243,10 @@ it.layer(NodeServices.layer)("ClaudeMaintenance", (it) => {
       advisory: "behind_latest",
       npm: true,
     },
-  ])("advertises the installable version for $name", (row) =>
+  ])("advertises the installable version for $name", (row, ctx) =>
     Effect.gen(function* () {
+      // This npm global is a Linux layout whose `:`-delimited PATH cannot hold a Windows drive path.
+      if (row.npm && HostProcess.Platform.defaultValue() === "win32") return ctx.skip();
       const f = yield* fixture(row.npm ? "npm" : "native");
       if (row.settings) yield* f.fs.writeFileString(f.settingsPath, row.settings);
       const requests: string[] = [];

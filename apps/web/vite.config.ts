@@ -145,6 +145,8 @@ const browserTestProject = {
         launchOptions: process.env.T3_BROWSER_NET_LOG
           ? { args: [`--log-net-log=${process.env.T3_BROWSER_NET_LOG}`] }
           : {},
+        // Chromium otherwise inherits the host locale, which picks the UI and speech languages.
+        contextOptions: { locale: "en-US" },
       }),
       instances: [{ browser: "chromium" }],
       screenshotFailures: false,

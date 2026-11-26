@@ -1,6 +1,6 @@
 import { RunId } from "@t3tools/contracts";
 import type { TimestampFormat } from "@t3tools/contracts/settings";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { usageLimitRecoveryBannerItem } from "./UsageLimitRecoveryBanner";
 
@@ -22,6 +22,17 @@ function bannerItem(resetAt: Date, timestampFormat: TimestampFormat = "24-hour")
 }
 
 describe("usageLimitRecoveryBannerItem", () => {
+  // Formatters default to the host locale; these expectations are the en-US rendering.
+  const HostDateTimeFormat = Intl.DateTimeFormat;
+  beforeEach(() => {
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (locales, options) {
+      return new HostDateTimeFormat(locales ?? "en-US", options);
+    } as typeof Intl.DateTimeFormat);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each([
     ["12-hour", "Resets 5:30 PM"],
     ["24-hour", "Resets 17:30"],

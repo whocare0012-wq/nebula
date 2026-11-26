@@ -46,6 +46,7 @@ import {
 import {
   legacyOwnerStartedBeforeRecord,
   legacyOwnerStartTimeCommand,
+  legacyOwnerStartTimeTimeoutMs,
 } from "./legacyServerOwner.ts";
 
 const HANDOFF_DELAY_MS = 2_000;
@@ -888,7 +889,11 @@ export async function stateDirOwned(baseDir: string): Promise<boolean> {
     NodeChildProcess.execFile(
       command,
       args,
-      { env: { ...process.env, ...env }, timeout: 2_000, maxBuffer: 16_384 },
+      {
+        env: { ...process.env, ...env },
+        timeout: legacyOwnerStartTimeTimeoutMs(platform),
+        maxBuffer: 16_384,
+      },
       (error, stdout) => resolve(error === null ? stdout : undefined),
     ),
   );

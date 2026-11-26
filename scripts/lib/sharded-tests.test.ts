@@ -14,7 +14,8 @@ it("uses the configured sequencer and discovers every file exactly once", async 
     await NodeFSP.symlink(
       NodePath.resolve(import.meta.dirname, "../../node_modules/vite-plus"),
       NodePath.join(root, "node_modules/vite-plus"),
-      "dir",
+      // A junction needs no Windows symlink privilege; other platforms ignore the type.
+      "junction",
     );
     await NodeFSP.writeFile(NodePath.join(root, "package.json"), '{"type":"module"}');
     await NodeFSP.writeFile(

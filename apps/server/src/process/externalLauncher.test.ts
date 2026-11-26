@@ -66,6 +66,8 @@ const layerTest = (input: {
   readonly onUnref?: () => void;
   readonly spawnResult?: (command: ChildProcess.StandardCommand) => MockSpawnResult | undefined;
   readonly existingPaths?: ReadonlyArray<string>;
+  /** Hidden from the host, compared case-insensitively like Windows paths. */
+  readonly missingPaths?: ReadonlyArray<string>;
 }) => {
   const layerSpawner = Layer.succeed(
     ChildProcessSpawner.ChildProcessSpawner,
@@ -102,6 +104,17 @@ const layerTest = (input: {
                 input.existingPaths?.includes(path)
                   ? Effect.succeed(true)
                   : fileSystem.exists(path),
+              stat: (path: string) =>
+                input.missingPaths?.some((missing) => missing.toLowerCase() === path.toLowerCase())
+                  ? Effect.fail(
+                      PlatformError.systemError({
+                        _tag: "NotFound",
+                        module: "FileSystem",
+                        method: "stat",
+                        pathOrDescriptor: path,
+                      }),
+                    )
+                  : fileSystem.stat(path),
             })),
           ).pipe(Layer.provide(NodeServices.layer)),
         ),
@@ -735,6 +748,8 @@ it.effect.each([
           platform: "win32",
           env: { PATH: binDir, PATHEXT: ".COM;.EXE;.BAT;.CMD", SYSTEMROOT: "C:\\Windows" },
           existingPaths: ["C:/Users/t3/my project/a,b.ts"],
+          // A Windows host has this PowerShell; the fixture models a host without it.
+          missingPaths: ["C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"],
           onSpawn: (command) => spawned.push(command),
           spawnResult: (command) => (command.command.endsWith("reg.exe") ? registry : undefined),
         }),

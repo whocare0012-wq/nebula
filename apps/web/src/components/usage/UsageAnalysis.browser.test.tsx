@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { expect, it, vi } from "vite-plus/test";
-import { page, userEvent } from "vite-plus/test/browser";
+import { cdp, page, userEvent } from "vite-plus/test/browser";
 import { render } from "../../../test/render";
 import { testUiLocale } from "../../../test/uiLocale";
 import { applyThemePalette } from "../../themePalette";
@@ -421,7 +421,19 @@ it("renders V9 cost page with bar/area toggle, provider drill-down, beUI insight
   }
 });
 
+// The fixture's hours sit near UTC day boundaries, so a far-off host zone reshuffles the grid.
+async function pinUtcZone(): Promise<AsyncDisposable> {
+  const session = cdp();
+  await session.send("Emulation.setTimezoneOverride", { timezoneId: "UTC" });
+  return {
+    [Symbol.asyncDispose]: async () => {
+      await session.send("Emulation.setTimezoneOverride", { timezoneId: "" });
+    },
+  };
+}
+
 it("renders V9 tokens page with 3-layer stacked bars, half-ring gauge, 7x24 dot states, and model details", async () => {
+  await using _zone = await pinUtcZone();
   using _locale = testUiLocale("zh-CN");
   using _theme = appleTheme();
   const envs = analysisFixture();

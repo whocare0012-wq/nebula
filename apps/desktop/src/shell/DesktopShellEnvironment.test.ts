@@ -26,6 +26,8 @@ import * as DesktopShellEnvironment from "./DesktopShellEnvironment.ts";
 vi.mock("node:os", { spy: true });
 
 const textEncoder = new TextEncoder();
+// Captured before tests swap process.env: Windows derives tmpdir() from TEMP/SystemRoot.
+const hostTempDirectory = NodeOS.tmpdir();
 const cacheCodec = Schema.fromJsonString(
   Schema.Struct({
     version: Schema.Number,
@@ -135,7 +137,8 @@ function runShellEnvironment(input: {
     DesktopEnvironment.DesktopEnvironment,
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const stateDir = input.stateDir ?? (yield* fs.makeTempDirectoryScoped());
+      const stateDir =
+        input.stateDir ?? (yield* fs.makeTempDirectoryScoped({ directory: hostTempDirectory }));
       return DesktopEnvironment.DesktopEnvironment.of({
         platform: input.platform,
         stateDir,

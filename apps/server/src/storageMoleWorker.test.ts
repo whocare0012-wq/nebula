@@ -1,10 +1,16 @@
 // @effect-diagnostics nodeBuiltinImport:off - Python functions run with an in-memory filesystem adapter only.
 import * as NodeChildProcess from "node:child_process";
 import { expect, it } from "vite-plus/test";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import { STORAGE_ARCHIVE_PROGRAM } from "./storageArchiveProgram.ts";
 
-it("executes and reconciles cleanup with mocked mutations, rejecting drift, busy paths, low space and cancellation", () => {
-  const program = String.raw`
+// The Python archive worker runs only on macOS; Windows hosts use the storageMoleWindows worker.
+const windowsHost = HostProcess.Platform.defaultValue() === "win32";
+
+it.skipIf(windowsHost)(
+  "executes and reconciles cleanup with mocked mutations, rejecting drift, busy paths, low space and cancellation",
+  () => {
+    const program = String.raw`
 import ast,json,sys,copy,types
 source=json.load(sys.stdin)
 module=ast.parse(source)
@@ -74,15 +80,18 @@ files={};globals()['state']=P('/state')
 assert main()['phase']=='failed'
 print(json.dumps({'passed':True,'mutations':'in-memory only','cases':10}))
 `;
-  const output = NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
-    input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
-    encoding: "utf8",
-  });
-  expect(JSON.parse(output)).toEqual({ passed: true, mutations: "in-memory only", cases: 10 });
-});
+    const output = NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
+      input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
+      encoding: "utf8",
+    });
+    expect(JSON.parse(output)).toEqual({ passed: true, mutations: "in-memory only", cases: 10 });
+  },
+);
 
-it("requires the newest two cold-backup receipts and integrity before offering an older backup", () => {
-  const program = String.raw`
+it.skipIf(windowsHost)(
+  "requires the newest two cold-backup receipts and integrity before offering an older backup",
+  () => {
+    const program = String.raw`
 import ast,json,sys,tempfile,hashlib,os,types,time
 from pathlib import Path as RealPath
 source=json.load(sys.stdin);tree=ast.parse(source)
@@ -122,15 +131,18 @@ except ValueError:pass
 assert all(p.exists() for p in archives)
 print(json.dumps({'cases':5,'allOriginalsKept':True,'tar':'mocked'}))
 `;
-  const output = NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
-    input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
-    encoding: "utf8",
-  });
-  expect(JSON.parse(output)).toEqual({ cases: 5, allOriginalsKept: true, tar: "mocked" });
-});
+    const output = NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
+      input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
+      encoding: "utf8",
+    });
+    expect(JSON.parse(output)).toEqual({ cases: 5, allOriginalsKept: true, tar: "mocked" });
+  },
+);
 
-it("discovers an external HFS volume even when T3 home is on that volume", () => {
-  const program = String.raw`
+it.skipIf(windowsHost)(
+  "discovers an external HFS volume even when T3 home is on that volume",
+  () => {
+    const program = String.raw`
 import ast,json,sys,types,hashlib
 source=json.load(sys.stdin);tree=ast.parse(source)
 code=ast.Module(body=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='volumes'],type_ignores=[])
@@ -153,16 +165,19 @@ exec(compile(code,'worker','exec'),globals())
 assert len(volumes())==1
 print('passed')
 `;
-  expect(
-    NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
-      input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
-      encoding: "utf8",
-    }).trim(),
-  ).toBe("passed");
-});
+    expect(
+      NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
+        input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("passed");
+  },
+);
 
-it("rechecks whole-cache roots, superseded receipts and rollback anchors without mutations", () => {
-  const program = String.raw`
+it.skipIf(windowsHost)(
+  "rechecks whole-cache roots, superseded receipts and rollback anchors without mutations",
+  () => {
+    const program = String.raw`
 import ast,json,sys,tempfile,hashlib,os,re
 from pathlib import Path as RealPath
 source=json.load(sys.stdin);tree=ast.parse(source)
@@ -210,16 +225,19 @@ for version in [59,62,70,71]:
 assert cache.exists() and p.exists() and current_app.exists()
 print('10 checks; all originals kept')
 `;
-  expect(
-    NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
-      input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
-      encoding: "utf8",
-    }).trim(),
-  ).toBe("10 checks; all originals kept");
-});
+    expect(
+      NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
+        input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("10 checks; all originals kept");
+  },
+);
 
-it("rechecks preview capacity, content, identity and occupancy before accepting a cleanup queue", () => {
-  const program = String.raw`
+it.skipIf(windowsHost)(
+  "rechecks preview capacity, content, identity and occupancy before accepting a cleanup queue",
+  () => {
+    const program = String.raw`
 import ast,json,sys,types
 from pathlib import Path
 module=ast.parse(json.load(sys.stdin))
@@ -245,10 +263,11 @@ for key,value in [('free',9899),('free',10101),('measured',1011),('digest','chan
  globals()[key]=old
 print('passed')
 `;
-  expect(
-    NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
-      input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
-      encoding: "utf8",
-    }).trim(),
-  ).toBe("passed");
-});
+    expect(
+      NodeChildProcess.execFileSync("/usr/bin/python3", ["-c", program], {
+        input: JSON.stringify(STORAGE_ARCHIVE_PROGRAM),
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("passed");
+  },
+);

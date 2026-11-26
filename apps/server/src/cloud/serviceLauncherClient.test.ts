@@ -18,6 +18,9 @@ import {
 import { posixLauncherScript } from "./pinnedRuntime.ts";
 import * as ServiceLauncherClient from "./serviceLauncherClient.ts";
 
+// Launchers are moved only on Linux and macOS, where they are symlinks or /bin/sh scripts.
+const posixHost = HostProcess.Platform.defaultValue() !== "win32";
+
 class FakeLauncherProcess {
   readonly connected: boolean;
   readonly env: Record<string, string | undefined>;
@@ -146,6 +149,7 @@ it.effect.each([3, SERVICE_LAUNCHER_PROTOCOL])(
       expect(yield* restartedClient.prepareTrial({ baseDir })).toEqual(committed);
       assert.equal(yield* fs.readLink(installed), exe("1.0.0"));
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  { skip: !posixHost },
 );
 
 it.effect("returns the launcher-generated ID only after update acceptance", () =>
@@ -241,7 +245,7 @@ it.effect("ignores launcher context inherited without an IPC channel", () =>
 );
 
 it.layer(NodeServices.layer)("self-update launchers", (it) => {
-  it.effect(
+  it.effect.skipIf(!posixHost)(
     "updates custom install and PATH launchers, including versions older than fromVersion",
     () =>
       Effect.gen(function* () {
@@ -275,132 +279,134 @@ it.layer(NodeServices.layer)("self-update launchers", (it) => {
       }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
 
-  it.effect("still moves the PATH launcher when the install bin one cannot be rewritten", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const baseDir = path.join(root, ".t3");
-      const exe = (version: string) => path.join(baseDir, "runtime/versions", version, "t3");
-      const installed = path.join(root, ".local/bin/t3");
-      const onPath = path.join(root, "bin/t3");
-      for (const file of [exe("1.0.0"), exe("2.0.0")]) {
-        yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-        yield* fs.writeFileString(file, "");
-      }
-      for (const link of [installed, onPath]) {
-        yield* fs.makeDirectory(path.dirname(link), { recursive: true });
-        yield* fs.symlink(exe("1.0.0"), link);
-      }
-      const warnings: unknown[] = [];
-      const logger = Logger.make(({ logLevel, message }) => {
-        if (logLevel === "Warn") warnings.push(message);
-      });
-      const failingFs = FileSystem.FileSystem.of({
-        ...fs,
-        rename: (source, destination) =>
-          destination === installed
-            ? Effect.fail(
-                new PlatformError.PlatformError(
-                  new PlatformError.SystemError({
-                    _tag: "PermissionDenied",
-                    module: "FileSystem",
-                    method: "rename",
-                    pathOrDescriptor: destination,
-                  }),
-                ),
-              )
-            : fs.rename(source, destination),
-      });
+  it.effect.skipIf(!posixHost)(
+    "still moves the PATH launcher when the install bin one cannot be rewritten",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+        const baseDir = path.join(root, ".t3");
+        const exe = (version: string) => path.join(baseDir, "runtime/versions", version, "t3");
+        const installed = path.join(root, ".local/bin/t3");
+        const onPath = path.join(root, "bin/t3");
+        for (const file of [exe("1.0.0"), exe("2.0.0")]) {
+          yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+          yield* fs.writeFileString(file, "");
+        }
+        for (const link of [installed, onPath]) {
+          yield* fs.makeDirectory(path.dirname(link), { recursive: true });
+          yield* fs.symlink(exe("1.0.0"), link);
+        }
+        const warnings: unknown[] = [];
+        const logger = Logger.make(({ logLevel, message }) => {
+          if (logLevel === "Warn") warnings.push(message);
+        });
+        const failingFs = FileSystem.FileSystem.of({
+          ...fs,
+          rename: (source, destination) =>
+            destination === installed
+              ? Effect.fail(
+                  new PlatformError.PlatformError(
+                    new PlatformError.SystemError({
+                      _tag: "PermissionDenied",
+                      module: "FileSystem",
+                      method: "rename",
+                      pathOrDescriptor: destination,
+                    }),
+                  ),
+                )
+              : fs.rename(source, destination),
+        });
 
-      yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
-        Effect.provideService(HostProcess.Environment, {
-          HOME: root,
-          PATH: path.dirname(onPath),
-        }),
-        Effect.provideService(FileSystem.FileSystem, failingFs),
-        Effect.provide(Logger.layer([logger], { mergeWithExisting: false })),
-      );
+        yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
+          Effect.provideService(HostProcess.Environment, {
+            HOME: root,
+            PATH: path.dirname(onPath),
+          }),
+          Effect.provideService(FileSystem.FileSystem, failingFs),
+          Effect.provide(Logger.layer([logger], { mergeWithExisting: false })),
+        );
 
-      assert.lengthOf(warnings, 1);
-      assert.include(JSON.stringify(warnings), installed);
-      assert.equal(yield* fs.readLink(installed), exe("1.0.0"));
-      assert.equal(yield* fs.readFileString(onPath), posixLauncherScript(exe("2.0.0")));
-    }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
+        assert.lengthOf(warnings, 1);
+        assert.include(JSON.stringify(warnings), installed);
+        assert.equal(yield* fs.readLink(installed), exe("1.0.0"));
+        assert.equal(yield* fs.readFileString(onPath), posixLauncherScript(exe("2.0.0")));
+      }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
 
-  it.effect("leaves unowned install files and PATH symlinks untouched after self-update", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const baseDir = path.join(root, ".t3");
-      const installed = path.join(root, ".local/bin/t3");
-      const onPath = path.join(root, "bin/t3");
-      const foreign = path.join(root, "other-home/runtime/versions/1.0.0/t3");
-      const target = path.join(baseDir, "runtime/versions/2.0.0/t3");
-      for (const file of [installed, foreign, target]) {
-        yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-        yield* fs.writeFileString(file, "user-owned file");
-      }
-      yield* fs.makeDirectory(path.dirname(onPath), { recursive: true });
-      yield* fs.symlink(foreign, onPath);
+  it.effect.skipIf(!posixHost)(
+    "leaves unowned install files and PATH symlinks untouched after self-update",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+        const baseDir = path.join(root, ".t3");
+        const installed = path.join(root, ".local/bin/t3");
+        const onPath = path.join(root, "bin/t3");
+        const foreign = path.join(root, "other-home/runtime/versions/1.0.0/t3");
+        const target = path.join(baseDir, "runtime/versions/2.0.0/t3");
+        for (const file of [installed, foreign, target]) {
+          yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+          yield* fs.writeFileString(file, "user-owned file");
+        }
+        yield* fs.makeDirectory(path.dirname(onPath), { recursive: true });
+        yield* fs.symlink(foreign, onPath);
 
-      yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
-        Effect.provideService(HostProcess.Environment, {
-          HOME: root,
-          PATH: path.dirname(onPath),
-        }),
-      );
+        yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
+          Effect.provideService(HostProcess.Environment, {
+            HOME: root,
+            PATH: path.dirname(onPath),
+          }),
+        );
 
-      assert.equal(yield* fs.readFileString(installed), "user-owned file");
-      assert.equal(yield* fs.readLink(onPath), foreign);
-    }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
+        assert.equal(yield* fs.readFileString(installed), "user-owned file");
+        assert.equal(yield* fs.readLink(onPath), foreign);
+      }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
 
   it.effect.each([
-    // The working-directory t3 is checked by its execute bits, which Windows hosts do not set.
-    ...(HostProcess.Platform.defaultValue() === "win32"
-      ? []
-      : [
-          { name: "leading", searchPath: (missing: string) => `:${missing}`, moved: true },
-          { name: "trailing", searchPath: (missing: string) => `${missing}:`, moved: true },
-        ]),
+    { name: "leading", searchPath: (missing: string) => `:${missing}`, moved: true },
+    { name: "trailing", searchPath: (missing: string) => `${missing}:`, moved: true },
     { name: "whole", searchPath: () => "", moved: false },
-  ])("treats a $name empty PATH entry like the shell does", ({ searchPath, moved }) =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const baseDir = path.join(root, ".t3");
-      const exe = (version: string) => path.join(baseDir, "runtime/versions", version, "t3");
-      const cwd = path.join(root, "work");
-      const inCwd = path.join(cwd, "t3");
-      for (const file of [exe("1.0.0"), exe("2.0.0")]) {
-        yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-        yield* fs.writeFileString(file, "", { mode: 0o755 });
-      }
-      yield* fs.makeDirectory(cwd);
-      yield* fs.symlink(exe("1.0.0"), inCwd);
+  ])(
+    "treats a $name empty PATH entry like the shell does",
+    ({ searchPath, moved }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+        const baseDir = path.join(root, ".t3");
+        const exe = (version: string) => path.join(baseDir, "runtime/versions", version, "t3");
+        const cwd = path.join(root, "work");
+        const inCwd = path.join(cwd, "t3");
+        for (const file of [exe("1.0.0"), exe("2.0.0")]) {
+          yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+          yield* fs.writeFileString(file, "", { mode: 0o755 });
+        }
+        yield* fs.makeDirectory(cwd);
+        yield* fs.symlink(exe("1.0.0"), inCwd);
 
-      yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
-        Effect.provideService(HostProcess.Environment, {
-          HOME: root,
-          PATH: searchPath(path.join(root, "missing")),
-        }),
-        Effect.provideService(HostProcess.WorkingDirectory, cwd),
-      );
+        yield* ServiceLauncherClient.repointLaunchers({ baseDir, targetVersion: "2.0.0" }).pipe(
+          Effect.provideService(HostProcess.Environment, {
+            HOME: root,
+            PATH: searchPath(path.join(root, "missing")),
+          }),
+          Effect.provideService(HostProcess.WorkingDirectory, cwd),
+        );
 
-      // A nonempty PATH searches the working directory there; an empty PATH searches nothing.
-      if (moved) {
-        assert.equal(yield* fs.readFileString(inCwd), posixLauncherScript(exe("2.0.0")));
-      } else {
-        assert.equal(yield* fs.readLink(inCwd), exe("1.0.0"));
-      }
-    }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
+        // A nonempty PATH searches the working directory there; an empty PATH searches nothing.
+        if (moved) {
+          assert.equal(yield* fs.readFileString(inCwd), posixLauncherScript(exe("2.0.0")));
+        } else {
+          assert.equal(yield* fs.readLink(inCwd), exe("1.0.0"));
+        }
+      }).pipe(Effect.provideService(HostProcess.Platform, "linux")),
+    { skip: !posixHost },
   );
 
-  it.effect("passes over a working-directory t3 the shell cannot run", () =>
+  it.effect.skipIf(!posixHost)("passes over a working-directory t3 the shell cannot run", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

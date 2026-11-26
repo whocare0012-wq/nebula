@@ -7,6 +7,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 import { ProjectId } from "@t3tools/contracts";
 
 import * as ServerConfig from "../config.ts";
+import { linkEntry } from "../fileLinks.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -153,7 +154,7 @@ describe("ReviewService", () => {
       assert.strictEqual(result.cwd, previous);
 
       const rootLink = `${baseDir}/root-link`;
-      yield* fs.symlink("/", rootLink);
+      yield* linkEntry(fs, "/", rootLink);
       for (const worktreesDirectory of ["/", rootLink]) {
         const error = yield* Effect.gen(function* () {
           const review = yield* ReviewService.ReviewService;
@@ -212,7 +213,7 @@ describe("ReviewService", () => {
       const missing = `${outside}/gone`;
       yield* fs.makeDirectory(nested, { recursive: true });
       yield* fs.makeDirectory(untracked);
-      yield* fs.symlink(repository, linked);
+      yield* linkEntry(fs, repository, linked);
 
       const review = (
         cwd: string,
@@ -297,7 +298,7 @@ describe("ReviewService", () => {
         yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-worktrees-" }),
       );
       const checkout = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-checkout-" });
-      yield* fs.symlink(checkout, `${managed}/feature`);
+      yield* linkEntry(fs, checkout, `${managed}/feature`);
 
       const result = yield* Effect.gen(function* () {
         const review = yield* ReviewService.ReviewService;

@@ -25,6 +25,7 @@ import * as TestClock from "effect/testing/TestClock";
 
 import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as ServerConfig from "../config.ts";
+import { linkEntry } from "../fileLinks.ts";
 import * as GitWorkflow from "../git/GitWorkflowService.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -82,7 +83,7 @@ const layerFor = (state: State, options: Options) => {
       const real = path.join(base, "real");
       yield* fileSystem.makeDirectory(real);
       if (options.symlinkedWorktrees !== true) return { ...config, worktreesDir: real };
-      yield* fileSystem.symlink(real, path.join(base, "linked"));
+      yield* linkEntry(fileSystem, real, path.join(base, "linked"));
       return { ...config, worktreesDir: path.join(base, "linked") };
     }),
   ).pipe(

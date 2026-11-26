@@ -32,6 +32,10 @@ import {
 } from "./pinnedRuntime.ts";
 import { SERVICE_LAUNCHER_PROTOCOL } from "./serviceProtocol.ts";
 
+const posixHost = HostProcess.Platform.defaultValue() !== "win32";
+// Windows launchers are `t3.cmd` shims; symlinked launchers on a colon-separated PATH are POSIX-only.
+const posixLauncherTest = { skip: !posixHost };
+
 const version = "1.2.3";
 const archiveName = `t3-${version}-linux-x64.tar.gz`;
 const archiveBytes = new TextEncoder().encode("not really a tarball");
@@ -651,7 +655,7 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
     return { baseDir, versionsDir, install };
   });
 
-  it.effect("removes only completed runtimes nothing references", () =>
+  it.effect.skipIf(!posixHost)("removes only completed runtimes nothing references", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -788,41 +792,44 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
       recorded: false,
       linkedHome: true,
     },
-  ])("removes a runtime only its own entry names when $name", ({ onPath, recorded, linkedHome }) =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
-      const binDir = path.join(baseDir, "bin");
-      yield* fs.makeDirectory(binDir);
-      yield* fs.symlink(path.join(versionsDir, "1.1.0", "t3"), path.join(binDir, "t3"));
-      const ownDir = path.join(versionsDir, "1.0.0");
-      if (recorded) {
-        yield* fs.writeFileString(
-          path.join(baseDir, "runtime", "launchers"),
-          `${path.join(ownDir, "t3")}\n`,
+  ])(
+    "removes a runtime only its own entry names when $name",
+    ({ onPath, recorded, linkedHome }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
+        const binDir = path.join(baseDir, "bin");
+        yield* fs.makeDirectory(binDir);
+        yield* fs.symlink(path.join(versionsDir, "1.1.0", "t3"), path.join(binDir, "t3"));
+        const ownDir = path.join(versionsDir, "1.0.0");
+        if (recorded) {
+          yield* fs.writeFileString(
+            path.join(baseDir, "runtime", "launchers"),
+            `${path.join(ownDir, "t3")}\n`,
+          );
+        }
+
+        const home = linkedHome
+          ? path.join(yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-link-" }), "home")
+          : baseDir;
+        if (linkedHome) yield* fs.symlink(baseDir, home);
+
+        // The launch agent puts the running runtime's own directory on PATH.
+        const removed = yield* prunePinnedRuntimes({ baseDir: home, keep: ["2.0.0"] }).pipe(
+          Effect.provideService(
+            ProcessRunner.ProcessRunner,
+            lsofRunner("p1\nftxt\nn/sbin/launchd\n"),
+          ),
+          Effect.provideService(HostProcess.Platform, "darwin"),
+          Effect.provideService(HostProcess.Environment, {
+            T3CODE_INSTALL_BIN_DIR: binDir,
+            PATH: onPath ? `${ownDir}:/usr/bin:/bin` : "/usr/bin:/bin",
+          }),
         );
-      }
-
-      const home = linkedHome
-        ? path.join(yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-link-" }), "home")
-        : baseDir;
-      if (linkedHome) yield* fs.symlink(baseDir, home);
-
-      // The launch agent puts the running runtime's own directory on PATH.
-      const removed = yield* prunePinnedRuntimes({ baseDir: home, keep: ["2.0.0"] }).pipe(
-        Effect.provideService(
-          ProcessRunner.ProcessRunner,
-          lsofRunner("p1\nftxt\nn/sbin/launchd\n"),
-        ),
-        Effect.provideService(HostProcess.Platform, "darwin"),
-        Effect.provideService(HostProcess.Environment, {
-          T3CODE_INSTALL_BIN_DIR: binDir,
-          PATH: onPath ? `${ownDir}:/usr/bin:/bin` : "/usr/bin:/bin",
-        }),
-      );
-      assert.deepEqual(removed, ["1.0.0"]);
-    }),
+        assert.deepEqual(removed, ["1.0.0"]);
+      }),
+    posixLauncherTest,
   );
 
   it.effect.each([
@@ -832,37 +839,40 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
       name: "a PATH directory in the versions directory linked to its version directory",
       via: "linked versions dir" as const,
     },
-  ])("keeps a runtime $name names", ({ via }) =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
-      let pathDirs = "/usr/bin:/bin";
-      if (via === "bin") {
-        // The installer accepts any bin directory, including one under the versions directory.
-        const binDir = path.join(versionsDir, "bin");
-        yield* fs.makeDirectory(binDir);
-        yield* fs.symlink(path.join(versionsDir, "1.0.0", "t3"), path.join(binDir, "t3"));
-        yield* fs.writeFileString(
-          path.join(baseDir, "runtime", "launchers"),
-          `${path.join(binDir, "t3")}\n`,
-        );
-      } else {
-        const linkedDir = path.join(via === "linked dir" ? baseDir : versionsDir, "current");
-        yield* fs.symlink(path.join(versionsDir, "1.0.0"), linkedDir);
-        pathDirs = `${linkedDir}:${pathDirs}`;
-      }
+  ])(
+    "keeps a runtime $name names",
+    ({ via }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
+        let pathDirs = "/usr/bin:/bin";
+        if (via === "bin") {
+          // The installer accepts any bin directory, including one under the versions directory.
+          const binDir = path.join(versionsDir, "bin");
+          yield* fs.makeDirectory(binDir);
+          yield* fs.symlink(path.join(versionsDir, "1.0.0", "t3"), path.join(binDir, "t3"));
+          yield* fs.writeFileString(
+            path.join(baseDir, "runtime", "launchers"),
+            `${path.join(binDir, "t3")}\n`,
+          );
+        } else {
+          const linkedDir = path.join(via === "linked dir" ? baseDir : versionsDir, "current");
+          yield* fs.symlink(path.join(versionsDir, "1.0.0"), linkedDir);
+          pathDirs = `${linkedDir}:${pathDirs}`;
+        }
 
-      const removed = yield* prunePinnedRuntimes({ baseDir, keep: ["2.0.0"] }).pipe(
-        Effect.provideService(
-          ProcessRunner.ProcessRunner,
-          lsofRunner("p1\nftxt\nn/sbin/launchd\n"),
-        ),
-        Effect.provideService(HostProcess.Platform, "darwin"),
-        Effect.provideService(HostProcess.Environment, { PATH: pathDirs }),
-      );
-      assert.deepEqual(removed, ["1.1.0"]);
-    }),
+        const removed = yield* prunePinnedRuntimes({ baseDir, keep: ["2.0.0"] }).pipe(
+          Effect.provideService(
+            ProcessRunner.ProcessRunner,
+            lsofRunner("p1\nftxt\nn/sbin/launchd\n"),
+          ),
+          Effect.provideService(HostProcess.Platform, "darwin"),
+          Effect.provideService(HostProcess.Environment, { PATH: pathDirs }),
+        );
+        assert.deepEqual(removed, ["1.1.0"]);
+      }),
+    posixLauncherTest,
   );
 
   it.effect.each([
@@ -870,45 +880,48 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
     { name: "an unterminated launcher record", recorded: "/opt/t", cut: "" },
     // Another process's append is cut short after prune reads the records.
     { name: "a record cut short after the read", recorded: "/opt/t3\n", cut: "/opt/t" },
-  ])("remembers a launcher found on PATH after $name", ({ recorded, cut }) =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
-      const binDir = path.join(baseDir, "custom-bin");
-      yield* fs.makeDirectory(binDir);
-      yield* fs.symlink(path.join(versionsDir, "1.0.0", "t3"), path.join(binDir, "t3"));
-      const launchersFile = path.join(baseDir, "runtime", "launchers");
-      yield* fs.writeFileString(launchersFile, recorded);
-      const prune = (environment: Record<string, string>) =>
-        prunePinnedRuntimes({ baseDir, keep: [] }).pipe(
-          Effect.provideService(ProcessRunner.ProcessRunner, lsofRunner("p1\nftxt\nn/bin/sh\n")),
-          Effect.provideService(HostProcess.Platform, "darwin"),
-          Effect.provideService(HostProcess.Environment, environment),
-          Effect.provideService(HostProcess.HomeDirectory, baseDir),
-        );
+  ])(
+    "remembers a launcher found on PATH after $name",
+    ({ recorded, cut }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
+        const binDir = path.join(baseDir, "custom-bin");
+        yield* fs.makeDirectory(binDir);
+        yield* fs.symlink(path.join(versionsDir, "1.0.0", "t3"), path.join(binDir, "t3"));
+        const launchersFile = path.join(baseDir, "runtime", "launchers");
+        yield* fs.writeFileString(launchersFile, recorded);
+        const prune = (environment: Record<string, string>) =>
+          prunePinnedRuntimes({ baseDir, keep: [] }).pipe(
+            Effect.provideService(ProcessRunner.ProcessRunner, lsofRunner("p1\nftxt\nn/bin/sh\n")),
+            Effect.provideService(HostProcess.Platform, "darwin"),
+            Effect.provideService(HostProcess.Environment, environment),
+            Effect.provideService(HostProcess.HomeDirectory, baseDir),
+          );
 
-      yield* prune({ PATH: binDir }).pipe(
-        Effect.provideService(FileSystem.FileSystem, {
-          ...fs,
-          readFileString: (file, encoding) =>
-            fs
-              .readFileString(file, encoding)
-              .pipe(
-                Effect.tap(() =>
-                  file === launchersFile
-                    ? fs.writeFileString(file, cut, { flag: "a" })
-                    : Effect.void,
+        yield* prune({ PATH: binDir }).pipe(
+          Effect.provideService(FileSystem.FileSystem, {
+            ...fs,
+            readFileString: (file, encoding) =>
+              fs
+                .readFileString(file, encoding)
+                .pipe(
+                  Effect.tap(() =>
+                    file === launchersFile
+                      ? fs.writeFileString(file, cut, { flag: "a" })
+                      : Effect.void,
+                  ),
                 ),
-              ),
-        }),
-      );
-      // A service that cannot see the interactive PATH.
-      const removed = yield* prune({});
+          }),
+        );
+        // A service that cannot see the interactive PATH.
+        const removed = yield* prune({});
 
-      assert.deepEqual(removed, []);
-      assert.isTrue(yield* fs.exists(path.join(versionsDir, "1.0.0", "t3")));
-    }),
+        assert.deepEqual(removed, []);
+        assert.isTrue(yield* fs.exists(path.join(versionsDir, "1.0.0", "t3")));
+      }),
+    posixLauncherTest,
   );
 
   it.effect("matches a Windows shim whatever its casing", () =>
@@ -992,7 +1005,6 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
 });
 
 // NTFS reports no exec bits, and these lookups pass over files without them.
-const posixHost = HostProcess.Platform.defaultValue() !== "win32";
 
 it.layer(NodeServices.layer)("launcher lookup on PATH", (it) => {
   it.effect.skipIf(!posixHost)(

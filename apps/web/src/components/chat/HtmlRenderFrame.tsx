@@ -84,7 +84,12 @@ export function HtmlRenderFrame(props: {
   }, [expanded, onFullscreenChange]);
 
   return (
-    <div ref={observeBox} className="group/html-render relative" style={{ height }}>
+    <div
+      ref={observeBox}
+      className="group/html-render relative"
+      // A failed load keeps only its message, so a tall reservation cannot hide nearby history.
+      style={failed ? undefined : { height }}
+    >
       {src !== null ? (
         <>
           <HtmlRenderDocument

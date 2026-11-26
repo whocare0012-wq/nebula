@@ -201,7 +201,8 @@ const launchCodex = (
     }),
   );
 
-describe("AgentScope service", () => {
+// Agent scopes are systemd units, which exist only on Linux; the fakes are `/bin/sh` scripts.
+describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("AgentScope service", () => {
   it.effect("labels a thread from its newest scope until its next session clears it", () =>
     withFakeSystemd(({ scope, units }) =>
       Effect.gen(function* () {

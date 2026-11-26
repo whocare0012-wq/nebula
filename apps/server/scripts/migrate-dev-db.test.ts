@@ -7,6 +7,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 
 import { runMigrations } from "../src/persistence/Migrations.ts";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
 import { dropResumableFamilies, runMigrateDevDb } from "./migrate-dev-db.ts";
 
 const withDatabase = <A, E, R>(
@@ -299,13 +300,19 @@ it.layer(NodeServices.layer)("migrate-dev-db", (it) => {
       const live = path.join(sharedHome, "userdata", "statev2.sqlite");
       yield* fs.makeDirectory(path.dirname(live), { recursive: true });
       yield* fs.rename(fixture, live);
-      const symlink = path.join(elsewhere, "statev2.sqlite");
-      yield* fs.symlink(live, symlink);
+      const links: Array<string> = [];
+      // A file symlink needs Developer Mode or elevation on Windows; the hard link still runs.
+      if (symlinksSupported) {
+        const symlink = path.join(elsewhere, "statev2.sqlite");
+        yield* fs.symlink(live, symlink);
+        links.push(symlink);
+      }
       // A hard link has its own path; only the file's identity gives it away.
       const hardLink = path.join(elsewhere, "copy.sqlite");
       yield* fs.link(live, hardLink);
+      links.push(hardLink);
 
-      for (const link of [symlink, hardLink]) {
+      for (const link of links) {
         const refused = yield* Effect.flip(dropResumableFamilies(link, { sharedHome }));
         assert.equal(refused._tag, "MigrateDevDbSharedHomeError", link);
       }

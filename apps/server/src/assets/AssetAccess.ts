@@ -1139,7 +1139,11 @@ export const resolveAsset = Effect.fn("AssetAccess.resolveAsset")(function* (
     yield* revisions.observe(
       {
         workspaceRoot: claims.workspaceRoot,
-        entryRelativePath: path.join(claims.baseRelativePath, claims.entryFileName),
+        // The `/` form the URL was minted with; path.join would give Windows another document.
+        entryRelativePath:
+          claims.baseRelativePath === "."
+            ? claims.entryFileName
+            : `${claims.baseRelativePath}/${claims.entryFileName}`,
       },
       joinedRelativePath,
     );

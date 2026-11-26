@@ -6,6 +6,7 @@
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Pty from "@t3tools/shared/PtyAdapter";
@@ -127,7 +128,10 @@ async function fixture(failStart = false, rejectSpawn = false, finishWithSteerin
           const settings = JSON.parse(NodeFS.readFileSync(settingsPath, "utf8"));
           const command: string = settings.hooks.SessionStart[0].hooks[0].command;
           activeHook = command.match(/http:\/\/[^ ]+/)![0].replace(/session-start$/, "");
-          expect(NodeFS.statSync(settingsPath).mode & 0o777).toBe(0o600);
+          // NTFS has no POSIX mode bits to check.
+          if (HostProcess.Platform.defaultValue() !== "win32") {
+            expect(NodeFS.statSync(settingsPath).mode & 0o777).toBe(0o600);
+          }
           let dataListener: ((data: string) => void) | undefined;
           const exitListeners = new Set<(event: Pty.PtyExitEvent) => void>();
           let typed = "";

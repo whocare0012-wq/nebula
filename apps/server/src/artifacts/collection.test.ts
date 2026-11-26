@@ -78,9 +78,9 @@ describe("artifact collection", () => {
       new Set(["attachment", "html", "file_change", "path_reference"]),
     );
     expect(values.every((v) => v.threadId === "fiction")).toBe(true);
-    expect(values.map((v) => v.path)).toContain("/fiction/work/角色 A.png");
+    expect(values.map((v) => v.path)).toContain(NodePath.resolve("/fiction/work/角色 A.png"));
     expect(values.find((v) => v.source === "html")?.name).toBe("示例页面.html");
-    expect(values.map((v) => v.path)).toContain("/fiction/work/slides.pptx");
+    expect(values.map((v) => v.path)).toContain(NodePath.resolve("/fiction/work/slides.pptx"));
     expect(
       collectArtifactCandidates(
         [
@@ -142,7 +142,9 @@ describe("artifact collection", () => {
     expect(resolveArtifactReference("https://example.test/a.png", "/fiction")).toBeNull();
     expect(resolveArtifactReference("relative.png", "")).toBeNull();
     expect(resolveArtifactReference("a.exe", "/fiction")).toBeNull();
-    expect(resolveArtifactReference("/fiction/a%20b.png", "/fiction")).toBe("/fiction/a b.png");
+    expect(resolveArtifactReference("/fiction/a%20b.png", "/fiction")).toBe(
+      NodePath.resolve("/fiction/a b.png"),
+    );
   });
   it("recognises bare paths next to full-width Chinese punctuation", () => {
     expect(referencedPaths("已生成：/fiction/a.png")).toEqual(["/fiction/a.png"]);
