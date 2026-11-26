@@ -651,7 +651,18 @@ export const AntigravityDriver: ProviderDriver<
       sessionId: string,
     ) {
       const snapshot = yield* provider.snapshot.getSnapshot;
-      if (!snapshot.slashCommands?.some((command) => command.name === "usage")) return;
+      // agy documents `/quota` as an alias of `/usage`; either answers with the same report.
+      const command = snapshot.slashCommands?.find(
+        (entry) => entry.name === "usage" || entry.name === "quota",
+      )?.name;
+      if (command === undefined) {
+        return yield* Effect.logInfo(
+          "Antigravity offers no /usage command, so its limits stay unknown.",
+          {
+            commands: snapshot.slashCommands?.map((entry) => entry.name) ?? [],
+          },
+        );
+      }
       const reply: string[] = [];
       yield* runtime.handleSessionUpdate((notification) =>
         Effect.sync(() => {
@@ -665,13 +676,20 @@ export const AntigravityDriver: ProviderDriver<
           }
         }),
       );
-      yield* runtime.prompt({ prompt: [{ type: "text", text: "/usage" }] });
+      yield* runtime.prompt({ prompt: [{ type: "text", text: `/${command}` }] });
+      const text = reply.join("");
+      const windows = parseAntigravityUsageReply(
+        text,
+        snapshot.models.map((model) => model.slug),
+      );
+      if (windows.length === 0) {
+        yield* Effect.logWarning("Antigravity's /usage reply listed no limits.", {
+          reply: text.slice(0, 2000),
+        });
+      }
       yield* provider.onUsageChecked({
         checkedAt: DateTime.formatIso(yield* DateTime.now),
-        windows: parseAntigravityUsageReply(
-          reply.join(""),
-          snapshot.models.map((model) => model.slug),
-        ),
+        windows,
       });
     });
 
