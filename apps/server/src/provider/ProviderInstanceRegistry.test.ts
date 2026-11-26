@@ -185,6 +185,13 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
     Layer.provideMerge(
       Layer.mock(CodexInstallation.CodexInstallation)({
         managedDirectory: "unused-managed-installation",
+        acquire: () =>
+          Effect.fail(
+            new CodexInstallation.CodexInstallationError({
+              operation: "resolve",
+              detail: "Codex is not installed in this test.",
+            }),
+          ),
       }),
     ),
     Layer.provideMerge(Layer.mock(ServerSecretStore.ServerSecretStore)({})),

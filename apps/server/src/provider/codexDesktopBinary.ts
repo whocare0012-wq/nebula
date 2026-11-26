@@ -1,6 +1,7 @@
 import { SpawnExecutableResolution } from "@t3tools/shared/shell";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 
 // The Codex desktop app ships as an MSIX package: its bundled CLI lives under
@@ -16,13 +17,16 @@ const DESKTOP_ALIASES: ReadonlyArray<{
 ];
 
 /**
- * On Windows, when Codex is configured as the bare default `codex` and nothing on PATH answers to
- * it, use the CLI bundled with an installed Codex desktop app. Anything else is returned as is.
+ * On Windows, for the bare default `codex` with nothing on PATH, use the managed Codex (so every
+ * account runs one version), else the desktop app's bundled CLI, which only that app can update.
+ * Anything else is returned as is.
  */
 export const resolveCodexDesktopBinary = Effect.fn("resolveCodexDesktopBinary")(function* (input: {
   readonly binaryPath: string;
   readonly platform: NodeJS.Platform;
   readonly env: NodeJS.ProcessEnv;
+  /** The managed Codex executable, if one is installed; looked up only when it would be used. */
+  readonly managed?: Effect.Effect<Option.Option<string>>;
 }) {
   const { binaryPath, platform, env } = input;
   const localAppData = env.LOCALAPPDATA?.trim();
@@ -37,6 +41,10 @@ export const resolveCodexDesktopBinary = Effect.fn("resolveCodexDesktopBinary")(
     }
   });
   if (onPath !== undefined) return binaryPath;
+  if (input.managed !== undefined) {
+    const managed = yield* input.managed;
+    if (Option.isSome(managed)) return managed.value;
+  }
 
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

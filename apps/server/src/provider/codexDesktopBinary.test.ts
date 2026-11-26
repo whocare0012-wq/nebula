@@ -3,6 +3,7 @@ import { SpawnExecutableResolution } from "@t3tools/shared/shell";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 
@@ -19,6 +20,7 @@ function resolve(input: {
   readonly links: Record<string, string>;
   readonly files: ReadonlyArray<string>;
   readonly onPath?: string;
+  readonly managed?: string;
 }) {
   const fileSystem = FileSystem.layerNoop({
     readLink: (path) =>
@@ -32,6 +34,7 @@ function resolve(input: {
     binaryPath: input.binaryPath ?? "codex",
     platform: input.platform ?? "win32",
     env,
+    managed: Effect.succeed(Option.fromUndefinedOr(input.managed)),
   }).pipe(
     Effect.provideService(SpawnExecutableResolution, () => input.onPath),
     Effect.provide(Layer.merge(fileSystem, Path.layer)),
@@ -75,6 +78,23 @@ describe("resolveCodexDesktopBinary", () => {
       );
       expect(yield* resolve({ ...desktop, platform: "darwin" })).toBe("codex");
       expect(yield* resolve({ links: {}, files: [] })).toBe("codex");
+    }),
+  );
+
+  it.effect("prefers the Codex Nebula manages over the desktop app's", () =>
+    Effect.gen(function* () {
+      const desktop = {
+        links: { [`${aliases}/chatgpt-desktop.exe`]: `${packageApp}/ChatGPT.exe` },
+        files: [`${packageApp}/resources/codex.exe`],
+      };
+      const managed = "/Users/me/.nebula/tools/codex/0.172.0/bin/codex.exe";
+      expect(yield* resolve({ ...desktop, managed })).toBe(managed);
+      expect(yield* resolve({ links: {}, files: [], managed })).toBe(managed);
+      // A Codex on PATH or a custom path still wins.
+      expect(yield* resolve({ ...desktop, managed, onPath: "/npm/codex.cmd" })).toBe("codex");
+      expect(yield* resolve({ ...desktop, managed, binaryPath: "/tools/codex.exe" })).toBe(
+        "/tools/codex.exe",
+      );
     }),
   );
 });

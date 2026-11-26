@@ -59,6 +59,14 @@ const layerDeps = ServerConfig.layerTest(process.cwd(), {
   Layer.provideMerge(
     Layer.mock(CodexInstallation.CodexInstallation)({
       managedDirectory: "unused-managed-installation",
+      // Nothing is installed, so a bare `codex` on Windows falls back as it would without Nebula's.
+      acquire: () =>
+        Effect.fail(
+          new CodexInstallation.CodexInstallationError({
+            operation: "resolve",
+            detail: "Codex is not installed in this test.",
+          }),
+        ),
     }),
   ),
   Layer.provideMerge(Layer.mock(ServerSecretStore.ServerSecretStore)({})),
