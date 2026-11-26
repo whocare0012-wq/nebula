@@ -181,6 +181,13 @@ const PACKAGE_FIELD_TEXT: ReadonlyMap<string, string> = new Map([
     "Custom ACP executable. Leave empty to select automatically.",
     msg("Custom ACP executable. Leave empty to select automatically."),
   ],
+  ["Read limits with the agy CLI", msg("Read limits with the agy CLI")],
+  [
+    "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.",
+    msg(
+      "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.",
+    ),
+  ],
   [
     "Agent identifier from the official ACP Registry, for example 'devin'.",
     msg("Agent identifier from the official ACP Registry, for example 'devin'."),

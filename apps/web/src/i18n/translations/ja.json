@@ -9337,6 +9337,8 @@
   "8bf0f6ed8dd4b77e": "Gemini Enterprise では必須です。API キーが設定されていない場合、Agent Platform がこれを使用します。",
   "7c735c8fbd3fb6e3": "Gemini Enterprise または Agent Platform のリージョンです。",
   "68429f58a5a70d33": "カスタムの ACP 実行ファイルです。空欄にすると自動で選択します。",
+  "6f45d658292a1ffe": "Read limits with the agy CLI",
+  "ff295b88edf1f85d": "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.",
   "0b0db4db3038102c": "公式 ACP Registry のエージェント識別子です (例: 'devin')。",
   "c731cf717a637a89": "この環境上の実行ファイルです。レジストリのエージェントでは、引数と環境変数はそのままに、配布されている実行ファイルを上書きします。",
   "bd02885a1d63c1a1": "ACP の認証方法 ID (省略可能) です。デフォルトでは、エージェントが管理する最初の方法が選択されます。",

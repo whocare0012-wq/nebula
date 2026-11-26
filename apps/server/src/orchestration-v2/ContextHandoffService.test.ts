@@ -149,10 +149,11 @@ it.layer(layerTest)("ContextHandoffService legacy import", (it) => {
         createdAt: DateTime.makeUnsafe("2026-01-02T00:00:00.000Z"),
       });
 
-      assert.include(
-        handoff.history?.omittedItemIds ?? [],
-        TurnItemId.make("turn-item:long-single-token"),
+      const kept = handoff.history?.messages.find(
+        (message) => message.itemId === TurnItemId.make("turn-item:long-single-token"),
       );
+      assert.include(kept?.text, "characters omitted");
+      assert.include(kept?.text, "LATEST_SINGLE_TOKEN");
       assert.isAtMost(handoff.summaryText.length, 32_000);
       assert.include(handoff.summaryText, "User:\n... ");
       assert.include(handoff.summaryText, "LATEST_SINGLE_TOKEN");

@@ -9379,6 +9379,8 @@
   "8bf0f6ed8dd4b77e": "Obrigatório para o Gemini Enterprise. O Agent Platform usa quando nenhuma chave de API está definida.",
   "7c735c8fbd3fb6e3": "Região do Gemini Enterprise ou do Agent Platform.",
   "68429f58a5a70d33": "Executável ACP personalizado. Deixe vazio para selecionar automaticamente.",
+  "6f45d658292a1ffe": "Read limits with the agy CLI",
+  "ff295b88edf1f85d": "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.",
   "0b0db4db3038102c": "Identificador do agente no ACP Registry oficial, por exemplo 'devin'.",
   "c731cf717a637a89": "Executável neste ambiente. Para agentes do registro, substitui o executável da distribuição mantendo os argumentos e o ambiente dele.",
   "bd02885a1d63c1a1": "ID opcional do método de autenticação ACP. Por padrão, o primeiro método gerenciado pelo agente é selecionado.",

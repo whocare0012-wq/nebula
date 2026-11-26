@@ -696,12 +696,11 @@ export const AntigravityDriver: ProviderDriver<
 
     const checkUsageWithCli = Effect.fn("AntigravityDriver.checkUsageWithCli")(function* () {
       const snapshot = yield* provider.snapshot.getSnapshot;
-      // Only Google sign-ins have subscription limits; never prompt a signed-out account.
-      if (
-        !antigravityAuthUsesBrowser(auth.authMethod) ||
-        snapshot.auth.status !== "authenticated"
-      ) {
-        return;
+      // Only Google sign-ins have subscription limits. After a restart the status stays "unknown"
+      // until a session starts, so only a known sign-out stops here; the CLI reports an expired one.
+      if (!antigravityAuthUsesBrowser(auth.authMethod)) return;
+      if (snapshot.auth.status === "unauthenticated") {
+        return yield* new AntigravityCliUsageError({ reason: "signed-out" });
       }
       const executable = yield* installation.acquire(settings.binaryPath, processEnvironment);
       const stdout = yield* runAntigravityCliUsage({

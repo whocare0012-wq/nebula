@@ -202,7 +202,7 @@ export function antigravityUsageRefreshTargets(providers: readonly ServerProvide
         provider.driver === "antigravity" &&
         provider.enabled &&
         provider.installed &&
-        provider.auth.status === "authenticated",
+        provider.auth.status !== "unauthenticated",
     )
     .map((provider) => provider.instanceId);
 }

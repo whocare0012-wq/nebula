@@ -138,6 +138,18 @@ describe("handoff budget", () => {
     assert.equal(command?.kind, "command_execution");
     assert.include(command!.text, "Exit code: 1");
     assert.include(command!.text, "界".repeat(300));
+    const longOutput = historicalMessage({
+      ...base,
+      type: "command_execution",
+      input: "vp test",
+      output: `first line\n${"noise\n".repeat(5_000)}last line: 3 failed`,
+      exitCode: 1,
+    });
+    assert.include(longOutput!.text, "Command: vp test\nExit code: 1\nfirst line");
+    assert.isTrue(longOutput!.text.endsWith("last line: 3 failed"));
+    assert.include(longOutput!.text, "characters omitted");
+    assert.include(longOutput!.text, base.id);
+    assert.isBelow(longOutput!.text.length, 4_000);
     assert.equal(
       historicalMessage({
         ...base,
@@ -222,7 +234,13 @@ describe("handoff budget", () => {
       selected.messages.map((m) => m.itemId),
       file.itemId,
     );
-    assert.include(selected.omittedItemIds, `${task}:log`);
+    // Whole items fill the budget first; a log kept at all is cut down, never kept whole.
+    const log = selected.messages.find((m) => m.itemId === `${task}:log`);
+    if (log === undefined) assert.include(selected.omittedItemIds, `${task}:log`);
+    else {
+      assert.include(log.text, "characters omitted");
+      assert.isBelow(log.text.length, 20_000);
+    }
     assert.isAtMost(historyCost(selected.messages, selected.context), budget);
   });
 
@@ -241,6 +259,24 @@ describe("handoff budget", () => {
     assert.deepEqual(selected.messages, messages);
     assert.equal(selected.omittedItems, 2);
     assert.isAtMost(historyCost(selected.messages, selected.context), 3_000);
+  });
+
+  it("keeps the start and end of an item too long for what is left, and says where to read the rest", () => {
+    const long = message("item:long", "assistant", `START ${"x".repeat(60_000)} END`);
+    const selected = selectHistory({
+      messages: [messages[0]!, long, messages[1]!],
+      coverage: "thread:handoff runs 1-3",
+      budget: 12_000,
+    });
+    const kept = selected.messages.find((item) => item.itemId === long.itemId);
+    assert.isDefined(kept);
+    assert.isTrue(kept!.text.startsWith("START "));
+    assert.isTrue(kept!.text.endsWith(" END"));
+    assert.include(kept!.text, "characters omitted");
+    assert.include(kept!.text, long.itemId);
+    assert.include(selected.context, "1 truncated");
+    assert.deepEqual(selected.omittedItemIds, []);
+    assert.isAtMost(historyCost(selected.messages, selected.context), 12_000);
   });
 
   it("points history recovery at the omitted items instead of a read from the thread's start", () => {
@@ -524,7 +560,8 @@ describe("handoff delivery", () => {
       const result = yield* deliverContextHandoffs({
         handoffs: [durable],
         providerThread,
-        budget: 16_000,
+        // Too little is left after the fixture messages for even a shortened copy of the oversized one.
+        budget: 3_000,
         alreadyDeliveredItemIds: new Set(),
         inject: (value) => {
           assert.include(value.context, "omitted 2 items");
