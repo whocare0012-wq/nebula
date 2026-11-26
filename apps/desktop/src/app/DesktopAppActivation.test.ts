@@ -16,11 +16,8 @@ import { it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import { afterEach, describe, expect } from "vite-plus/test";
 
-import {
-  OPEN_FOLDER_ARGUMENT,
-  readOpenFolderArgument,
-  startDesktopAppControlServer,
-} from "./DesktopAppActivation.ts";
+import { startDesktopAppControlServer } from "./DesktopAppActivation.ts";
+import { OPEN_FOLDER_ARGUMENT, readOpenFolderArgument } from "./launchArguments.ts";
 
 const openServers: Array<{ close: () => Promise<void> }> = [];
 

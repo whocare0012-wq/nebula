@@ -81,7 +81,7 @@ import {
 } from "../../modelSelection";
 import { useTextGenerationTargets } from "../../textGenerators";
 import { ensureLocalApi, readLocalApi } from "../../localApi";
-import { isMacPlatform } from "../../lib/utils";
+import { isMacPlatform, isWindowsPlatform } from "../../lib/utils";
 import {
   useEnvironmentProviders,
   useEnvironments,
@@ -651,6 +651,12 @@ export function useSettingsRestore(onRestored?: () => void) {
       ? [gt("Delete confirmation")]
       : []),
     ...(settings.confirmQuit !== DEFAULT_UNIFIED_SETTINGS.confirmQuit ? [gt("Quit shortcut")] : []),
+    ...(settings.windowsRunInBackground !== DEFAULT_UNIFIED_SETTINGS.windowsRunInBackground
+      ? [uiText("Keep running in the tray")]
+      : []),
+    ...(settings.windowsOpenAtLogin !== DEFAULT_UNIFIED_SETTINGS.windowsOpenAtLogin
+      ? [uiText("Start at login")]
+      : []),
     ...(isTextGenerationModelDirty ? [gt("Text generation model")] : []),
     ...(settings.threadTitleInstructions !== DEFAULT_UNIFIED_SETTINGS.threadTitleInstructions
       ? [gt("Thread title instructions")]
@@ -768,6 +774,8 @@ export function useSettingsRestore(onRestored?: () => void) {
       confirmThreadDelete: DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete,
       confirmThreadUnpin: DEFAULT_UNIFIED_SETTINGS.confirmThreadUnpin,
       confirmQuit: DEFAULT_UNIFIED_SETTINGS.confirmQuit,
+      windowsRunInBackground: DEFAULT_UNIFIED_SETTINGS.windowsRunInBackground,
+      windowsOpenAtLogin: DEFAULT_UNIFIED_SETTINGS.windowsOpenAtLogin,
       textGenerationModelSelection: DEFAULT_UNIFIED_SETTINGS.textGenerationModelSelection,
       threadTitleInstructions: DEFAULT_UNIFIED_SETTINGS.threadTitleInstructions,
       fontFamilySans: DEFAULT_UNIFIED_SETTINGS.fontFamilySans,
@@ -1138,6 +1146,67 @@ export function GeneralSettingsPanel() {
               </Select>
             }
           />
+        ) : null}
+        {isElectron && isWindowsPlatform(navigator.platform) ? (
+          <>
+            <SettingsRow
+              id="windows-run-in-background"
+              title={uiText("Keep running in the tray")}
+              description={uiText(
+                "Closing the window hides Nebula to the notification area, so agents keep working and notifications still arrive. Quit from the tray icon.",
+              )}
+              resetAction={
+                settings.windowsRunInBackground !==
+                DEFAULT_UNIFIED_SETTINGS.windowsRunInBackground ? (
+                  <SettingResetButton
+                    ariaLabel={uiText("Reset tray behavior to default")}
+                    onClick={() =>
+                      updateSettings({
+                        windowsRunInBackground: DEFAULT_UNIFIED_SETTINGS.windowsRunInBackground,
+                      })
+                    }
+                  />
+                ) : null
+              }
+              control={
+                <Switch
+                  checked={settings.windowsRunInBackground}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ windowsRunInBackground: Boolean(checked) })
+                  }
+                  aria-label={uiText("Keep running in the tray")}
+                />
+              }
+            />
+            <SettingsRow
+              id="windows-open-at-login"
+              title={uiText("Start at login")}
+              description={uiText(
+                "Open Nebula when you sign in to Windows. With Keep running in the tray on, it starts in the tray without a window.",
+              )}
+              resetAction={
+                settings.windowsOpenAtLogin !== DEFAULT_UNIFIED_SETTINGS.windowsOpenAtLogin ? (
+                  <SettingResetButton
+                    ariaLabel={uiText("Reset start at login to default")}
+                    onClick={() =>
+                      updateSettings({
+                        windowsOpenAtLogin: DEFAULT_UNIFIED_SETTINGS.windowsOpenAtLogin,
+                      })
+                    }
+                  />
+                ) : null
+              }
+              control={
+                <Switch
+                  checked={settings.windowsOpenAtLogin}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ windowsOpenAtLogin: Boolean(checked) })
+                  }
+                  aria-label={uiText("Start at login")}
+                />
+              }
+            />
+          </>
         ) : null}
       </SettingsSection>
 

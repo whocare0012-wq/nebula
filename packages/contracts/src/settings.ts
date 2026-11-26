@@ -566,6 +566,8 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_GLASS_OPACITY)),
   ),
   windowsMica: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  windowsRunInBackground: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  windowsOpenAtLogin: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   fontSizeInterface: InterfaceFontSize.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_INTERFACE_FONT_SIZE)),
   ),
@@ -2294,6 +2296,8 @@ export const ClientSettingsPatch = Schema.Struct({
   environmentIdentificationMode: Schema.optionalKey(EnvironmentIdentificationMode),
   glassOpacity: Schema.optionalKey(GlassOpacity),
   windowsMica: Schema.optionalKey(Schema.Boolean),
+  windowsRunInBackground: Schema.optionalKey(Schema.Boolean),
+  windowsOpenAtLogin: Schema.optionalKey(Schema.Boolean),
   onboardingCompletedAt: Schema.optionalKey(Schema.NullOr(Schema.String)),
   fontSizeInterface: Schema.optionalKey(InterfaceFontSize),
   fontSizePrompt: Schema.optionalKey(PromptFontSize),

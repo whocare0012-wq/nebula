@@ -49,6 +49,7 @@ import * as DesktopSnapShot from "../snapShot/DesktopSnapShot.ts";
 import * as DesktopRendererHistory from "../telemetry/DesktopRendererHistory.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopApplicationMenu from "../window/DesktopApplicationMenu.ts";
+import * as DesktopBackgroundMode from "../window/DesktopBackgroundMode.ts";
 import * as DesktopWindow from "../window/DesktopWindow.ts";
 import * as DesktopWslBackend from "../wsl/DesktopWslBackend.ts";
 
@@ -148,6 +149,10 @@ const runStubbedDesktop = (stub: StubbedDesktop) =>
         } as PreviewPasskeys.PreviewPasskeys["Service"]),
         Effect.provideService(DesktopApplicationMenu.DesktopApplicationMenu, {
           configure: stub.record("menu"),
+        }),
+        Effect.provideService(DesktopBackgroundMode.DesktopBackgroundMode, {
+          start: Effect.void,
+          configure: () => Effect.void,
         }),
         Effect.provideService(DesktopUpdates.DesktopUpdates, {
           configure: Effect.void,

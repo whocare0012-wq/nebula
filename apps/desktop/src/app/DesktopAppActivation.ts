@@ -30,6 +30,7 @@ import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import { DESKTOP_APP_ACTIVATION_REQUEST_CHANNEL } from "../ipc/channels.ts";
 import * as DesktopWindow from "../window/DesktopWindow.ts";
 import { DesktopAppActivationBroker } from "./DesktopAppActivationBroker.ts";
+import { NEW_THREAD_ARGUMENT, readOpenFolderArgument } from "./launchArguments.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";
 
@@ -38,16 +39,6 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // A cold start from Explorer waits for the backend and the first renderer load.
 const OPEN_FOLDER_TIMEOUT_MS = 180_000;
 
-/** Explorer's "Open with Nebula" passes the folder as `--nebula-open-folder=<path>`. */
-export const OPEN_FOLDER_ARGUMENT = "--nebula-open-folder";
-
-export function readOpenFolderArgument(argv: readonly string[]): string | null {
-  const prefix = `${OPEN_FOLDER_ARGUMENT}=`;
-  const value = argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
-  // A drive root's trailing backslash escapes the closing quote, which then stays in the value.
-  const folder = value?.replace(/"$/, "").trim();
-  return folder ? folder : null;
-}
 const isDesktopAppActivationRequest = Schema.is(DesktopAppActivationRequest);
 
 export class DesktopAppActivationStartError extends Schema.TaggedError<DesktopAppActivationStartError>()(
@@ -371,16 +362,32 @@ export const make = Effect.gen(function* () {
         if (!response.ok) void runPromise(reportOpenFolderFailure(folder, response.message));
       });
   };
+  // A new thread needs the renderer's projects, so a cold start holds it until the renderer is ready.
+  let rendererReady = false;
+  let newThreadPending = false;
+  const openNewThread = () =>
+    void runPromise(
+      desktopWindow
+        .dispatchMenuAction("chat.new")
+        .pipe(Effect.catchCause((cause) => logWarning("could not open a new thread", { cause }))),
+    );
+  const requestNewThread = () => {
+    if (rendererReady) openNewThread();
+    else newThreadPending = true;
+  };
+
   // Second launches can arrive while the app is still starting; they wait for `start`.
   let started = false;
   const pendingFolders: Array<string> = [];
   if (desktopEnvironment.platform === "win32") {
     yield* electronApp.on("second-instance", (_event: unknown, argv: readonly string[]) => {
+      if (argv.includes(NEW_THREAD_ARGUMENT)) requestNewThread();
       const folder = readOpenFolderArgument(argv);
       if (folder === null) return;
       if (started) openFolder(folder);
       else pendingFolders.push(folder);
     });
+    if (launchArguments.includes(NEW_THREAD_ARGUMENT)) newThreadPending = true;
     const launchFolder = readOpenFolderArgument(launchArguments);
     if (launchFolder !== null) pendingFolders.push(launchFolder);
   }
@@ -425,9 +432,14 @@ export const make = Effect.gen(function* () {
       Effect.asVoid,
     ),
     setRendererReady: Effect.fn("DesktopAppActivation.setRendererReady")(function* (ready) {
+      rendererReady = ready;
       if (!ready) {
         clearRegisteredRenderer();
         return;
+      }
+      if (newThreadPending) {
+        newThreadPending = false;
+        openNewThread();
       }
       const main = yield* electronWindow.main;
       if (Option.isNone(main)) return;

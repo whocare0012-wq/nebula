@@ -17,6 +17,7 @@ import { applyLanguage, m, onLocaleChange } from "../i18n/messages.ts";
 import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopWindow from "./DesktopWindow.ts";
+import { NEW_THREAD_ARGUMENT } from "../app/launchArguments.ts";
 import { localizeApplicationMenu } from "./menuLocale.ts";
 
 export class DesktopApplicationMenuActionError extends Schema.TaggedError<DesktopApplicationMenuActionError>()(
@@ -51,9 +52,6 @@ const dispatchMenuAction = Effect.fn("desktop.menu.dispatchMenuAction")(function
   });
 });
 
-/** Jump list task argument; Windows starts a second instance with it, which this one handles. */
-export const NEW_THREAD_TASK_ARGUMENT = "--nebula-new-thread";
-
 /** Returns the failure, if Windows refused the jump list. */
 function setWindowsJumpList(locale: "zh-CN" | "en"): unknown {
   const zh = locale === "zh-CN";
@@ -69,7 +67,7 @@ function setUserTasks(zh: boolean): boolean {
   return Electron.app.setUserTasks([
     {
       program: process.execPath,
-      arguments: NEW_THREAD_TASK_ARGUMENT,
+      arguments: NEW_THREAD_ARGUMENT,
       title: zh ? "新建会话" : "New thread",
       description: zh ? "在 Nebula 中新建会话" : "Start a new thread in Nebula",
       iconPath: process.execPath,
@@ -230,13 +228,6 @@ export const make = Effect.gen(function* () {
       ),
     );
   };
-  if (environment.platform === "win32") {
-    yield* electronApp.on("second-instance", (_event: unknown, argv: readonly string[]) => {
-      if (argv.includes(NEW_THREAD_TASK_ARGUMENT)) {
-        runMenuEffect("chat.new", dispatchMenuAction("chat.new"));
-      }
-    });
-  }
   const configure = Effect.gen(function* () {
     const checkForUpdatesClick = () => {
       runMenuEffect("check-for-updates", handleCheckForUpdatesMenuClick);

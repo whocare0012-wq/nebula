@@ -8309,6 +8309,14 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Let the Windows desktop tint the sidebar and window edges. Needs Windows 11 22H2 or later.":
     "让 Windows 桌面的颜色透过侧边栏和窗口边缘。需要 Windows 11 22H2 或更新版本。",
   "Reset Mica background to default": "将云母背景恢复默认",
+  "Keep running in the tray": "关闭窗口后在托盘继续运行",
+  "Closing the window hides Nebula to the notification area, so agents keep working and notifications still arrive. Quit from the tray icon.":
+    "关闭窗口时星云会隐藏到通知区域，代理继续工作，通知照常送达。要退出请在托盘图标的菜单里选择。",
+  "Reset tray behavior to default": "将托盘行为恢复默认",
+  "Start at login": "开机自动启动",
+  "Open Nebula when you sign in to Windows. With Keep running in the tray on, it starts in the tray without a window.":
+    "登录 Windows 时自动打开星云。如果同时开启了「关闭窗口后在托盘继续运行」，会直接在托盘启动、不弹出窗口。",
+  "Reset start at login to default": "将开机自动启动恢复默认",
   "Write.": "写入",
   "Search {count}": "搜索 {count}",
   File: "文件",

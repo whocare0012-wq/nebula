@@ -10,6 +10,7 @@ import * as Schedule from "effect/Schedule";
 import * as Semaphore from "effect/Semaphore";
 
 import * as Electron from "electron";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import { msg } from "gt-i18n";
 
 import {
@@ -39,6 +40,7 @@ import {
   WINDOW_FULLSCREEN_STATE_CHANNEL,
 } from "../ipc/channels.ts";
 import { windowBackgroundColor } from "./windowMaterial.ts";
+import { BACKGROUND_LAUNCH_ARGUMENT } from "../app/launchArguments.ts";
 import {
   PASSKEY_BRIDGE_ARGUMENT,
   PRIMARY_PASTE_DISABLED_ARGUMENT,
@@ -437,6 +439,10 @@ export const make = Effect.gen(function* () {
   const backendReadyRef = yield* Ref.make(false);
   let backendHasStarted = false;
   let mainClosedDuringStartup = false;
+  // A login launch in background mode keeps the first main window hidden until the tray opens it.
+  let startHidden =
+    environment.platform === "win32" &&
+    (yield* HostProcess.Arguments).includes(BACKGROUND_LAUNCH_ARGUMENT);
   const splashWindowRef = yield* Ref.make<Option.Option<Electron.BrowserWindow>>(Option.none());
   const context = yield* Effect.context<DesktopWindowRuntimeServices>();
   const runFork = Effect.runForkWith(context);
@@ -444,7 +450,11 @@ export const make = Effect.gen(function* () {
   const mainWindowMutex = yield* Semaphore.make(1);
   const pendingMainReveals = new WeakMap<Electron.BrowserWindow, Effect.Effect<void>>();
   const revealMain = Effect.fn("desktop.window.revealMain")((window: Electron.BrowserWindow) =>
-    Effect.suspend(() => pendingMainReveals.get(window) ?? electronWindow.reveal(window)),
+    Effect.suspend(() => {
+      // Opening from the tray before the renderer is ready reveals it once ready.
+      startHidden = false;
+      return pendingMainReveals.get(window) ?? electronWindow.reveal(window);
+    }),
   );
   let flushMainWindowBounds: Effect.Effect<void> = Effect.void;
   let remoteRequestHeaderOwner: Electron.BrowserWindow | null = null;
@@ -1078,6 +1088,10 @@ export const make = Effect.gen(function* () {
     pendingMainReveals.set(window, revealWhenReady);
     bindFirstRevealTrigger(revealSubscribers, () => {
       rendererReady = true;
+      if (startHidden) {
+        startHidden = false;
+        return;
+      }
       void runPromise(revealWhenReady);
     });
 
@@ -1157,7 +1171,7 @@ export const make = Effect.gen(function* () {
   }).pipe(Effect.withSpan("desktop.window.createMainIfBackendReady"));
 
   const showConnectingSplash = Effect.gen(function* () {
-    if (yield* Ref.get(desktopState.quitting)) return;
+    if (startHidden || (yield* Ref.get(desktopState.quitting))) return;
     const existingSplash = yield* Ref.get(splashWindowRef);
     if (Option.isSome(existingSplash)) return;
     const existingWindow = yield* electronWindow.currentMainOrFirst;

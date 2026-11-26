@@ -10,9 +10,8 @@ import type { DesktopUpdateCheckResult, DesktopUpdateState } from "@t3tools/cont
 import * as Electron from "electron";
 import { vi } from "vite-plus/test";
 
-const { setUserTasks, appListeners } = vi.hoisted(() => ({
+const { setUserTasks } = vi.hoisted(() => ({
   setUserTasks: vi.fn((_tasks: ReadonlyArray<Electron.Task>) => true),
-  appListeners: new Map<string, (...args: never[]) => void>(),
 }));
 vi.mock("electron", () => ({
   app: { setUserTasks },
@@ -23,6 +22,7 @@ import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as ElectronDialog from "../electron/ElectronDialog.ts";
 import * as ElectronMenu from "../electron/ElectronMenu.ts";
 import * as DesktopApplicationMenu from "./DesktopApplicationMenu.ts";
+import { NEW_THREAD_ARGUMENT } from "../app/launchArguments.ts";
 import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
@@ -62,10 +62,7 @@ const layerElectronApp = Layer.succeed(ElectronApp.ElectronApp, {
   appendCommandLineSwitch: () => Effect.void,
   onBeforeQuitForUpdate: () => Effect.void,
   removeCommandLineSwitch: () => Effect.void,
-  on: (eventName, listener) =>
-    Effect.sync(() => {
-      appListeners.set(eventName, listener as unknown as (...args: never[]) => void);
-    }),
+  on: () => Effect.void,
 } satisfies ElectronApp.ElectronApp["Service"]);
 
 interface MenuServices {
@@ -453,13 +450,11 @@ describe("DesktopApplicationMenu", () => {
 });
 
 describe("Windows jump list", () => {
-  it.effect("offers New thread and opens one when Windows starts the task", () =>
+  it.effect("offers New thread in the jump list", () =>
     Effect.gen(function* () {
       setUserTasks.mockClear();
-      appListeners.clear();
-      const selectedAction = yield* Deferred.make<string>();
       yield* configureMenu(
-        selectedAction,
+        yield* Deferred.make<string>(),
         yield* Deferred.make<readonly Electron.MenuItemConstructorOptions[]>(),
         {
           platform: "win32",
@@ -471,17 +466,8 @@ describe("Windows jump list", () => {
           args,
           title,
         })),
-        [{ args: DesktopApplicationMenu.NEW_THREAD_TASK_ARGUMENT, title: "New thread" }],
+        [{ args: NEW_THREAD_ARGUMENT, title: "New thread" }],
       );
-
-      const secondInstance = appListeners.get("second-instance") as (
-        event: unknown,
-        argv: readonly string[],
-      ) => void;
-      secondInstance({}, ["Nebula.exe"]);
-      assert.isTrue(Option.isNone(yield* Deferred.poll(selectedAction)));
-      secondInstance({}, ["Nebula.exe", DesktopApplicationMenu.NEW_THREAD_TASK_ARGUMENT]);
-      assert.strictEqual(yield* Deferred.await(selectedAction), "chat.new");
     }),
   );
 
