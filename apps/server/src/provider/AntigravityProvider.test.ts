@@ -517,6 +517,28 @@ it.layer(layerTest)("Antigravity provider snapshots", (it) => {
     }),
   );
 
+  it.effect("keeps /usage limits through health checks until the account signs out", () =>
+    Effect.gen(function* () {
+      const harness = yield* makeHarness();
+      yield* harness.initialize;
+      yield* harness.provider.onSessionStarted(started, "/workspace");
+      const windows = [
+        {
+          id: "antigravity-gemini-models-weekly",
+          kind: "weekly" as const,
+          label: "Gemini Models · Weekly",
+          usedPercent: 9,
+        },
+      ];
+      yield* harness.provider.onUsageChecked({ checkedAt: "2026-11-26T10:00:00.000Z", windows });
+      expect((yield* harness.provider.snapshot.getSnapshot).usageLimits?.windows).toEqual(windows);
+      expect((yield* harness.provider.snapshot.refresh).usageLimits?.windows).toEqual(windows);
+
+      yield* harness.provider.onSignedOut;
+      expect((yield* harness.provider.snapshot.refresh).usageLimits).toBeUndefined();
+    }),
+  );
+
   it.effect("clears all account metadata on sign-out and authentication failure", () =>
     Effect.gen(function* () {
       const auth = { type: "gemini-api-key", label: "Gemini API key" };

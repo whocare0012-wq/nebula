@@ -16,6 +16,7 @@ import {
 import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Deferred from "effect/Deferred";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
@@ -70,6 +71,7 @@ import {
 import { makeAcpNativeLoggerFactory } from "@t3tools/provider-acp/server/nativeLogging";
 import { ProviderDriverError } from "../Errors.ts";
 import { makeAntigravityProvider } from "../AntigravityProvider.ts";
+import { parseAntigravityUsageReply } from "../antigravityUsageReply.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
 import {
@@ -641,6 +643,38 @@ export const AntigravityDriver: ProviderDriver<
         }),
     });
 
+    const checkUsage = Effect.fn("AntigravityDriver.checkUsage")(function* (
+      runtime: Pick<
+        AcpSessionRuntime.AcpSessionRuntime["Service"],
+        "prompt" | "handleSessionUpdate"
+      >,
+      sessionId: string,
+    ) {
+      const snapshot = yield* provider.snapshot.getSnapshot;
+      if (!snapshot.slashCommands?.some((command) => command.name === "usage")) return;
+      const reply: string[] = [];
+      yield* runtime.handleSessionUpdate((notification) =>
+        Effect.sync(() => {
+          const update = notification.update;
+          if (
+            notification.sessionId === sessionId &&
+            update.sessionUpdate === "agent_message_chunk" &&
+            update.content.type === "text"
+          ) {
+            reply.push(update.content.text);
+          }
+        }),
+      );
+      yield* runtime.prompt({ prompt: [{ type: "text", text: "/usage" }] });
+      yield* provider.onUsageChecked({
+        checkedAt: DateTime.formatIso(yield* DateTime.now),
+        windows: parseAntigravityUsageReply(
+          reply.join(""),
+          snapshot.models.map((model) => model.slug),
+        ),
+      });
+    });
+
     const refreshModels = Effect.fn("AntigravityDriver.refreshModels")(
       function* () {
         const processScope = yield* Scope.make();
@@ -652,6 +686,12 @@ export const AntigravityDriver: ProviderDriver<
               const runtime = yield* makeDisposableRuntime({});
               const started = yield* runtime.start();
               yield* publishCatalog(started, runtime);
+              // A model refresh is the user's own request and already runs agy, so its `/usage`
+              // answer rides along. It is the only limit source: T3 reads no credential for it.
+              yield* checkUsage(runtime, started.sessionId).pipe(
+                Effect.timeout("20 seconds"),
+                Effect.ignoreCause({ log: true }),
+              );
             }),
           )
           .pipe(Effect.provideService(Scope.Scope, processScope));

@@ -8,8 +8,10 @@ import {
   type ServerProvider,
   type ServerProviderModel,
   type ServerProviderSlashCommand,
+  type ServerProviderUsageWindow,
 } from "@t3tools/contracts";
 import { createModelCapabilities } from "@t3tools/shared/model";
+import { makeUsageLimits } from "@t3tools/provider-core/server/usageLimits";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -40,6 +42,7 @@ import {
 import { antigravityThinkingConfig } from "./acp/AntigravityAcpSupport.ts";
 
 const EMPTY_MODEL_CAPABILITIES = createModelCapabilities({ optionDescriptors: [] });
+const withoutUsageLimits = ({ usageLimits: _dropped, ...draft }: ServerProviderDraft) => draft;
 const MAX_WORKSPACE_SNAPSHOTS = 32;
 const HEALTH_CHECK_TIMEOUT_MS = 90_000;
 const SIGN_IN_MESSAGE = "Sign in with Google to use Antigravity.";
@@ -453,7 +456,8 @@ export const makeAntigravityProvider = Effect.fn("makeAntigravityProvider")(func
       {
         authRevision: state.authRevision + 1,
         draft: {
-          ...state.draft,
+          // Another account may sign in next; its limits are unknown until it is checked.
+          ...withoutUsageLimits(state.draft),
           auth: {
             status: "unauthenticated",
             ...(usesCredentials ? options.auth : {}),
@@ -503,8 +507,23 @@ export const makeAntigravityProvider = Effect.fn("makeAntigravityProvider")(func
       : { ...snapshot, skills: resolvedSkills };
   });
 
+  // Limits come only from agy's own `/usage` reply. Kept in the draft so a health check, which
+  // reads none, does not drop them; applied too, because enrichment cannot publish limits.
+  const onUsageChecked = Effect.fn("AntigravityProvider.onUsageChecked")(function* (input: {
+    readonly checkedAt: string;
+    readonly windows: ReadonlyArray<ServerProviderUsageWindow>;
+  }) {
+    if (!settings.enabled || input.windows.length === 0) return;
+    yield* SubscriptionRef.update(metadata, (state) => ({
+      ...state,
+      draft: { ...state.draft, usageLimits: makeUsageLimits(input) },
+    }));
+    yield* managed.applyUsageLimits({ ...input, complete: true });
+  });
+
   return {
     snapshot: { ...managed, getSnapshot },
+    onUsageChecked,
     onSessionStarted,
     onConfigOptionsUpdated,
     onAvailableCommands,
