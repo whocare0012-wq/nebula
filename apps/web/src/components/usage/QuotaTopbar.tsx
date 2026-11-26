@@ -893,7 +893,7 @@ export function QuotaTopbar() {
                 )) {
                   const refreshed = await refreshProviders({
                     environmentId,
-                    input: { instanceId, refreshModels: true },
+                    input: { instanceId, refreshUsage: true },
                   });
                   if (refreshed._tag === "Failure") return refreshed;
                 }

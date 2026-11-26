@@ -1056,12 +1056,23 @@ export const AntigravitySettings = makeProviderSettingsSchema(
         providerSettingsForm: { placeholder: "Automatic", clearWhenEmpty: "persist" },
       }),
     ),
+    cliUsageLimits: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false)),
+      Schema.annotateKey({
+        title: "Read limits with the agy CLI",
+        description:
+          "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.",
+        providerSettingsForm: { control: "switch" },
+      }),
+    ),
     customModels: Schema.Array(CustomModelSetting).pipe(
       Schema.withDecodingDefault(Effect.succeed([])),
       Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
     ),
   },
-  { order: ["authMethod", "apiKey", "gcpProject", "gcpLocation", "binaryPath"] },
+  {
+    order: ["authMethod", "apiKey", "gcpProject", "gcpLocation", "binaryPath", "cliUsageLimits"],
+  },
 );
 export type AntigravitySettings = typeof AntigravitySettings.Type;
 

@@ -1,5 +1,7 @@
 import type { ServerProviderUsageWindow } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
+import * as Option from "effect/Option";
+import * as Schema from "effect/Schema";
 
 const QUOTA_HEADING = "### Quota Limits";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -85,6 +87,94 @@ export function parseAntigravityUsageReply(
       ...(resetsAt ? { resetsAt } : {}),
       ...(modelIds ? { modelIds } : {}),
     });
+  }
+  return windows;
+}
+
+const CliBucket = Schema.Struct({
+  id: Schema.String,
+  name: Schema.optional(Schema.String),
+  window: Schema.optional(Schema.String),
+  remaining_fraction: Schema.optional(Schema.Number),
+  reset_time: Schema.optional(Schema.String),
+  disabled: Schema.optional(Schema.Boolean),
+});
+const CliUsage = Schema.Struct({
+  status: Schema.optional(Schema.String),
+  num_turns: Schema.optional(Schema.Number),
+  command: Schema.optional(
+    Schema.Struct({
+      name: Schema.String,
+      data: Schema.optional(
+        Schema.Struct({
+          groups: Schema.optional(
+            Schema.Array(
+              Schema.Struct({
+                name: Schema.optional(Schema.String),
+                buckets: Schema.optional(Schema.Array(CliBucket)),
+              }),
+            ),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+const decodeCliUsage = Schema.decodeUnknownOption(Schema.fromJsonString(CliUsage));
+
+const CLI_WINDOWS: Record<
+  string,
+  Pick<ServerProviderUsageWindow, "kind" | "windowDurationMins">
+> = {
+  weekly: { kind: "weekly", windowDurationMins: 7 * 24 * 60 },
+  "5h": { kind: "session", windowDurationMins: 5 * 60 },
+};
+const CLI_WINDOW_LABELS: Record<string, string> = { weekly: "Weekly", "5h": "5-hour" };
+
+/**
+ * Reads `agy --print /usage --output-format json`. Returns undefined unless agy answered as the
+ * `/usage` command; an agy that no longer knows the command runs a model turn instead.
+ */
+export function parseAntigravityCliUsage(
+  stdout: string,
+  modelSlugs: ReadonlyArray<string>,
+): ServerProviderUsageWindow[] | undefined {
+  const json = stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .findLast((line) => line.startsWith("{"));
+  const output = json === undefined ? undefined : Option.getOrUndefined(decodeCliUsage(json));
+  if (
+    output?.command?.name !== "usage" ||
+    (output.status !== undefined && output.status !== "SUCCESS") ||
+    (output.num_turns ?? 0) !== 0
+  ) {
+    return undefined;
+  }
+  const windows: ServerProviderUsageWindow[] = [];
+  for (const group of output.command.data?.groups ?? []) {
+    const groupName = group.name?.trim() || "Antigravity";
+    const modelIds = groupModelIds(groupName, modelSlugs);
+    for (const bucket of group.buckets ?? []) {
+      const remaining = bucket.remaining_fraction;
+      if (bucket.disabled === true || remaining === undefined || !Number.isFinite(remaining)) {
+        continue;
+      }
+      const fraction = Math.min(1, Math.max(0, remaining));
+      const resetAt = bucket.reset_time === undefined ? NaN : Date.parse(bucket.reset_time);
+      // An untouched bucket reports a Unix-epoch or rolling reset that means nothing yet.
+      const resetsAt =
+        fraction < 1 && resetAt > 0 ? DateTime.formatIso(DateTime.makeUnsafe(resetAt)) : undefined;
+      const window = bucket.window ?? "";
+      windows.push({
+        id: `antigravity-${slug(bucket.id)}`,
+        label: `${groupName} · ${CLI_WINDOW_LABELS[window] ?? bucket.name?.trim() ?? bucket.id}`,
+        usedPercent: (1 - fraction) * 100,
+        ...(CLI_WINDOWS[window] ?? windowShape(bucket.name ?? "")),
+        ...(resetsAt ? { resetsAt } : {}),
+        ...(modelIds ? { modelIds } : {}),
+      });
+    }
   }
   return windows;
 }

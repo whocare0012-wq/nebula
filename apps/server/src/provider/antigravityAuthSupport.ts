@@ -245,6 +245,37 @@ function antigravityEnvironment(
   };
 }
 
+/**
+ * The environment for running the agy CLI itself (not `agy acp`) on a profile. The CLI has no
+ * profile flag and reads `~/.gemini/antigravity-cli`, so `home` stands in for the user's home.
+ */
+export function antigravityCliEnvironment(input: {
+  readonly baseEnv: NodeJS.ProcessEnv;
+  readonly home: string;
+  readonly platform: NodeJS.Platform;
+  readonly authMethod: AntigravityAuthMethod;
+}): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(input.baseEnv)) {
+    const name = key.toUpperCase();
+    if (removedEnvironmentKeys.has(name) || name === "DISPLAY" || name === "WAYLAND_DISPLAY") {
+      continue;
+    }
+    if (name === "HOME" || name === "USERPROFILE") continue;
+    environment[key] = value;
+  }
+  return {
+    ...environment,
+    HOME: input.home,
+    ...(input.platform === "win32" ? { USERPROFILE: input.home } : {}),
+    // As for ACP: without it the CLI looks for the sign-in in the shared OS keyring.
+    ...(input.authMethod === "oauth-personal"
+      ? { SSH_CONNECTION: input.baseEnv.SSH_CONNECTION || "127.0.0.1 0 127.0.0.1 0" }
+      : {}),
+    AGY_CLI_DISABLE_AUTO_UPDATE: "true",
+  };
+}
+
 class AntigravitySkillLinkError extends Schema.TaggedError<AntigravitySkillLinkError>()(
   "AntigravitySkillLinkError",
   { link: Schema.String, cause: Schema.Defect() },

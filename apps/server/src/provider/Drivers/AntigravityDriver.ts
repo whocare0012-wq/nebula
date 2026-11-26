@@ -71,7 +71,8 @@ import {
 import { makeAcpNativeLoggerFactory } from "@t3tools/provider-acp/server/nativeLogging";
 import { ProviderDriverError } from "../Errors.ts";
 import { makeAntigravityProvider } from "../AntigravityProvider.ts";
-import { parseAntigravityUsageReply } from "../antigravityUsageReply.ts";
+import { AntigravityCliUsageError, runAntigravityCliUsage } from "../antigravityCliUsage.ts";
+import { parseAntigravityCliUsage, parseAntigravityUsageReply } from "../antigravityUsageReply.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
 import {
@@ -693,6 +694,42 @@ export const AntigravityDriver: ProviderDriver<
       });
     });
 
+    const checkUsageWithCli = Effect.fn("AntigravityDriver.checkUsageWithCli")(function* () {
+      const snapshot = yield* provider.snapshot.getSnapshot;
+      // Only Google sign-ins have subscription limits; never prompt a signed-out account.
+      if (
+        !antigravityAuthUsesBrowser(auth.authMethod) ||
+        snapshot.auth.status !== "authenticated"
+      ) {
+        return;
+      }
+      const executable = yield* installation.acquire(settings.binaryPath, processEnvironment);
+      const stdout = yield* runAntigravityCliUsage({
+        executablePath: executable.executablePath,
+        acpDirectory: path.join(profileDirectory, "antigravity-acp"),
+        baseEnv: processEnvironment,
+        authMethod: auth.authMethod,
+      }).pipe(
+        Effect.provideService(FileSystem.FileSystem, fileSystem),
+        Effect.provideService(Path.Path, path),
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+      );
+      const windows = parseAntigravityCliUsage(
+        stdout,
+        snapshot.models.map((model) => model.slug),
+      );
+      if (windows === undefined) {
+        yield* Effect.logWarning("agy did not answer /usage as a command.", {
+          output: stdout.slice(0, 500),
+        });
+        return yield* new AntigravityCliUsageError({ reason: "failed" });
+      }
+      yield* provider.onUsageChecked({
+        checkedAt: DateTime.formatIso(yield* DateTime.now),
+        windows,
+      });
+    });
+
     const refreshModels = Effect.fn("AntigravityDriver.refreshModels")(
       function* () {
         const processScope = yield* Scope.make();
@@ -706,10 +743,10 @@ export const AntigravityDriver: ProviderDriver<
               yield* publishCatalog(started, runtime);
               // A model refresh is the user's own request and already runs agy, so its `/usage`
               // answer rides along. It is the only limit source: T3 reads no credential for it.
-              yield* checkUsage(runtime, started.sessionId).pipe(
-                Effect.timeout("20 seconds"),
-                Effect.ignoreCause({ log: true }),
-              );
+              yield* Effect.gen(function* () {
+                if (settings.cliUsageLimits) return yield* Effect.scoped(checkUsageWithCli());
+                return yield* checkUsage(runtime, started.sessionId);
+              }).pipe(Effect.timeout("30 seconds"), Effect.ignoreCause({ log: true }));
             }),
           )
           .pipe(Effect.provideService(Scope.Scope, processScope));
@@ -752,6 +789,34 @@ export const AntigravityDriver: ProviderDriver<
       ),
     );
 
+    const refreshUsage = Effect.fn("AntigravityDriver.refreshUsage")(
+      function* () {
+        if (settings.cliUsageLimits) return yield* checkUsageWithCli();
+        const snapshot = yield* provider.snapshot.getSnapshot;
+        if (
+          snapshot.slashCommands?.some((entry) => entry.name === "usage" || entry.name === "quota")
+        ) {
+          yield* refreshModels();
+        }
+      },
+      Effect.scoped,
+      Effect.mapError((cause) =>
+        cause._tag === "ProviderDriverError"
+          ? cause
+          : new ProviderDriverError({
+              driver: DRIVER,
+              instanceId,
+              detail:
+                cause._tag === "AntigravityCliUsageError" && cause.reason === "signed-out"
+                  ? "Antigravity's saved sign-in has expired. Sign in again in provider settings."
+                  : cause._tag === "AntigravityCliUsageError"
+                    ? "Could not read Antigravity limits with the agy CLI."
+                    : cause.detail,
+              cause,
+            }),
+      ),
+    );
+
     return {
       instanceId,
       driverKind: DRIVER,
@@ -781,6 +846,7 @@ export const AntigravityDriver: ProviderDriver<
       textGeneration,
       auth: authFlow.controller,
       refreshModels,
+      refreshUsage,
     } satisfies ProviderInstance;
   }),
 };

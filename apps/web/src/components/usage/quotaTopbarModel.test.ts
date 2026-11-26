@@ -377,22 +377,20 @@ describe("quota topbar data", () => {
   });
 });
 
-it("asks only signed-in Antigravity accounts whose agy offers /usage or /quota", () => {
+it("asks only enabled, signed-in Antigravity accounts for their limits", () => {
   const antigravity = (id: string, overrides: Partial<ServerProvider> = {}) =>
     provider({
       instanceId: ProviderInstanceId.make(id),
       driver: ProviderDriverKind.make("antigravity"),
-      slashCommands: [{ name: "usage" }],
       ...overrides,
     });
   expect(
     antigravityUsageRefreshTargets([
-      provider({ slashCommands: [{ name: "usage" }] }),
-      antigravity("offers-usage"),
-      antigravity("offers-quota", { slashCommands: [{ name: "quota" }] }),
-      antigravity("offers-neither", { slashCommands: [{ name: "plan" }] }),
+      provider({}),
+      antigravity("signed-in"),
       antigravity("signed-out", { auth: { status: "unauthenticated" } }),
       antigravity("disabled", { enabled: false }),
+      antigravity("not-installed", { installed: false }),
     ]),
-  ).toEqual(["offers-usage", "offers-quota"]);
+  ).toEqual(["signed-in"]);
 });

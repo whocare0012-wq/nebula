@@ -193,7 +193,7 @@ export function createQuotaAccountsSelector() {
 
 /**
  * Antigravity limits come only from agy's own /usage, which needs agy started, so only a manual
- * refresh asks for them, and only from signed-in accounts whose agy offers the command.
+ * refresh asks signed-in accounts for them. The server decides per account whether it may.
  */
 export function antigravityUsageRefreshTargets(providers: readonly ServerProvider[]) {
   return providers
@@ -202,10 +202,7 @@ export function antigravityUsageRefreshTargets(providers: readonly ServerProvide
         provider.driver === "antigravity" &&
         provider.enabled &&
         provider.installed &&
-        provider.auth.status === "authenticated" &&
-        provider.slashCommands.some(
-          (command) => command.name === "usage" || command.name === "quota",
-        ),
+        provider.auth.status === "authenticated",
     )
     .map((provider) => provider.instanceId);
 }

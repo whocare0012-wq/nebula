@@ -147,8 +147,11 @@ If a window still looks stale, refresh Limits to re-check every provider and hub
 
 Antigravity limits come only from Antigravity's own `/usage` command. T3 Code runs it when you
 refresh providers in **Settings → Providers** or click refresh in the top-bar quota panel, never in
-the background, and does not read your Google sign-in for it. Antigravity versions that don't offer
-`/usage` to editors show no Antigravity limits.
+the background, and does not read your Google sign-in for it. Current Antigravity versions don't
+offer `/usage` to editors, so no limits show unless you turn on **Read limits with the agy CLI** in
+that account's provider settings. It runs `agy --print /usage`, which uses no tokens, outside the
+editor protocol Google supports for other apps, so it may put your account at risk. It is off by
+default.
 
 Pick `/usage-limits` from the composer's command menu, or send it as a message, to check the
 current model's limits without leaving the conversation. The result opens above the composer and

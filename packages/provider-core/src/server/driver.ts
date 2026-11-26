@@ -57,6 +57,8 @@ export interface ProviderInstance {
    */
   readonly workspaceRescans?: Stream.Stream<string>;
   readonly refreshModels?: () => Effect.Effect<void, ProviderDriverError>;
+  /** Reads limits that only a user's explicit refresh may fetch, such as by starting a CLI. */
+  readonly refreshUsage?: () => Effect.Effect<void, ProviderDriverError>;
   readonly invalidateCaches?: Effect.Effect<void>;
   /** Moves a long-lived service onto a newly updated binary before its version is read back. */
   readonly afterUpdate?: Effect.Effect<void, ProviderDriverError>;

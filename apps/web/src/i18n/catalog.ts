@@ -6520,6 +6520,9 @@ export const zhCN: Readonly<Record<string, string>> = {
   "Region for Gemini Enterprise or Agent Platform.": "Gemini 企业版或 Agent Platform 所用区域。",
   "Custom ACP executable. Leave empty to select automatically.":
     "自定义 ACP 可执行文件，留空则自动选择。",
+  "Read limits with the agy CLI": "用 agy 命令行读取额度",
+  "Refreshing the quota panel runs agy's own /usage outside ACP. It uses no tokens, but Google supports only ACP for other apps, so your account may be at risk.":
+    "在额度面板点刷新时，会在 ACP 之外运行 agy 自带的 /usage。它不消耗 token，但 Google 只支持其他软件通过 ACP 接入，所以账号可能有风险。",
   "ACP Registry": "ACP 注册表",
   "ACP source": "ACP 来源",
   "Local command": "本地命令",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { parseAntigravityUsageReply } from "./antigravityUsageReply.ts";
+import { parseAntigravityCliUsage, parseAntigravityUsageReply } from "./antigravityUsageReply.ts";
 
 const MODELS = ["gemini-3.1-pro", "gemini-3-flash", "claude-sonnet-4-6", "gpt-oss-120b"];
 
@@ -69,5 +69,91 @@ describe("parseAntigravityUsageReply", () => {
         MODELS,
       ),
     ).toEqual([]);
+  });
+});
+
+// Shape of `agy --print /usage --output-format json` from agy 1.x, trimmed.
+const CLI_USAGE = JSON.stringify({
+  conversation_id: "",
+  status: "SUCCESS",
+  num_turns: 0,
+  usage: { total_tokens: 0 },
+  command: {
+    name: "usage",
+    data: {
+      groups: [
+        {
+          name: "Gemini Models",
+          buckets: [
+            {
+              id: "gemini-weekly",
+              name: "Weekly Limit Remaining",
+              window: "weekly",
+              remaining_fraction: 0.75,
+              reset_time: "2026-12-03T17:07:21Z",
+            },
+            {
+              id: "gemini-5h",
+              name: "Five Hour Limit Remaining",
+              window: "5h",
+              remaining_fraction: 0.5,
+              reset_time: "2026-11-26T22:07:21Z",
+            },
+          ],
+        },
+        {
+          name: "Claude and GPT models",
+          buckets: [
+            {
+              id: "3p-5h",
+              name: "Five Hour Limit Remaining",
+              window: "5h",
+              remaining_fraction: 1,
+              reset_time: "1970-01-01T00:00:00Z",
+            },
+            { id: "3p-old", name: "Retired", remaining_fraction: 0.2, disabled: true },
+          ],
+        },
+      ],
+    },
+  },
+});
+
+describe("parseAntigravityCliUsage", () => {
+  it("turns each bucket into a window for the models its group meters", () => {
+    expect(parseAntigravityCliUsage(`I1127 starting\n${CLI_USAGE}\n`, MODELS)).toEqual([
+      {
+        id: "antigravity-gemini-weekly",
+        label: "Gemini Models · Weekly",
+        usedPercent: 25,
+        kind: "weekly",
+        windowDurationMins: 7 * 24 * 60,
+        resetsAt: "2026-12-03T17:07:21.000Z",
+        modelIds: ["gemini-3.1-pro", "gemini-3-flash"],
+      },
+      {
+        id: "antigravity-gemini-5h",
+        label: "Gemini Models · 5-hour",
+        usedPercent: 50,
+        kind: "session",
+        windowDurationMins: 5 * 60,
+        resetsAt: "2026-11-26T22:07:21.000Z",
+        modelIds: ["gemini-3.1-pro", "gemini-3-flash"],
+      },
+      {
+        id: "antigravity-3p-5h",
+        label: "Claude and GPT models · 5-hour",
+        usedPercent: 0,
+        kind: "session",
+        windowDurationMins: 5 * 60,
+        modelIds: ["claude-sonnet-4-6", "gpt-oss-120b"],
+      },
+    ]);
+  });
+
+  it("rejects a reply that was a model turn rather than the /usage command", () => {
+    const turn = JSON.stringify({ status: "SUCCESS", response: "What should I do?", num_turns: 1 });
+    expect(parseAntigravityCliUsage(turn, MODELS)).toBeUndefined();
+    expect(parseAntigravityCliUsage("AGY_ERROR: timeout", MODELS)).toBeUndefined();
   });
 });

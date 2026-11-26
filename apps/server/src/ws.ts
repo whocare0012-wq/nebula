@@ -2667,6 +2667,30 @@ export const layerWsRpc = (
                 providers = yield* providerRegistry.refreshInstance(instance.instanceId);
               }
             }
+            if (input.refreshUsage === true && input.instanceId !== undefined) {
+              const instance = yield* providerInstances.getInstance(input.instanceId);
+              if (
+                instance?.refreshUsage &&
+                providers.some(
+                  (provider) =>
+                    provider.instanceId === instance.instanceId &&
+                    provider.enabled &&
+                    provider.installed,
+                )
+              ) {
+                yield* instance.refreshUsage().pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new ProviderSetupError({
+                        instanceId: instance.instanceId,
+                        operation: "refresh-usage",
+                        detail: error.detail,
+                      }),
+                  ),
+                );
+                providers = yield* providerRegistry.refreshInstance(instance.instanceId);
+              }
+            }
             const { instanceId, cwd } = input;
             if (input.omitProviders === true && (instanceId === undefined || cwd === undefined)) {
               return { providers: [] };
