@@ -21,12 +21,14 @@ const DESKTOP_ALIASES: ReadonlyArray<{
  * account runs one version), else the desktop app's bundled CLI, which only that app can update.
  * Anything else is returned as is.
  */
-export const resolveCodexDesktopBinary = Effect.fn("resolveCodexDesktopBinary")(function* (input: {
+export const resolveCodexDesktopBinary = Effect.fn("resolveCodexDesktopBinary")(function* <
+  R = never,
+>(input: {
   readonly binaryPath: string;
   readonly platform: NodeJS.Platform;
   readonly env: NodeJS.ProcessEnv;
   /** The managed Codex executable, if one is installed; looked up only when it would be used. */
-  readonly managed?: Effect.Effect<Option.Option<string>>;
+  readonly managed?: Effect.Effect<Option.Option<string>, never, R>;
 }) {
   const { binaryPath, platform, env } = input;
   const localAppData = env.LOCALAPPDATA?.trim();

@@ -7,7 +7,6 @@ import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
-import * as Scope from "effect/Scope";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
@@ -194,12 +193,11 @@ export const CodexDriver: ProviderDriver<
       yield* HostProcess.Environment,
     );
     const environmentHome = processEnv.CODEX_HOME;
-    const instanceScope = yield* Effect.scope;
     const binaryPath = yield* resolveCodexDesktopBinary({
       binaryPath: config.binaryPath,
       platform: yield* HostProcess.Platform,
       env: processEnv,
-      // Holding the release for the instance's life keeps an update from pruning it mid-use.
+      // The lease lives in the instance scope, so an update cannot prune this release mid-use.
       managed: installation.acquire().pipe(
         Effect.map((executable) =>
           executable.source === "managed"
@@ -207,7 +205,6 @@ export const CodexDriver: ProviderDriver<
             : Option.none<string>(),
         ),
         Effect.orElseSucceed(() => Option.none<string>()),
-        Effect.provideService(Scope.Scope, instanceScope),
       ),
     });
     const homeConfig = {
