@@ -1,4 +1,4 @@
-import type { ServerProviderUsageWindow } from "@t3tools/contracts";
+import type { ServerProvider, ServerProviderUsageWindow } from "@t3tools/contracts";
 import { quotaAccounts, type QuotaAccount } from "@t3tools/shared/usageLimits";
 export { quotaAccounts, type QuotaAccount } from "@t3tools/shared/usageLimits";
 import * as Schema from "effect/Schema";
@@ -189,4 +189,23 @@ export function createQuotaAccountsSelector() {
     previous = quotaAccounts(presentations);
     return previous;
   };
+}
+
+/**
+ * Antigravity limits come only from agy's own /usage, which needs agy started, so only a manual
+ * refresh asks for them, and only from signed-in accounts whose agy offers the command.
+ */
+export function antigravityUsageRefreshTargets(providers: readonly ServerProvider[]) {
+  return providers
+    .filter(
+      (provider) =>
+        provider.driver === "antigravity" &&
+        provider.enabled &&
+        provider.installed &&
+        provider.auth.status === "authenticated" &&
+        provider.slashCommands.some(
+          (command) => command.name === "usage" || command.name === "quota",
+        ),
+    )
+    .map((provider) => provider.instanceId);
 }

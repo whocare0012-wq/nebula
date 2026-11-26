@@ -35,6 +35,7 @@ import {
   DEFAULT_QUOTA_PREFERENCES,
   QUOTA_PREFERENCES_KEY,
   QuotaPreferencesSchema,
+  antigravityUsageRefreshTargets,
   createQuotaAccountsSelector,
   quotaPins,
   quotaShownIds,
@@ -885,7 +886,19 @@ export function QuotaTopbar() {
                 environmentId,
                 () => refreshProviders({ environmentId, input: {} }),
                 automatic,
-              );
+              ).then(async (result) => {
+                if (automatic) return result;
+                for (const instanceId of antigravityUsageRefreshTargets(
+                  p.serverConfig?.providers ?? [],
+                )) {
+                  const refreshed = await refreshProviders({
+                    environmentId,
+                    input: { instanceId, refreshModels: true },
+                  });
+                  if (refreshed._tag === "Failure") return refreshed;
+                }
+                return result;
+              });
             },
           ),
         );

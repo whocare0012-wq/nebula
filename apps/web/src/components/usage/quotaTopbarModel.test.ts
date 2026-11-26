@@ -7,6 +7,7 @@ import {
 import { collectLimitAccounts, collectLimitPools, limitPoolId } from "@t3tools/shared/usageLimits";
 import { describe, expect, it } from "vite-plus/test";
 import {
+  antigravityUsageRefreshTargets,
   DEFAULT_QUOTA_PREFERENCES,
   quotaAccounts,
   createQuotaAccountsSelector,
@@ -374,4 +375,24 @@ describe("quota topbar data", () => {
       expect(lone.map(limitPoolId)).toEqual(["claudeAgent"]);
     });
   });
+});
+
+it("asks only signed-in Antigravity accounts whose agy offers /usage or /quota", () => {
+  const antigravity = (id: string, overrides: Partial<ServerProvider> = {}) =>
+    provider({
+      instanceId: ProviderInstanceId.make(id),
+      driver: ProviderDriverKind.make("antigravity"),
+      slashCommands: [{ name: "usage" }],
+      ...overrides,
+    });
+  expect(
+    antigravityUsageRefreshTargets([
+      provider({ slashCommands: [{ name: "usage" }] }),
+      antigravity("offers-usage"),
+      antigravity("offers-quota", { slashCommands: [{ name: "quota" }] }),
+      antigravity("offers-neither", { slashCommands: [{ name: "plan" }] }),
+      antigravity("signed-out", { auth: { status: "unauthenticated" } }),
+      antigravity("disabled", { enabled: false }),
+    ]),
+  ).toEqual(["offers-usage", "offers-quota"]);
 });
