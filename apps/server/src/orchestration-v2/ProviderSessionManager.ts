@@ -3588,6 +3588,7 @@ export const layerWithOptions = (
                   Option.none<{
                     readonly entry: LiveSessionEntry;
                     readonly idleUnloadFibers: ReadonlyArray<Fiber.Fiber<void, never>>;
+                    readonly heldProviderThreads: ReadonlyArray<OrchestrationV2ProviderThread>;
                   }>(),
                   current,
                 ] as const;
@@ -3610,9 +3611,11 @@ export const layerWithOptions = (
                   : entry.mcpCredentialIdByThread;
               const idleThreadUnloads = new Map(entry.idleThreadUnloads);
               const idleUnloadFibers: Array<Fiber.Fiber<void, never>> = [];
+              const heldProviderThreads: Array<OrchestrationV2ProviderThread> = [];
               for (const [providerThreadId, pending] of entry.idleThreadUnloads) {
                 if (pending.threadId !== input.threadId) continue;
                 idleThreadUnloads.delete(providerThreadId);
+                heldProviderThreads.push(pending.providerThread);
                 if (pending.fiber !== null) idleUnloadFibers.push(pending.fiber);
               }
               const updatedEntry = {
@@ -3629,6 +3632,7 @@ export const layerWithOptions = (
                 Option.some({
                   entry: updatedEntry,
                   idleUnloadFibers,
+                  heldProviderThreads,
                 }),
                 updated,
               ] as const;
@@ -3660,9 +3664,19 @@ export const layerWithOptions = (
             }
             const unloadThread = detached.value.exposedRuntime.unloadThread;
             if (detached.value.supportsMultipleProviderThreads && unloadThread !== undefined) {
+              // An account switch moves the provider thread row to the new session before this
+              // detach runs, so the projection no longer lists it here. The threads this session
+              // still holds loaded must unload too: Codex keeps its writer lock until they do.
+              const projectedKeys = new Set(detachedProviderThreads.map(providerThreadRuntimeKey));
+              const heldOnly = Option.isSome(detachResult)
+                ? detachResult.value.heldProviderThreads.filter(
+                    (thread) => !projectedKeys.has(providerThreadRuntimeKey(thread)),
+                  )
+                : [];
+              const heldOnlyIds = new Set(heldOnly.map((thread) => thread.id));
               // The projection includes native children owned by other app threads;
               // lock each owner so an attached child stays loaded and later attaches wait.
-              for (const providerThread of detachedProviderThreads) {
+              for (const providerThread of [...detachedProviderThreads, ...heldOnly]) {
                 if (providerThread.nativeThreadRef === null) continue;
                 const ownerThreadId = providerThread.appThreadId ?? input.threadId;
                 yield* threadAttachment.withLock(
@@ -3674,7 +3688,13 @@ export const layerWithOptions = (
                     const entry = (yield* Ref.get(sessions)).get(key);
                     if (
                       entry?.runtime !== detached.value.runtime ||
-                      entry.attachedThreadIds.has(ownerThreadId)
+                      entry.attachedThreadIds.has(ownerThreadId) ||
+                      (heldOnlyIds.has(providerThread.id) &&
+                        [...entry.loadedProviderThreadKeyByThread].some(
+                          ([threadId, loadKey]) =>
+                            entry.attachedThreadIds.has(threadId) &&
+                            isLoadKeyFor(loadKey, providerThread),
+                        ))
                     ) {
                       return;
                     }
